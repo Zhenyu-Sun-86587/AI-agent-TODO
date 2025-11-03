@@ -18,12 +18,14 @@ AI-agent-TODO是一个创新的任务管理应用，利用人工智能代理技�
 
 ## 🚀 快速开始
 
+> **注意**：本项目目前处于初始化阶段，核心功能正在开发中。
+
 ### 环境要求
 
 - Python 3.8+
 - pip 或 conda 包管理器
 
-### 安装步骤
+### 安装步骤（开发中）
 
 1. 克隆仓库：
 ```bash
@@ -37,18 +39,18 @@ python -m venv venv
 source venv/bin/activate  # Windows用户请使用: venv\Scripts\activate
 ```
 
-3. 安装依赖：
+3. 安装依赖（待项目文件添加后）：
 ```bash
 pip install -r requirements.txt
 ```
 
-4. 配置环境变量：
+4. 配置环境变量（待项目文件添加后）：
 ```bash
 cp .env.example .env
 # 编辑.env文件，添加必要的配置信息（如AI API密钥）
 ```
 
-5. 运行应用：
+5. 运行应用（待项目文件添加后）：
 ```bash
 python main.py
 ```
@@ -79,18 +81,26 @@ AI代理可以帮助您：
 
 ## 📁 项目结构
 
+### 当前结构
 ```
 AI-agent-TODO/
-├── README.md           # 项目说明文档
-├── .gitignore         # Git忽略文件配置
-├── requirements.txt   # Python依赖列表（待添加）
-├── main.py           # 主程序入口（待添加）
-├── src/              # 源代码目录（待添加）
-│   ├── agent/        # AI代理模块
-│   ├── models/       # 数据模型
-│   ├── services/     # 业务逻辑
-│   └── utils/        # 工具函数
-└── tests/            # 测试文件（待添加）
+├── README.md          # 项目说明文档
+└── .gitignore        # Git忽略文件配置
+```
+
+### 规划中的项目结构
+```
+AI-agent-TODO/
+├── README.md          # 项目说明文档
+├── .gitignore        # Git忽略文件配置
+├── requirements.txt  # Python依赖列表
+├── main.py          # 主程序入口
+├── src/             # 源代码目录
+│   ├── agent/       # AI代理模块
+│   ├── models/      # 数据模型
+│   ├── services/    # 业务逻辑
+│   └── utils/       # 工具函数
+└── tests/           # 测试文件
 ```
 
 ## 🤝 贡献指南
