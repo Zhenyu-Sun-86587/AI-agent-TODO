@@ -1,0 +1,2 @@
+class AiService:
+    pass
