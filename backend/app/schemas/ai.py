@@ -1,9 +1,9 @@
 from datetime import datetime
 from typing import Any, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
-from app.schemas.task import Priority, TaskCreate
+from app.schemas.task import Priority
 
 
 class ParseTaskRequest(BaseModel):
@@ -21,8 +21,16 @@ class AiParsedTask(BaseModel):
     raw_due_text: Optional[str] = None
 
 
+class AiTaskOverrides(BaseModel):
+    title: Optional[str] = Field(default=None, min_length=1, max_length=100)
+    description: Optional[str] = Field(default=None, max_length=2000)
+    priority: Optional[Priority] = None
+    category: Optional[str] = Field(default=None, max_length=50)
+    due_time: Optional[datetime] = None
+
+
 class CreateTaskByAiRequest(ParseTaskRequest):
-    overrides: Optional[TaskCreate] = None
+    overrides: Optional[AiTaskOverrides] = None
 
 
 class AiSuggestRequest(BaseModel):
@@ -43,3 +51,5 @@ class AiLogRead(BaseModel):
     status: str
     model_name: Optional[str] = None
     created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
