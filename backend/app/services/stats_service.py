@@ -1,2 +1,155 @@
+from collections import defaultdict
+from datetime import datetime, time, timedelta, timezone
+from typing import Optional
+from zoneinfo import ZoneInfo
+
+from sqlalchemy.orm import Query, Session
+
+from app.models.task import Task
+from app.models.user import User
+from app.schemas.task import Priority, TaskStatus
+from app.utils.datetime import utc_now
+
+APP_TIMEZONE = ZoneInfo("Asia/Shanghai")
+
+
 class StatsService:
-    pass
+    def __init__(self, db: Session) -> None:
+        self.db = db
+
+    def overview(
+        self,
+        user: User,
+        from_time: Optional[datetime] = None,
+        to_time: Optional[datetime] = None,
+    ) -> dict:
+        query = self._task_query(user, from_time, to_time)
+        total_tasks = query.count()
+        done_tasks = query.filter(Task.status == TaskStatus.done.value).count()
+        todo_tasks = query.filter(Task.status == TaskStatus.todo.value).count()
+        now = utc_now()
+        overdue_tasks = query.filter(
+            Task.status == TaskStatus.todo.value,
+            Task.due_time.isnot(None),
+            Task.due_time < now,
+        ).count()
+
+        today_start, tomorrow_start = self._today_bounds()
+        today_due_tasks = query.filter(
+            Task.due_time.isnot(None),
+            Task.due_time >= today_start,
+            Task.due_time < tomorrow_start,
+        ).count()
+        ai_created_tasks = query.filter(Task.is_ai_created.is_(True)).count()
+        return {
+            "total_tasks": total_tasks,
+            "done_tasks": done_tasks,
+            "todo_tasks": todo_tasks,
+            "completion_rate": self._rate(done_tasks, total_tasks),
+            "overdue_tasks": overdue_tasks,
+            "today_due_tasks": today_due_tasks,
+            "ai_created_tasks": ai_created_tasks,
+        }
+
+    def by_category(
+        self,
+        user: User,
+        from_time: Optional[datetime] = None,
+        to_time: Optional[datetime] = None,
+    ) -> list[dict]:
+        buckets: dict[str, dict] = defaultdict(lambda: {"total": 0, "done": 0, "todo": 0})
+        for task in self._task_query(user, from_time, to_time).all():
+            category = task.category.strip() if task.category and task.category.strip() else "未分类"
+            bucket = buckets[category]
+            bucket["total"] += 1
+            if task.status == TaskStatus.done.value:
+                bucket["done"] += 1
+            else:
+                bucket["todo"] += 1
+
+        result = []
+        for category, values in buckets.items():
+            result.append(
+                {
+                    "category": category,
+                    "total": values["total"],
+                    "done": values["done"],
+                    "todo": values["todo"],
+                    "completion_rate": self._rate(values["done"], values["total"]),
+                }
+            )
+        return sorted(result, key=lambda item: (-item["total"], item["category"]))
+
+    def by_priority(self, user: User) -> list[dict]:
+        values = {
+            priority.value: {"priority": priority.value, "total": 0, "done": 0, "todo": 0}
+            for priority in (Priority.high, Priority.medium, Priority.low)
+        }
+        for task in self._task_query(user).all():
+            bucket = values.get(task.priority)
+            if not bucket:
+                continue
+            bucket["total"] += 1
+            if task.status == TaskStatus.done.value:
+                bucket["done"] += 1
+            else:
+                bucket["todo"] += 1
+        return [values[priority.value] for priority in (Priority.high, Priority.medium, Priority.low)]
+
+    def trend(self, user: User, days: int) -> list[dict]:
+        today = utc_now().astimezone(APP_TIMEZONE).date()
+        start_date = today - timedelta(days=days - 1)
+        buckets = {
+            start_date + timedelta(days=offset): {"created": 0, "done": 0}
+            for offset in range(days)
+        }
+
+        range_start = datetime.combine(start_date, time.min, tzinfo=APP_TIMEZONE)
+        tasks = (
+            self.db.query(Task)
+            .filter(
+                Task.user_id == user.id,
+                ((Task.created_at >= range_start) | (Task.updated_at >= range_start)),
+            )
+            .all()
+        )
+        for task in tasks:
+            created_date = self._local_date(task.created_at)
+            if created_date in buckets:
+                buckets[created_date]["created"] += 1
+            if task.status == TaskStatus.done.value:
+                done_date = self._local_date(task.updated_at)
+                if done_date in buckets:
+                    buckets[done_date]["done"] += 1
+
+        return [
+            {"date": day, "created": values["created"], "done": values["done"]}
+            for day, values in buckets.items()
+        ]
+
+    def _task_query(
+        self,
+        user: User,
+        from_time: Optional[datetime] = None,
+        to_time: Optional[datetime] = None,
+    ) -> Query:
+        query = self.db.query(Task).filter(Task.user_id == user.id)
+        if from_time:
+            query = query.filter(Task.created_at >= from_time)
+        if to_time:
+            query = query.filter(Task.created_at <= to_time)
+        return query
+
+    def _today_bounds(self) -> tuple[datetime, datetime]:
+        today = utc_now().astimezone(APP_TIMEZONE).date()
+        today_start = datetime.combine(today, time.min, tzinfo=APP_TIMEZONE)
+        tomorrow_start = today_start + timedelta(days=1)
+        return today_start, tomorrow_start
+
+    def _local_date(self, value: datetime):
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=timezone.utc)
+        return value.astimezone(APP_TIMEZONE).date()
+
+    def _rate(self, done: int, total: int) -> float:
+        return round(done / total, 4) if total else 0

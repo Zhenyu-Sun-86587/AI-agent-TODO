@@ -2,10 +2,13 @@ from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Query, Request
+from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user
-from app.core.placeholders import not_implemented
+from app.api.deps import get_current_user, get_db
+from app.core.response import success_response
 from app.models.user import User
+from app.schemas.stats import CategoryStats, PriorityStats, StatsOverview, TrendStats
+from app.services.stats_service import StatsService
 
 router = APIRouter()
 
@@ -16,8 +19,10 @@ def overview(
     from_time: Optional[datetime] = Query(None, alias="from"),
     to_time: Optional[datetime] = Query(None, alias="to"),
     current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ) -> dict:
-    return not_implemented()
+    data = StatsOverview(**StatsService(db).overview(current_user, from_time, to_time))
+    return success_response(data, request_id=request.state.request_id)
 
 
 @router.get("/category")
@@ -26,16 +31,23 @@ def category_stats(
     from_time: Optional[datetime] = Query(None, alias="from"),
     to_time: Optional[datetime] = Query(None, alias="to"),
     current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ) -> dict:
-    return not_implemented()
+    data = [
+        CategoryStats(**item)
+        for item in StatsService(db).by_category(current_user, from_time, to_time)
+    ]
+    return success_response(data, request_id=request.state.request_id)
 
 
 @router.get("/priority")
 def priority_stats(
     request: Request,
     current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ) -> dict:
-    return not_implemented()
+    data = [PriorityStats(**item) for item in StatsService(db).by_priority(current_user)]
+    return success_response(data, request_id=request.state.request_id)
 
 
 @router.get("/trend")
@@ -43,5 +55,7 @@ def trend_stats(
     request: Request,
     days: int = Query(7, ge=1, le=30),
     current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ) -> dict:
-    return not_implemented()
+    data = [TrendStats(**item) for item in StatsService(db).trend(current_user, days)]
+    return success_response(data, request_id=request.state.request_id)
