@@ -55,6 +55,41 @@ cp .env.example .env
 python main.py
 ```
 
+### 后端本地测试
+
+后端代码位于 `backend/` 目录。首次测试或依赖更新后，先安装依赖：
+
+```bash
+cd backend
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements.txt
+```
+
+初始化或升级本地数据库：
+
+```bash
+.venv/bin/alembic upgrade head
+```
+
+启动 FastAPI 后端服务：
+
+```bash
+.venv/bin/uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+```
+
+启动成功后，在浏览器打开后端接口测试页面：
+
+```text
+http://127.0.0.1:8000/docs
+```
+
+也可以在终端检查健康接口和自动化测试：
+
+```bash
+curl http://127.0.0.1:8000/health
+.venv/bin/python -m pytest -q
+```
+
 ## 💡 使用指南
 
 ### 创建任务

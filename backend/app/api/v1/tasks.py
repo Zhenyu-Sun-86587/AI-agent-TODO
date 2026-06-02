@@ -2,11 +2,22 @@ from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Query, Request, Response, status
+from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user
-from app.core.placeholders import not_implemented
+from app.api.deps import get_current_user, get_db
+from app.core.response import page_response, success_response
 from app.models.user import User
-from app.schemas.task import Priority, TaskCreate, TaskStatus, TaskStatusUpdate, TaskUpdate
+from app.schemas.task import (
+    CategoryRead,
+    Priority,
+    TaskCreate,
+    TaskRead,
+    TaskStatus,
+    TaskStatusRead,
+    TaskStatusUpdate,
+    TaskUpdate,
+)
+from app.services.task_service import TaskService
 
 router = APIRouter()
 
@@ -16,8 +27,10 @@ def create_task(
     payload: TaskCreate,
     request: Request,
     current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ) -> dict:
-    return not_implemented()
+    task = TaskService(db).create_task(current_user, payload)
+    return success_response(TaskRead.model_validate(task), request_id=request.state.request_id)
 
 
 @router.get("")
@@ -34,16 +47,33 @@ def list_tasks(
     sort_by: str = Query("created_at", pattern="^(created_at|due_time|priority|updated_at)$"),
     sort_order: str = Query("desc", pattern="^(asc|desc)$"),
     current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ) -> dict:
-    return not_implemented()
+    items, total = TaskService(db).list_tasks(
+        current_user,
+        page=page,
+        page_size=page_size,
+        status=task_status,
+        priority=priority,
+        category=category,
+        keyword=keyword,
+        due_from=due_from,
+        due_to=due_to,
+        sort_by=sort_by,
+        sort_order=sort_order,
+    )
+    data = page_response([TaskRead.model_validate(item) for item in items], page, page_size, total)
+    return success_response(data, request_id=request.state.request_id)
 
 
 @router.get("/categories")
 def list_categories(
     request: Request,
     current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ) -> dict:
-    return not_implemented()
+    categories = [CategoryRead(**item) for item in TaskService(db).list_categories(current_user)]
+    return success_response(categories, request_id=request.state.request_id)
 
 
 @router.get("/{task_id}")
@@ -51,8 +81,10 @@ def get_task(
     task_id: int,
     request: Request,
     current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ) -> dict:
-    return not_implemented()
+    task = TaskService(db).get_task(current_user, task_id)
+    return success_response(TaskRead.model_validate(task), request_id=request.state.request_id)
 
 
 @router.put("/{task_id}")
@@ -61,8 +93,10 @@ def update_task(
     payload: TaskUpdate,
     request: Request,
     current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ) -> dict:
-    return not_implemented()
+    task = TaskService(db).update_task(current_user, task_id, payload)
+    return success_response(TaskRead.model_validate(task), request_id=request.state.request_id)
 
 
 @router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -70,8 +104,10 @@ def delete_task(
     task_id: int,
     request: Request,
     current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ) -> Response:
-    return not_implemented()
+    TaskService(db).delete_task(current_user, task_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.patch("/{task_id}/status")
@@ -80,5 +116,10 @@ def update_task_status(
     payload: TaskStatusUpdate,
     request: Request,
     current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ) -> dict:
-    return not_implemented()
+    task = TaskService(db).update_status(current_user, task_id, payload)
+    return success_response(
+        TaskStatusRead.model_validate(task),
+        request_id=request.state.request_id,
+    )

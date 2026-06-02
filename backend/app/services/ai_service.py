@@ -13,11 +13,11 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.errors import BusinessError, ErrorCode
 from app.models.ai_call_log import AiCallLog
-from app.models.task import Task
 from app.models.user import User
 from app.schemas.ai import AiParsedTask, AiSuggestResponse, CreateTaskByAiRequest, ParseTaskRequest
-from app.schemas.task import AiStatus, Priority, TaskCreate, TaskStatus
+from app.schemas.task import AiStatus, Priority, TaskCreate
 from app.services.setting_service import SettingService
+from app.services.task_service import TaskService
 from app.utils.datetime import utc_now
 
 PROMPT_PATH = Path(__file__).resolve().parents[1] / "prompts" / "parse_task.md"
@@ -92,19 +92,7 @@ class AiService:
                 merged[key] = value
             task_data = TaskCreate(**merged)
 
-        task = Task(
-            user_id=user.id,
-            title=task_data.title,
-            description=task_data.description,
-            priority=task_data.priority.value,
-            category=task_data.category,
-            due_time=task_data.due_time,
-            status=TaskStatus.todo.value,
-            is_ai_created=True,
-        )
-        self.db.add(task)
-        self.db.commit()
-        self.db.refresh(task)
+        task = TaskService(self.db).create_task(user, task_data, is_ai_created=True)
         return {
             "task": task,
             "parsed_task": parsed,
