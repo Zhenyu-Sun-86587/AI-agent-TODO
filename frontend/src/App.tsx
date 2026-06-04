@@ -31,7 +31,6 @@ import {
 
 type PageKey =
   | "dashboard"
-  | "today"
   | "all"
   | "ai"
   | "board"
@@ -284,7 +283,6 @@ function writeStoredJson(key: string, value: unknown) {
 
 const pagePaths: Record<PageKey, string> = {
   dashboard: "/",
-  today: "/today",
   all: "/tasks",
   ai: "/ai",
   board: "/board",
@@ -699,7 +697,6 @@ const initialTasks: Task[] = [
 
 const navItems: Array<{ key: PageKey; label: string; icon: LucideIcon }> = [
   { key: "dashboard", label: "Dashboard", icon: Home },
-  { key: "today", label: "今日任务", icon: CheckCircle2 },
   { key: "all", label: "全部任务", icon: ListTodo },
   { key: "ai", label: "AI 推荐", icon: Sparkles },
   { key: "board", label: "任务看板", icon: LayoutDashboard },
@@ -1800,14 +1797,13 @@ function PageRenderer({
   token,
   tasks,
 }: PageRendererProps) {
-  if (activePage === "dashboard" || activePage === "today") {
+  if (activePage === "dashboard") {
     return (
       <DashboardPage
         onOpenTask={onOpenTask}
         onPageChange={onPageChange}
         onToggleComplete={onToggleComplete}
         recommendedTasks={recommendedTasks}
-        showTodayOnly={activePage === "today"}
         tasks={tasks}
       />
     );
@@ -1863,7 +1859,6 @@ interface DashboardPageProps {
   onPageChange: (page: PageKey) => void;
   onToggleComplete: (taskId: number) => void;
   recommendedTasks: Task[];
-  showTodayOnly: boolean;
   tasks: Task[];
 }
 
@@ -1872,11 +1867,10 @@ function DashboardPage({
   onPageChange,
   onToggleComplete,
   recommendedTasks,
-  showTodayOnly,
   tasks,
 }: DashboardPageProps) {
   const todayTasks = tasks.filter((task) => isToday(task.dueDate));
-  const visibleTasks = showTodayOnly ? todayTasks : todayTasks.slice(0, 5);
+  const visibleTasks = todayTasks.slice(0, 5);
   const completedToday = todayTasks.filter((task) => task.status === "已完成").length;
   const overdue = tasks.filter(isOverdue).length;
 
@@ -1906,14 +1900,12 @@ function DashboardPage({
         <div className="content-card">
           <div className="section-title">
             <div>
-              <h2>{showTodayOnly ? "今日任务" : "今日任务模块"}</h2>
+              <h2>今日任务</h2>
               <p>按截止时间和 AI 优先级排序。</p>
             </div>
-            {!showTodayOnly && (
-              <button className="ghost-button" type="button" onClick={() => onPageChange("today")}>
-                查看全部
-              </button>
-            )}
+            <button className="ghost-button" type="button" onClick={() => onPageChange("all")}>
+              查看全部
+            </button>
           </div>
           <div className="task-card-list">
             {visibleTasks.length ? (
@@ -3442,7 +3434,7 @@ function MobileBottomNav({
   onCreateTask: () => void;
   onNavigate: (page: PageKey) => void;
 }) {
-  const items = navItems.filter((item) => ["dashboard", "today", "all", "stats"].includes(item.key));
+  const items = navItems.filter((item) => ["dashboard", "all", "calendar", "stats"].includes(item.key));
   return (
     <nav className="mobile-bottom-nav" aria-label="移动端导航">
       {items.slice(0, 2).map((item) => {

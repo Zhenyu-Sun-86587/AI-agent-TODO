@@ -474,6 +474,7 @@ p {
 
 .page-content {
   display: grid;
+  align-content: start;
   gap: 22px;
   padding: 28px;
 }
@@ -1112,18 +1113,27 @@ p {
 .range-tabs {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
+  align-self: start;
   gap: 8px;
 }
 
 .calendar-controls button,
 .range-tabs button {
-  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  height: 38px;
+  min-height: 38px;
   padding: 0 12px;
   border: 1px solid var(--line);
   border-radius: 10px;
   background: var(--surface);
   color: var(--muted);
   font-weight: 900;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .calendar-controls button.active,
@@ -1846,6 +1856,14 @@ p {
 
   .calendar-grid {
     grid-template-columns: 1fr;
+  }
+
+  .calendar-controls,
+  .range-tabs {
+    flex-wrap: nowrap;
+    margin-inline: -16px;
+    padding-inline: 16px;
+    overflow-x: auto;
   }
 
   .calendar-day {
