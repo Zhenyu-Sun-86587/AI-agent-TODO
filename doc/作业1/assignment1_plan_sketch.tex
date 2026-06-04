@@ -1,0 +1,760 @@
+\documentclass[UTF8,a4paper,12pt,fontset=fandol]{ctexart}
+
+\usepackage[a4paper,top=2.4cm,bottom=2.4cm,left=2.6cm,right=2.6cm]{geometry}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{caption}
+\usepackage{float}
+\usepackage{adjustbox}
+\usepackage[most]{tcolorbox}
+
+\usetikzlibrary{
+  arrows.meta,
+  positioning,
+  shapes.geometric,
+  shapes.misc,
+  calc,
+  fit,
+  backgrounds
+}
+
+\definecolor{brand}{HTML}{2563EB}
+\definecolor{brandDark}{HTML}{1E40AF}
+\definecolor{accent}{HTML}{059669}
+\definecolor{accentDark}{HTML}{047857}
+\definecolor{warm}{HTML}{F59E0B}
+\definecolor{danger}{HTML}{DC2626}
+\definecolor{ink}{HTML}{1F2937}
+\definecolor{muted}{HTML}{6B7280}
+\definecolor{panel}{HTML}{F8FAFC}
+\definecolor{linegray}{HTML}{CBD5E1}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=brandDark,
+  urlcolor=brandDark,
+  citecolor=brandDark
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{AI-agent-TODO}
+\rhead{前期项目计划书与功能草图}
+\cfoot{\thepage}
+\setlength{\headheight}{15pt}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\titleformat{\section}{\Large\bfseries\color{brandDark}}{\thesection}{0.8em}{}
+\titleformat{\subsection}{\large\bfseries\color{ink}}{\thesubsection}{0.8em}{}
+\titleformat{\subsubsection}{\bfseries\color{ink}}{\thesubsubsection}{0.6em}{}
+\captionsetup{font=small,labelfont=bf}
+
+\setlength{\parindent}{2em}
+\setlength{\parskip}{0.35em}
+\setlist[itemize]{leftmargin=2em,itemsep=0.2em,topsep=0.3em}
+\setlist[enumerate]{leftmargin=2em,itemsep=0.2em,topsep=0.3em}
+\renewcommand{\arraystretch}{1.32}
+
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\newcommand{\product}{AI-agent-TODO}
+\newcommand{\code}[1]{{\small\texttt{#1}}}
+
+\tikzset{
+  diagram text/.style={font=\sffamily\footnotesize,text=ink,align=center},
+  title node/.style={
+    diagram text,
+    font=\sffamily\bfseries\footnotesize,
+    rounded corners=5pt,
+    draw=brandDark,
+    fill=brand!10,
+    thick,
+    minimum width=30mm,
+    minimum height=9mm
+  },
+  module node/.style={
+    diagram text,
+    rounded corners=5pt,
+    draw=brand!65,
+    fill=brand!7,
+    thick,
+    minimum width=25mm,
+    minimum height=8.5mm
+  },
+  green node/.style={
+    diagram text,
+    rounded corners=5pt,
+    draw=accent!70,
+    fill=accent!8,
+    thick,
+    minimum width=25mm,
+    minimum height=8.5mm
+  },
+  amber node/.style={
+    diagram text,
+    rounded corners=5pt,
+    draw=warm!80,
+    fill=warm!12,
+    thick,
+    minimum width=25mm,
+    minimum height=8.5mm
+  },
+  gray node/.style={
+    diagram text,
+    rounded corners=5pt,
+    draw=linegray,
+    fill=panel,
+    thick,
+    minimum width=25mm,
+    minimum height=8.5mm
+  },
+  decision node/.style={
+    diamond,
+    aspect=2.25,
+    diagram text,
+    draw=warm!85,
+    fill=warm!12,
+    thick,
+    inner sep=1.6pt,
+    minimum width=27mm
+  },
+  tiny node/.style={
+    diagram text,
+    font=\sffamily\scriptsize,
+    rounded corners=4pt,
+    draw=linegray,
+    fill=white,
+    minimum width=18mm,
+    minimum height=6.5mm
+  },
+  group box/.style={
+    rounded corners=7pt,
+    draw=linegray,
+    fill=panel,
+    thick,
+    inner sep=7pt
+  },
+  flow line/.style={-Stealth,draw=ink!70,thick},
+  soft line/.style={-Stealth,draw=muted!70,thick},
+  dashed line/.style={-Stealth,draw=muted!70,thick,dashed},
+  lifeline/.style={draw=linegray,dashed,thick},
+  note/.style={
+    diagram text,
+    font=\sffamily\scriptsize,
+    rounded corners=4pt,
+    draw=linegray,
+    fill=white,
+    inner sep=4pt
+  }
+}
+
+\newtcolorbox{summarybox}{
+  colback=brand!5,
+  colframe=brand!70,
+  arc=5pt,
+  boxrule=0.8pt,
+  left=8pt,
+  right=8pt,
+  top=8pt,
+  bottom=8pt
+}
+
+\newtcolorbox{infobox}[1]{
+  colback=panel,
+  colframe=linegray,
+  arc=5pt,
+  boxrule=0.7pt,
+  title=#1,
+  fonttitle=\bfseries,
+  coltitle=ink,
+  left=8pt,
+  right=8pt,
+  top=7pt,
+  bottom=7pt
+}
+
+\begin{document}
+
+\begin{titlepage}
+  \centering
+  \vspace*{1.4cm}
+  {\Huge\bfseries \product 智能任务管理系统\par}
+  \vspace{0.6cm}
+  {\LARGE 前期项目计划书与功能草图\par}
+  \vspace{2.4cm}
+
+  \vfill
+  \begin{tabular}{rl}
+    团队成员： & 严骄阳、孙镇宇、上官福炜、刘明轩 \\
+    日期： & 2026 年 6 月 \\
+  \end{tabular}
+  \vspace*{1.2cm}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+\section{项目概述与产品定位}
+
+\begin{summarybox}
+\product 是一个面向个人用户的智能任务管理系统。项目以 Web 端为核心，通过 React + Vite 前端、FastAPI 后端和 OpenAI API 能力，将传统 TODO 的任务记录、状态管理、分类统计等能力与 AI 自然语言解析结合起来，让用户可以用更低成本完成任务录入和任务整理。
+
+项目的核心定位是：\textbf{把用户随手输入的自然语言转化为结构化任务，并围绕任务执行过程提供清晰、可视化的个人效率管理体验。}
+\end{summarybox}
+
+\subsection{项目价值}
+
+\begin{itemize}
+  \item \textbf{降低任务录入成本：}用户可以输入“明天下午三点完成软件工程报告，很重要”，系统自动解析标题、截止时间、优先级和分类。
+  \item \textbf{提升任务管理效率：}支持任务创建、编辑、删除、完成状态切换、筛选、搜索和排序。
+  \item \textbf{强化结果反馈：}通过完成率、待办数量、今日截止、逾期任务、分类完成度和优先级分布展示任务执行情况。
+  \item \textbf{降低部署成本：}采用 BYOK 模式，用户自行配置 OpenAI API Key，系统后端按用户设置调用 AI 能力。
+\end{itemize}
+
+\subsection{目标用户}
+
+\begin{table}[H]
+  \centering
+  \caption{目标用户与系统价值}
+  \begin{tabularx}{\linewidth}{>{\bfseries}p{2.7cm}YY}
+    \toprule
+    用户类型 & 典型需求 & 系统价值 \\
+    \midrule
+    学生用户 & 管理课程作业、考试安排、项目文档和答辩准备 & 快速创建学习任务，按截止时间和优先级安排进度 \\
+    个人开发者 & 管理开发任务、Bug 修复、文档整理和测试工作 & 将自然语言需求快速转成可跟踪任务 \\
+    普通办公用户 & 管理日常工作、会议事项和生活安排 & 通过分类、搜索和统计减少遗漏 \\
+    项目展示观众 & 快速理解 AI 与 TODO 场景结合方式 & 通过页面和流程图展示完整产品闭环 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\section{使用场景}
+
+\begin{infobox}{场景一：自然语言创建任务}
+用户在任务页输入自然语言描述，点击“解析”后，系统调用 AI 服务生成结构化任务草稿。用户可以在前端确认或修正解析结果，再点击“确认创建”生成任务。
+\end{infobox}
+
+\begin{infobox}{场景二：日常任务管理}
+用户登录后进入任务工作台，可以查看任务列表，按状态、优先级、分类和关键词筛选任务，也可以新建、编辑、删除任务，或快速切换任务完成状态。
+\end{infobox}
+
+\begin{infobox}{场景三：个人效率回顾}
+用户进入统计页后，可以查看任务总览、分类完成度、优先级分布和近 7 日趋势，用于了解当前任务压力和完成情况。
+\end{infobox}
+
+\begin{infobox}{场景四：用户自带 Key 调用 AI}
+用户在设置页填写 OpenAI API Key 和模型名称，系统只展示脱敏后的 Key 状态，并支持测试 Key 是否可用。
+\end{infobox}
+
+\section{核心功能规划}
+
+\begin{table}[H]
+  \centering
+  \caption{MVP 核心功能规划}
+  \begin{tabularx}{\linewidth}{>{\bfseries}p{2.6cm}Yp{2.2cm}}
+    \toprule
+    功能模块 & 功能内容 & MVP 状态 \\
+    \midrule
+    用户认证 & 注册、登录、JWT 鉴权、当前用户信息 & 核心功能 \\
+    任务管理 & 创建、查看、编辑、删除、完成状态切换 & 核心功能 \\
+    任务筛选 & 按关键词、状态、优先级、分类和截止时间排序 & 核心功能 \\
+    AI 创建任务 & 自然语言解析、草稿确认、AI 创建标记 & 核心功能 \\
+    统计分析 & 完成率、待办数、今日截止、逾期数、分类统计、优先级统计、趋势统计 & 核心功能 \\
+    BYOK 设置 & 保存 OpenAI API Key、模型名称、Key 测试、脱敏展示 & 核心功能 \\
+    演示模式 & 前端本地演示数据体验 & 展示辅助 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\subsection{功能模块说明}
+
+\begin{itemize}
+  \item \textbf{用户认证模块：}支持用户注册和登录，使用 JWT Token 保护任务、统计、AI 和设置接口，不同用户之间的数据相互隔离。
+  \item \textbf{任务管理模块：}支持标题、描述、优先级、分类、截止时间和状态字段，提供新建、编辑、删除、完成状态切换、搜索、筛选和排序。
+  \item \textbf{AI 自然语言创建模块：}用户输入自然语言后，后端调用 OpenAI API 或使用兜底策略生成结构化结果，前端展示草稿并允许用户修正。
+  \item \textbf{统计分析模块：}展示任务完成率、已完成数量、待办数量、今日截止任务、逾期任务、分类完成情况、优先级分布和近 7 日趋势。
+  \item \textbf{BYOK 设置模块：}用户可配置 OpenAI API Key 和默认模型名称，系统返回脱敏 Key 展示结果，并支持 Key 可用性测试。
+\end{itemize}
+
+\section{技术方案}
+
+\subsection{总体架构}
+
+\begin{figure}[H]
+  \centering
+  \resizebox{0.58\linewidth}{!}{
+    \begin{tikzpicture}[node distance=13mm]
+      \node[title node, minimum width=48mm] (fe) {React + Vite + TypeScript\\前端};
+      \node[module node, minimum width=48mm, below=of fe] (be) {FastAPI\\后端服务};
+      \node[green node, minimum width=48mm, below=of be] (db) {SQLite / PostgreSQL\\数据库};
+      \node[amber node, minimum width=48mm, below=of db] (ai) {OpenAI API\\用户 BYOK};
+
+      \draw[flow line] (fe) -- node[right, diagram text, font=\scriptsize]{HTTP / JSON} (be);
+      \draw[flow line] (be) -- node[right, diagram text, font=\scriptsize]{SQLAlchemy ORM} (db);
+      \draw[flow line] (db) -- node[right, diagram text, font=\scriptsize]{用户配置 Key} (ai);
+    \end{tikzpicture}
+  }
+  \caption{系统总体技术架构}
+\end{figure}
+
+\begin{infobox}{架构说明}
+系统采用前后端分离架构。React + Vite + TypeScript 前端负责页面展示、任务交互和 API 请求封装；FastAPI 后端负责认证、任务、统计、AI 和设置等业务接口；数据库通过 SQLAlchemy ORM 存储用户、任务、设置和 AI 调用记录；OpenAI API 通过用户自带 Key 调用，降低统一部署成本，并方便后续扩展多模型能力。
+\end{infobox}
+
+\subsection{前端方案}
+
+\begin{itemize}
+  \item 技术栈：React、Vite、TypeScript、React Router、Axios、lucide-react。
+  \item 页面路由：\code{/login}、\code{/tasks}、\code{/stats}、\code{/settings}。
+  \item 页面组成：登录注册页、任务工作台、统计看板、设置页。
+  \item 交互重点：任务快速创建、AI 草稿确认、筛选排序、错误提示和加载状态。
+\end{itemize}
+
+\subsection{后端方案}
+
+\begin{itemize}
+  \item 技术栈：FastAPI、Pydantic、SQLAlchemy、Alembic、Uvicorn。
+  \item API 前缀：\code{/api}。
+  \item 核心路由：认证、用户、任务、AI、统计、设置。
+  \item 认证方式：JWT Token。
+  \item 数据库：开发阶段使用 SQLite，后续可切换 PostgreSQL。
+\end{itemize}
+
+\subsection{数据与 AI 方案}
+
+\begin{itemize}
+  \item 核心实体：User、Task、UserSetting、AiCallLog。
+  \item 任务优先级：\code{low}、\code{medium}、\code{high}。
+  \item 任务状态：\code{todo}、\code{done}。
+  \item AI 输出结构：标题、描述、优先级、分类、截止时间、置信度和原始时间文本。
+  \item Key 管理：用户自带 Key，后端保存设置并对外脱敏展示。
+\end{itemize}
+
+\section{项目阶段计划}
+
+\begin{table}[H]
+  \centering
+  \caption{项目阶段计划}
+  \begin{tabularx}{\linewidth}{>{\bfseries}p{2.4cm}p{2cm}YY}
+    \toprule
+    阶段 & 时间安排 & 主要任务 & 交付物 \\
+    \midrule
+    前期设计 & 第 1 周 & 明确项目目标、功能边界、技术栈、接口约定和页面结构 & 项目计划书、功能草图、初步设计文档 \\
+    MVP 开发 & 第 2--3 周 & 实现用户认证、任务管理、AI 创建、统计分析和 BYOK 设置 & 可运行前后端、数据库迁移、基础测试 \\
+    联调测试 & 第 4 周 & 完成前后端接口联调、页面流程验证、异常场景处理 & API 文档、测试用例、问题修复记录 \\
+    演示验收 & 第 5 周 & 准备演示数据、项目说明、答辩材料和最终文档 & 演示版本、项目总结、部署说明 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\section{团队分工与交付物}
+
+\begin{table}[H]
+  \centering
+  \caption{团队分工}
+  \begin{tabularx}{\linewidth}{>{\bfseries}p{2.5cm}YY}
+    \toprule
+    成员 & 主要职责 & 重点交付 \\
+    \midrule
+    严骄阳 & 后端接口与数据库设计 & FastAPI 路由、SQLAlchemy 模型、Alembic 迁移、后端测试 \\
+    上官福炜 & 前端页面与交互设计 & 登录页、任务页、统计页、设置页、组件与样式 \\
+    孙镇宇 & AI 模块与 OpenAI API 接入 & 自然语言解析、AI 创建任务、调用日志、BYOK 联调 \\
+    刘明轩 & 测试、文档、部署与项目管理 & 测试用例、项目文档、部署说明、演示材料 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\subsection{交付物规划}
+
+\begin{itemize}
+  \item 可运行的 Web 智能 TODO 系统。
+  \item 前端项目：页面、组件、API 请求封装和本地演示模式。
+  \item 后端项目：API 服务、数据模型、认证、AI 服务、统计服务和测试用例。
+  \item 数据库迁移脚本和本地启动说明。
+  \item 项目文档：初步设计、开发计划、API 对接文档、前期项目计划书、功能草图。
+  \item 演示材料：产品流程、核心功能截图或页面说明、问题总结与改进方向。
+\end{itemize}
+
+\section{风险与应对}
+
+\begin{table}[H]
+  \centering
+  \caption{主要风险与应对措施}
+  \begin{tabularx}{\linewidth}{>{\bfseries}p{3.1cm}YY}
+    \toprule
+    风险 & 影响 & 应对措施 \\
+    \midrule
+    OpenAI API Key 不可用 & AI 解析功能无法正常演示 & 保留 Key 测试功能和 Mock 兜底策略 \\
+    自然语言解析不稳定 & 解析结果可能不符合用户预期 & 前端提供草稿确认和手动修改入口 \\
+    前后端字段不一致 & 联调出现请求失败或展示错误 & 以 API 文档和 TypeScript 类型作为共同约定 \\
+    数据库迁移遗漏 & 本地环境无法启动或表结构错误 & 使用 Alembic 管理迁移并保留测试用例 \\
+    项目展示时间有限 & 无法完整展示所有细节 & 优先展示登录、AI 创建任务、任务管理和统计闭环 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\section{功能草图}
+
+本节将原 Markdown 文档中的 Mermaid 图重新绘制为统一风格的 TikZ 图。所有图统一使用蓝色表示前端与用户入口，绿色表示数据或业务处理，橙色表示判断、AI 或外部服务节点，保证视觉风格、节点大小和排版间距一致。
+
+\subsection{系统功能总览}
+
+\begin{figure}[H]
+  \centering
+  \resizebox{0.88\linewidth}{!}{
+    \begin{tikzpicture}[node distance=10mm and 14mm]
+      \node[title node, text width=28mm, minimum height=12mm] (user) at (0,0) {个人用户};
+
+      \node[module node, text width=38mm, minimum height=20mm] (auth) at (-5.0,2.45)
+        {用户认证\\{\scriptsize 登录 / 注册 / 演示模式}};
+      \node[module node, text width=38mm, minimum height=20mm] (settings) at (5.0,2.45)
+        {BYOK 设置\\{\scriptsize API Key / 模型名称 / Key 测试}};
+      \node[module node, text width=38mm, minimum height=22mm] (tasks) at (-5.0,-2.45)
+        {任务管理\\{\scriptsize 新建 / 编辑 / 删除}\\{\scriptsize 完成状态 / 搜索筛选}};
+      \node[green node, text width=38mm, minimum height=22mm] (stats) at (5.0,-2.45)
+        {统计分析\\{\scriptsize 总览 / 分类完成度}\\{\scriptsize 优先级分布 / 近 7 日趋势}};
+      \node[amber node, text width=40mm, minimum height=20mm] (ai) at (0,-5.35)
+        {AI 自然语言创建\\{\scriptsize 解析输入 / 草稿确认 / 创建任务}};
+
+      \draw[flow line] (user) -- (auth);
+      \draw[flow line] (user) -- (settings);
+      \draw[flow line] (user) -- (tasks);
+      \draw[flow line] (user) -- (stats);
+      \draw[flow line] (user) -- (ai);
+    \end{tikzpicture}
+  }
+  \caption{系统功能总览}
+\end{figure}
+
+\subsection{用户访问流程}
+
+\begin{figure}[H]
+  \centering
+  \resizebox{0.90\linewidth}{!}{
+    \begin{tikzpicture}[node distance=10mm and 16mm]
+      \node[title node] (start) at (0,0) {打开系统};
+      \node[decision node] (token) at (0,-1.65) {本地是否\\已有 Token};
+      \node[module node, text width=30mm] (login) at (-4.7,-3.45) {进入 /login\\登录注册页};
+      \node[green node, text width=31mm] (tasks) at (6.1,-6.85) {进入 /tasks\\任务工作台};
+
+      \node[decision node] (choice) at (-4.7,-5.35) {用户选择};
+      \node[module node, text width=27mm] (loginSubmit) at (-8.4,-7.0) {提交账号\\和密码};
+      \node[module node, text width=27mm] (registerSubmit) at (-4.7,-7.0) {提交用户名\\邮箱 密码};
+      \node[amber node, text width=25mm] (demo) at (-1.0,-7.0) {进入\\演示模式};
+
+      \node[decision node] (authok) at (-6.2,-8.85) {认证是否\\成功};
+      \node[module node, text width=27mm] (error) at (-8.8,-10.35) {展示错误提示};
+      \node[green node, text width=27mm] (save) at (-3.95,-10.35) {保存 JWT\\Token};
+
+      \draw[flow line] (start) -- (token);
+      \draw[flow line] (token) -- node[above left, diagram text, font=\scriptsize]{无} (login);
+      \draw[flow line] (token.east) -- node[above, diagram text, font=\scriptsize]{有} (tasks.north |- token.east) -- (tasks.north);
+      \draw[flow line] (login) -- (choice);
+      \draw[flow line] (choice) -- node[above left, diagram text, font=\scriptsize]{登录} (loginSubmit);
+      \draw[flow line] (choice) -- node[right, diagram text, font=\scriptsize]{注册} (registerSubmit);
+      \draw[flow line] (choice) -- node[above right, diagram text, font=\scriptsize]{体验演示} (demo);
+      \draw[flow line] (loginSubmit) -- (authok);
+      \draw[flow line] (registerSubmit) -- (authok);
+      \draw[flow line] (authok) -- node[below left, diagram text, font=\scriptsize]{失败} (error);
+      \draw[flow line] (authok) -- node[below right, diagram text, font=\scriptsize]{成功} (save);
+      \draw[flow line] (save.east) -- ++(1.2,0) -| (tasks.south);
+      \draw[flow line] (demo.east) -- ++(1.7,0) -- (tasks.west);
+      \draw[dashed line] (error.west) -- ++(-0.9,0) |- (login.west);
+    \end{tikzpicture}
+  }
+  \caption{用户访问流程}
+\end{figure}
+
+\subsection{页面流转草图}
+
+\begin{figure}[H]
+  \centering
+  \resizebox{0.88\linewidth}{!}{
+    \begin{tikzpicture}[node distance=13mm and 18mm]
+      \node[module node, minimum width=32mm] (login) at (-6.0,0) {/login\\登录注册页};
+      \node[title node, minimum width=36mm] (tasks) at (-1.6,0) {/tasks\\任务工作台};
+      \node[green node, minimum width=32mm] (stats) at (4.5,2.0) {/stats\\统计看板};
+      \node[module node, minimum width=32mm] (settings) at (4.5,-2.0) {/settings\\设置页};
+
+      \node[amber node, minimum width=30mm] (create) at (-6.0,-4.2) {创建任务弹窗};
+      \node[amber node, minimum width=30mm] (edit) at (-1.6,-4.2) {编辑任务弹窗};
+      \node[amber node, minimum width=30mm] (draft) at (2.8,-4.2) {AI 解析草稿};
+
+      \draw[flow line] (login) -- (tasks);
+      \draw[draw=ink!70,thick,Stealth-Stealth] (tasks.north east) -- (stats.west);
+      \draw[draw=ink!70,thick,Stealth-Stealth] (tasks.south east) -- (settings.west);
+      \draw[flow line] (tasks) -- (create);
+      \draw[flow line] (tasks) -- (edit);
+      \draw[flow line] (tasks) -- (draft);
+    \end{tikzpicture}
+  }
+  \caption{页面流转草图}
+\end{figure}
+
+\subsection{页面结构草图}
+
+\begin{figure}[H]
+  \centering
+  \resizebox{\linewidth}{!}{
+    \begin{tikzpicture}[
+      screen/.style={rounded corners=6pt, draw=brand!50, fill=white, thick, minimum width=58mm, minimum height=54mm},
+      widget/.style={rounded corners=3pt, draw=linegray, fill=panel, minimum height=5mm},
+      label/.style={diagram text, font=\sffamily\bfseries\small}
+    ]
+      \node[screen] (loginScreen) at (0,0) {};
+      \node[label] at (0,2.15) {登录注册页 /login};
+      \draw[widget] (-2.25,1.35) rectangle (2.25,1.65);
+      \draw[widget, fill=brand!8] (-2.25,0.75) rectangle (2.25,1.05);
+      \draw[widget] (-2.25,0.15) rectangle (2.25,0.45);
+      \draw[widget] (-2.25,-0.45) rectangle (2.25,-0.15);
+      \draw[widget, fill=brand!12] (-2.25,-1.1) rectangle (2.25,-0.75);
+      \node[diagram text, font=\scriptsize] at (0,1.5) {品牌与价值文案};
+      \node[diagram text, font=\scriptsize] at (0,0.9) {登录 / 注册切换};
+      \node[diagram text, font=\scriptsize] at (0,0.3) {账号或邮箱};
+      \node[diagram text, font=\scriptsize] at (0,-0.3) {密码};
+      \node[diagram text, font=\scriptsize] at (0,-0.92) {进入工作台 / 体验演示};
+
+      \node[screen] (taskScreen) at (7,0) {};
+      \node[label] at (7,2.15) {任务工作台 /tasks};
+      \foreach \x/\t in {5.1/完成率,7/今日截止,8.9/AI 创建} {
+        \draw[widget, fill=brand!8] (\x-0.75,1.4) rectangle (\x+0.75,1.75);
+        \node[diagram text, font=\scriptsize] at (\x,1.575) {\t};
+      }
+      \draw[widget, fill=accent!8] (4.9,0.55) rectangle (9.1,1.1);
+      \node[diagram text, font=\scriptsize] at (7,0.82) {AI 自然语言创建};
+      \draw[widget] (4.9,-0.2) rectangle (9.1,0.15);
+      \node[diagram text, font=\scriptsize] at (7,-0.02) {搜索 / 筛选 / 新建};
+      \draw[widget] (4.9,-1.35) rectangle (9.1,-0.55);
+      \node[diagram text, font=\scriptsize] at (7,-0.95) {任务卡片列表};
+
+      \node[screen] (statsScreen) at (0,-6.0) {};
+      \node[label] at (0,-3.85) {统计看板 /stats};
+      \foreach \x/\t in {-1.8/完成率,0/待办,1.8/逾期} {
+        \draw[widget, fill=brand!8] (\x-0.7,-4.65) rectangle (\x+0.7,-4.28);
+        \node[diagram text, font=\scriptsize] at (\x,-4.46) {\t};
+      }
+      \draw[widget] (-2.35,-5.55) rectangle (-0.15,-5.0);
+      \draw[widget] (0.15,-5.55) rectangle (2.35,-5.0);
+      \node[diagram text, font=\scriptsize] at (-1.25,-5.28) {分类完成度};
+      \node[diagram text, font=\scriptsize] at (1.25,-5.28) {优先级分布};
+      \draw[widget, fill=accent!8] (-2.35,-6.75) rectangle (2.35,-5.95);
+      \node[diagram text, font=\scriptsize] at (0,-6.35) {近 7 日趋势};
+
+      \node[screen] (settingScreen) at (7,-6.0) {};
+      \node[label] at (7,-3.85) {设置页 /settings};
+      \draw[widget, fill=brand!8] (4.85,-4.85) rectangle (9.15,-4.25);
+      \node[diagram text, font=\scriptsize] at (7,-4.55) {账号信息};
+      \draw[widget] (4.85,-5.65) rectangle (9.15,-5.25);
+      \node[diagram text, font=\scriptsize] at (7,-5.45) {模型名称};
+      \draw[widget] (4.85,-6.25) rectangle (9.15,-5.85);
+      \node[diagram text, font=\scriptsize] at (7,-6.05) {OpenAI API Key};
+      \draw[widget, fill=accent!8] (4.85,-6.95) rectangle (6.75,-6.55);
+      \draw[widget, fill=brand!8] (7.25,-6.95) rectangle (9.15,-6.55);
+      \node[diagram text, font=\scriptsize] at (5.8,-6.75) {测试 Key};
+      \node[diagram text, font=\scriptsize] at (8.2,-6.75) {保存设置};
+    \end{tikzpicture}
+  }
+  \caption{核心页面结构草图}
+\end{figure}
+
+\subsection{任务管理流程}
+
+\begin{figure}[H]
+  \centering
+  \resizebox{0.92\linewidth}{!}{
+    \begin{tikzpicture}[node distance=9mm and 11mm]
+      \node[title node] (page) at (0,0) {任务工作台};
+      \node[decision node] (op) at (0,-1.35) {用户操作};
+
+      \node[module node, text width=23mm] (createOpen) at (-7.2,-3.0) {打开创建\\任务弹窗};
+      \node[module node, text width=23mm] (fill) at (-7.2,-4.25) {填写任务字段};
+      \node[green node, text width=23mm] (submitCreate) at (-7.2,-5.5) {提交创建};
+
+      \node[module node, text width=23mm] (editOpen) at (-3.6,-3.0) {打开编辑\\任务弹窗};
+      \node[module node, text width=23mm] (modify) at (-3.6,-4.25) {修改任务字段};
+      \node[green node, text width=23mm] (submitEdit) at (-3.6,-5.5) {提交更新};
+
+      \node[green node, text width=23mm] (toggle) at (0,-4.25) {切换\\todo / done};
+
+      \node[module node, text width=23mm] (confirm) at (3.6,-3.0) {弹出删除确认};
+      \node[decision node] (deleteYes) at (3.6,-4.35) {确认删除};
+      \node[green node, text width=23mm] (submitDelete) at (3.6,-5.7) {提交删除};
+
+      \node[module node, text width=23mm] (filters) at (7.2,-3.0) {更新搜索\\筛选排序};
+      \node[green node, text width=23mm] (reload) at (7.2,-4.35) {重新加载\\任务列表};
+
+      \node[title node, minimum width=48mm] (refresh) at (0,-7.25) {刷新任务列表和统计};
+
+      \draw[flow line] (page) -- (op);
+      \draw[flow line] (op) -- node[above left, diagram text, font=\scriptsize]{新建} (createOpen);
+      \draw[flow line] (createOpen) -- (fill);
+      \draw[flow line] (fill) -- (submitCreate);
+      \draw[flow line] (submitCreate) |- (refresh);
+
+      \draw[flow line] (op) -- node[above left, diagram text, font=\scriptsize]{编辑} (editOpen);
+      \draw[flow line] (editOpen) -- (modify);
+      \draw[flow line] (modify) -- (submitEdit);
+      \draw[flow line] (submitEdit) -- (refresh);
+
+      \draw[flow line] (op) -- node[right, diagram text, font=\scriptsize]{完成状态} (toggle);
+      \draw[flow line] (toggle) -- (refresh);
+
+      \draw[flow line] (op) -- node[above right, diagram text, font=\scriptsize]{删除} (confirm);
+      \draw[flow line] (confirm) -- (deleteYes);
+      \draw[flow line] (deleteYes) -- node[right, diagram text, font=\scriptsize]{确认} (submitDelete);
+      \draw[flow line] (submitDelete) |- (refresh);
+      \draw[flow line] (op) -- node[above right, diagram text, font=\scriptsize]{筛选搜索} (filters);
+      \draw[flow line] (filters) -- (reload);
+      \draw[flow line] (reload) |- (refresh);
+    \end{tikzpicture}
+  }
+  \caption{任务管理流程}
+\end{figure}
+
+\subsection{AI 自然语言创建流程}
+
+\begin{figure}[H]
+  \centering
+  \resizebox{\linewidth}{!}{
+    \begin{tikzpicture}[x=1cm,y=1cm]
+      \foreach \x/\name in {
+        0/用户,
+        2.75/任务页,
+        5.55/FastAPI 后端,
+        8.35/AI 服务,
+        11.15/OpenAI API,
+        13.85/数据库
+      } {
+        \node[title node, minimum width=24mm] at (\x,0) {\name};
+        \draw[lifeline] (\x,-0.45) -- (\x,-8.7);
+      }
+
+      \draw[flow line] (0,-1.0) -- node[above, diagram text, font=\scriptsize]{输入自然语言任务} (2.75,-1.0);
+      \draw[flow line] (0,-1.75) -- node[above, diagram text, font=\scriptsize]{点击解析} (2.75,-1.75);
+      \draw[flow line] (2.75,-2.5) -- node[above, diagram text, font=\scriptsize]{POST /api/ai/parse-task} (5.55,-2.5);
+      \draw[flow line] (5.55,-3.25) -- node[above, diagram text, font=\scriptsize]{校验用户设置和输入文本} (8.35,-3.25);
+      \draw[flow line] (8.35,-4.0) -- node[above, diagram text, font=\scriptsize]{使用用户 API Key 请求解析} (11.15,-4.0);
+      \draw[soft line] (11.15,-4.75) -- node[above, diagram text, font=\scriptsize]{返回结构化字段} (8.35,-4.75);
+      \draw[soft line] (8.35,-5.5) -- node[above, diagram text, font=\scriptsize]{返回解析结果} (5.55,-5.5);
+      \draw[soft line] (5.55,-6.25) -- node[above, diagram text, font=\scriptsize]{返回 AI 草稿} (2.75,-6.25);
+      \draw[soft line] (2.75,-7.0) -- node[above, diagram text, font=\scriptsize]{展示草稿并允许修正} (0,-7.0);
+      \draw[flow line] (0,-7.75) -- node[above, diagram text, font=\scriptsize]{确认创建} (2.75,-7.75);
+      \draw[flow line] (2.75,-8.5) -- node[above, diagram text, font=\scriptsize]{POST /api/ai/create-task} (5.55,-8.5);
+      \draw[flow line] (5.55,-9.25) -- node[above, diagram text, font=\scriptsize]{创建任务并记录调用} (13.85,-9.25);
+      \draw[soft line] (13.85,-10.0) -- node[above, diagram text, font=\scriptsize]{返回新任务} (2.75,-10.0);
+      \draw[soft line] (2.75,-10.75) -- node[above, diagram text, font=\scriptsize]{刷新列表和统计} (0,-10.75);
+    \end{tikzpicture}
+  }
+  \caption{AI 自然语言创建时序流程}
+\end{figure}
+
+\clearpage
+\subsection{前后端交互草图}
+
+\begin{figure}[H]
+  \centering
+  \resizebox{0.92\linewidth}{!}{
+    \begin{tikzpicture}[node distance=10mm and 14mm]
+      \node[diagram text, font=\sffamily\bfseries\footnotesize] at (0,2.85) {React + Vite 前端};
+      \node[module node, text width=27mm] (login) at (0,1.65) {/login};
+      \node[module node, text width=27mm] (tasksPage) at (0,0.55) {/tasks};
+      \node[module node, text width=27mm] (statsPage) at (0,-0.55) {/stats};
+      \node[module node, text width=27mm] (settingsPage) at (0,-1.65) {/settings};
+
+      \node[diagram text, font=\sffamily\bfseries\footnotesize] at (4.2,2.85) {请求封装};
+      \node[title node, text width=30mm, minimum height=11mm] (client) at (4.2,0) {Axios API\\Client};
+
+      \node[diagram text, font=\sffamily\bfseries\footnotesize] at (8.8,2.85) {FastAPI 后端};
+      \node[green node, text width=40mm, minimum height=34mm] (backend) at (8.8,0)
+        {FastAPI 路由层\\[2pt]
+        {\scriptsize /api/auth \quad /api/users}\\
+        {\scriptsize /api/tasks \quad /api/ai}\\
+        {\scriptsize /api/stats \quad /api/settings}};
+
+      \node[diagram text, font=\sffamily\bfseries\footnotesize] at (14.3,2.85) {数据与外部服务};
+      \node[amber node, text width=32mm, minimum height=11mm] (db) at (14.3,0.95)
+        {SQLite / PostgreSQL\\{\scriptsize 用户、任务、设置、调用记录}};
+      \node[amber node, text width=32mm, minimum height=11mm] (openai) at (14.3,-1.25)
+        {OpenAI API\\{\scriptsize BYOK 调用}};
+
+      \foreach \p in {login,tasksPage,statsPage,settingsPage} {
+        \draw[flow line] (\p.east) -- (client.west);
+      }
+      \draw[flow line] (client.east) -- (backend.west);
+      \draw[flow line] (backend.east) -- (db.west);
+      \draw[flow line] (backend.east) -- (openai.west);
+    \end{tikzpicture}
+  }
+  \caption{前后端交互草图}
+\end{figure}
+
+\subsection{核心接口关系}
+
+\begin{table}[H]
+  \centering
+  \caption{页面与核心接口关系}
+  \begin{tabularx}{\linewidth}{>{\bfseries}p{2.3cm}YY}
+    \toprule
+    页面 & 主要接口 & 用途 \\
+    \midrule
+    \code{/login} & \code{/api/auth/register}、\code{/api/auth/login} & 用户注册和登录 \\
+    \code{/tasks} & \code{/api/tasks}、\code{/api/tasks/\{task\_id\}}、\code{/api/tasks/\{task\_id\}/status} & 任务增删改查和状态切换 \\
+    \code{/tasks} & \code{/api/ai/parse-task}、\code{/api/ai/create-task} & AI 解析与 AI 创建任务 \\
+    \code{/stats} & \code{/api/stats/overview}、\code{/api/stats/category}、\code{/api/stats/priority}、\code{/api/stats/trend} & 统计看板数据 \\
+    \code{/settings} & \code{/api/settings}、\newline \code{/api/settings/test-openai-key} & BYOK 配置和 Key 测试 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\subsection{展示闭环}
+
+\begin{figure}[H]
+  \centering
+  \resizebox{0.84\linewidth}{!}{
+    \begin{tikzpicture}[node distance=10mm and 12mm]
+      \node[title node, text width=28mm] (a) at (0,2.35) {注册或登录};
+      \node[module node, text width=28mm] (b) at (4.0,2.35) {配置 OpenAI\\API Key};
+      \node[amber node, text width=28mm] (c) at (8.0,2.35) {输入自然语言\\任务};
+      \node[amber node, text width=28mm] (d) at (8.0,0) {AI 解析\\任务草稿};
+      \node[green node, text width=28mm] (e) at (8.0,-2.35) {确认创建\\任务};
+      \node[module node, text width=28mm] (f) at (4.0,-2.35) {在任务列表\\管理任务};
+      \node[green node, text width=28mm] (g) at (0,-2.35) {切换完成\\状态};
+      \node[green node, text width=28mm] (h) at (0,0) {查看统计\\看板};
+      \node[module node, text width=28mm] (i) at (4.0,0) {回到任务页\\继续管理};
+
+      \draw[flow line] (a) -- (b);
+      \draw[flow line] (b) -- (c);
+      \draw[flow line] (c) -- (d);
+      \draw[flow line] (d) -- (e);
+      \draw[flow line] (e) -- (f);
+      \draw[flow line] (f) -- (g);
+      \draw[flow line] (g) -- (h);
+      \draw[flow line] (h) -- (i);
+      \draw[dashed line] (i.north east) -- (c.south west);
+    \end{tikzpicture}
+  }
+  \caption{产品展示闭环}
+\end{figure}
+
+\section{预期成果}
+
+项目完成后，应形成一个具备完整产品闭环的 AI 智能任务管理系统。用户可以注册登录、管理个人任务、使用 AI 自然语言创建任务、查看统计结果，并通过 BYOK 模式配置自己的 OpenAI API Key。
+
+从产品展示角度，项目能够清晰体现以下成果：
+
+\begin{itemize}
+  \item AI 能力与日常任务管理场景的结合。
+  \item 从自然语言输入到结构化任务创建的完整流程。
+  \item 前后端分离项目的工程实现能力。
+  \item 数据统计、任务筛选和用户设置带来的完整使用体验。
+  \item 可继续扩展到移动端、桌面端、多模型支持和多人协作任务空间的架构基础。
+\end{itemize}
+
+\end{document}
