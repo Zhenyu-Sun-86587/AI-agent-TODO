@@ -95,6 +95,11 @@ interface SettingsState {
   hasOpenaiApiKey?: boolean;
 }
 
+interface ProfileState {
+  username: string;
+  email: string;
+}
+
 interface ApiEnvelope<T> {
   code: number;
   message: string;
@@ -119,6 +124,8 @@ interface ApiUser {
   id: number;
   username: string;
   email: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 interface ApiAuthResponse {
@@ -215,11 +222,25 @@ interface ApiOpenAIKeyTest {
   latency_ms: number | null;
 }
 
+interface ApiAiLog {
+  id: number;
+  input_text: string;
+  output_json: unknown;
+  status: "success" | "failed" | "mocked";
+  model_name: string | null;
+  created_at: string;
+}
+
 interface RemoteStatsState {
   overview: ApiStatsOverview | null;
   categories: ApiCategoryStats[];
   priorities: ApiPriorityStats[];
   trend: ApiTrendStats[];
+}
+
+interface TaskDetailState {
+  isLoading: boolean;
+  error: string;
 }
 
 interface TaskFieldSuggestion {
@@ -371,6 +392,17 @@ function isoFromLocalParts(date: string, time: string) {
   return `${date}T${time || "23:59"}:00${offsetSign}${offsetHours}:${offsetRestMinutes}`;
 }
 
+function apiRangeIso(date: string, time: "00:00" | "23:59") {
+  return isoFromLocalParts(date, time) || "";
+}
+
+function buildDateRange(startDate: string, endDate: string) {
+  return {
+    from: apiRangeIso(startDate, "00:00"),
+    to: apiRangeIso(endDate, "23:59"),
+  };
+}
+
 function dateFromIso(value: string | null) {
   return localPartsFromIso(value).date || dateFromToday(0);
 }
@@ -440,6 +472,8 @@ function inputToApiTaskPayload(input: NewTaskInput) {
 
 function buildTaskListPath({
   category,
+  dueFrom,
+  dueTo,
   keyword,
   page,
   pageSize,
@@ -448,6 +482,8 @@ function buildTaskListPath({
   status,
 }: {
   category: string;
+  dueFrom?: string;
+  dueTo?: string;
   keyword: string;
   page: number;
   pageSize: number;
@@ -471,6 +507,12 @@ function buildTaskListPath({
   }
   if (category !== "全部") {
     params.set("category", category);
+  }
+  if (dueFrom) {
+    params.set("due_from", dueFrom);
+  }
+  if (dueTo) {
+    params.set("due_to", dueTo);
   }
 
   if (sort === "priority") {
@@ -909,6 +951,10 @@ const emptyRemoteStats: RemoteStatsState = {
 
 export function App() {
   const [session, setSession] = useState<DemoSession | null>(() => readStoredJson<DemoSession | null>(SESSION_STORAGE_KEY, null));
+  const [profile, setProfile] = useState<ProfileState>(() => ({
+    username: session?.name || "Demo User",
+    email: session?.email || "demo@aitodo.local",
+  }));
   const [tasks, setTasks] = useState<Task[]>(() => readStoredJson<Task[]>(TASKS_STORAGE_KEY, initialTasks));
   const [settings, setSettings] = useState<SettingsState>(() => readStoredJson<SettingsState>(SETTINGS_STORAGE_KEY, defaultSettings));
   const [remoteStats, setRemoteStats] = useState<RemoteStatsState>(emptyRemoteStats);
@@ -926,7 +972,18 @@ export function App() {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [isDark, setIsDark] = useState(() => readStoredJson<boolean>(THEME_STORAGE_KEY, false));
   const [globalSearch, setGlobalSearch] = useState("");
+  const [taskDetailState, setTaskDetailState] = useState<TaskDetailState>({ isLoading: false, error: "" });
   const activeToken = session?.isApiSession ? session.token : "";
+
+  const clearSession = () => {
+    setSession(null);
+    window.localStorage.removeItem(SESSION_STORAGE_KEY);
+    window.history.pushState(null, "", "/login");
+    setAuthMode("login");
+    setSelectedTask(null);
+    setEditingTask(null);
+    setTaskDetailState({ isLoading: false, error: "" });
+  };
 
   useEffect(() => {
     if (!session?.isApiSession) {
@@ -950,7 +1007,7 @@ export function App() {
 
   const handleApiError = (error: unknown) => {
     if (error instanceof ApiError && error.status === 401) {
-      logout();
+      clearSession();
       return "登录已过期，请重新登录。";
     }
 
@@ -988,6 +1045,7 @@ export function App() {
             }
           : currentSession,
       );
+      setProfile({ username: me.username, email: me.email });
       setTasks(taskPage.items.map((task) => mapApiTask(task)));
       setRemoteCategories(categoryList.map((item) => item.name).filter(Boolean));
       setSettings({
@@ -1018,6 +1076,10 @@ export function App() {
       setApiMessage("本地演示模式");
       setRemoteStats(emptyRemoteStats);
       setRemoteCategories([]);
+      setProfile({
+        username: session?.name || "Demo User",
+        email: session?.email || "demo@aitodo.local",
+      });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.isApiSession, session?.token]);
@@ -1043,6 +1105,7 @@ export function App() {
 
   const authenticate = (nextSession: DemoSession) => {
     setSession(nextSession);
+    setProfile({ username: nextSession.name, email: nextSession.email });
     writeStoredJson(SESSION_STORAGE_KEY, nextSession);
     navigateTo("dashboard");
   };
@@ -1098,13 +1161,84 @@ export function App() {
     });
   };
 
-  const logout = () => {
-    setSession(null);
-    window.localStorage.removeItem(SESSION_STORAGE_KEY);
-    window.history.pushState(null, "", "/login");
-    setAuthMode("login");
-    setSelectedTask(null);
-    setEditingTask(null);
+  const logout = async () => {
+    if (activeToken) {
+      try {
+        await apiRequest<null>("/auth/logout", {
+          method: "POST",
+          token: activeToken,
+        });
+      } catch (error) {
+        setApiMessage(asErrorMessage(error));
+      }
+    }
+    clearSession();
+  };
+
+  const openTaskDetails = async (task: Task) => {
+    setSelectedTask(task);
+    setTaskDetailState({ isLoading: Boolean(activeToken), error: "" });
+    if (!activeToken) {
+      return;
+    }
+
+    try {
+      const remoteTask = await apiRequest<ApiTask>(`/tasks/${task.id}`, { token: activeToken });
+      setSelectedTask(mapApiTask(remoteTask));
+      setTaskDetailState({ isLoading: false, error: "" });
+    } catch (error) {
+      setTaskDetailState({ isLoading: false, error: handleApiError(error) });
+    }
+  };
+
+  const saveProfile = async (nextProfile: ProfileState) => {
+    const username = nextProfile.username.trim();
+    const email = nextProfile.email.trim();
+    if (!username) {
+      return "用户名不能为空。";
+    }
+    if (!isBackendCompatibleEmail(email)) {
+      return "请输入有效邮箱，不能使用 .local 或 example.com 等保留域名。";
+    }
+
+    if (!activeToken) {
+      setProfile({ username, email });
+      setSession((currentSession) =>
+        currentSession
+          ? {
+              ...currentSession,
+              name: username,
+              email,
+            }
+          : currentSession,
+      );
+      return "已保存到本地演示资料。";
+    }
+
+    try {
+      setApiState("loading");
+      setApiMessage("正在保存 /users/me...");
+      const user = await apiRequest<ApiUser>("/users/me", {
+        method: "PUT",
+        token: activeToken,
+        body: JSON.stringify({ username, email }),
+      });
+      setProfile({ username: user.username, email: user.email });
+      setSession((currentSession) =>
+        currentSession
+          ? {
+              ...currentSession,
+              name: user.username,
+              email: user.email,
+            }
+          : currentSession,
+      );
+      setApiState("online");
+      setApiMessage("用户资料已同步后端");
+      return "用户资料已保存到后端。";
+    } catch (error) {
+      return handleApiError(error);
+    }
   };
 
   const categories = useMemo(() => Array.from(new Set(tasks.map((task) => task.category))).sort(), [tasks]);
@@ -1404,7 +1538,13 @@ export function App() {
         ? `测试通过${data.latency_ms ? `，耗时 ${data.latency_ms}ms` : ""}。`
         : "测试失败，请检查 Key 或模型权限。";
     } catch (error) {
-      return handleApiError(error);
+      if (error instanceof ApiError && error.status === 401) {
+        return handleApiError(error);
+      }
+      const message = asErrorMessage(error);
+      setApiState("online");
+      setApiMessage(message);
+      return message;
     }
   };
 
@@ -1418,13 +1558,15 @@ export function App() {
       onCreateTask={() => setCreateOpen(true)}
       onEditTask={setEditingTask}
       onApiError={handleApiError}
-      onOpenTask={setSelectedTask}
+      onOpenTask={openTaskDetails}
       onPageChange={navigateTo}
+      onSaveProfile={saveProfile}
       onSaveSettings={saveSettings}
       onSuggestTaskFields={suggestTaskFields}
       onTestOpenAIKey={testOpenAIKey}
       onToggleComplete={toggleComplete}
       recommendedTasks={recommendedTasks}
+      profile={profile}
       remoteStats={remoteStats}
       settings={settings}
       taskVersion={taskVersion}
@@ -1477,6 +1619,8 @@ export function App() {
       </div>
       <MobileBottomNav activePage={activePage} onCreateTask={() => setCreateOpen(true)} onNavigate={navigateTo} />
       <TaskDetailDrawer
+        detailState={taskDetailState}
+        isApiMode={Boolean(activeToken)}
         onClose={() => setSelectedTask(null)}
         onDelete={deleteTask}
         onToggleComplete={toggleComplete}
@@ -1763,10 +1907,12 @@ interface PageRendererProps {
   onEditTask: (task: Task) => void;
   onOpenTask: (task: Task) => void;
   onPageChange: (page: PageKey) => void;
+  onSaveProfile: (profile: ProfileState) => Promise<string | void>;
   onSaveSettings: (settings: SettingsState) => Promise<string | void>;
   onSuggestTaskFields: (title: string, description: string) => Promise<TaskFieldSuggestion>;
   onTestOpenAIKey: (settings: SettingsState) => Promise<string>;
   onToggleComplete: (taskId: number) => void;
+  profile: ProfileState;
   recommendedTasks: Task[];
   remoteStats: RemoteStatsState;
   settings: SettingsState;
@@ -1786,10 +1932,12 @@ function PageRenderer({
   onEditTask,
   onOpenTask,
   onPageChange,
+  onSaveProfile,
   onSaveSettings,
   onSuggestTaskFields,
   onTestOpenAIKey,
   onToggleComplete,
+  profile,
   recommendedTasks,
   remoteStats,
   settings,
@@ -1832,15 +1980,43 @@ function PageRenderer({
   }
 
   if (activePage === "ai") {
-    return <AIPage onOpenTask={onOpenTask} onSuggestTaskFields={onSuggestTaskFields} recommendedTasks={recommendedTasks} />;
+    return (
+      <AIPage
+        isApiMode={isApiMode}
+        onApiError={onApiError}
+        onOpenTask={onOpenTask}
+        onSuggestTaskFields={onSuggestTaskFields}
+        recommendedTasks={recommendedTasks}
+        taskVersion={taskVersion}
+        token={token}
+      />
+    );
   }
 
   if (activePage === "calendar") {
-    return <CalendarPage onOpenTask={onOpenTask} tasks={tasks} />;
+    return (
+      <CalendarPage
+        isApiMode={isApiMode}
+        onApiError={onApiError}
+        onOpenTask={onOpenTask}
+        taskVersion={taskVersion}
+        tasks={tasks}
+        token={token}
+      />
+    );
   }
 
   if (activePage === "stats") {
-    return <StatsPage remoteStats={remoteStats} tasks={tasks} />;
+    return (
+      <StatsPage
+        isApiMode={isApiMode}
+        onApiError={onApiError}
+        remoteStats={remoteStats}
+        taskVersion={taskVersion}
+        tasks={tasks}
+        token={token}
+      />
+    );
   }
 
   if (activePage === "tags") {
@@ -1848,7 +2024,7 @@ function PageRenderer({
   }
 
   if (activePage === "settings") {
-    return <SettingsPage onSave={onSaveSettings} onTest={onTestOpenAIKey} settings={settings} />;
+    return <SettingsPage onSave={onSaveSettings} onSaveProfile={onSaveProfile} onTest={onTestOpenAIKey} profile={profile} settings={settings} />;
   }
 
   return <PlaceholderPage activePage={activePage} />;
@@ -2553,20 +2729,183 @@ function TaskColumn({ onOpenTask, status, tasks }: TaskColumnProps) {
 }
 
 function AIPage({
+  isApiMode,
+  onApiError,
   onOpenTask,
   onSuggestTaskFields,
   recommendedTasks,
+  taskVersion,
+  token,
 }: {
+  isApiMode: boolean;
+  onApiError: (error: unknown) => string;
   onOpenTask: (task: Task) => void;
   onSuggestTaskFields: (title: string, description: string) => Promise<TaskFieldSuggestion>;
   recommendedTasks: Task[];
+  taskVersion: number;
+  token: string;
 }) {
   return (
     <main className="page-content">
       <PageHeading title="AI 推荐" description="AI 根据截止时间、优先级和复杂度给出的今日处理建议。" />
       <AIAssistantCard onOpenTask={onOpenTask} tasks={recommendedTasks} />
       <AISuggestTool onSuggestTaskFields={onSuggestTaskFields} />
+      <AILogsPanel isApiMode={isApiMode} onApiError={onApiError} taskVersion={taskVersion} token={token} />
     </main>
+  );
+}
+
+function formatAiLogOutput(output: unknown) {
+  if (typeof output === "string") {
+    try {
+      return formatAiLogOutput(JSON.parse(output));
+    } catch {
+      return output.slice(0, 120);
+    }
+  }
+
+  if (!output || typeof output !== "object") {
+    return "无结构化输出";
+  }
+
+  const record = output as Record<string, unknown>;
+  const parsed = record.parsed_task as Record<string, unknown> | undefined;
+  const task = record.task as Record<string, unknown> | undefined;
+  const title = parsed?.title || task?.title || record.title;
+  const category = parsed?.category || task?.category || record.category;
+  const priority = parsed?.priority || task?.priority || record.priority;
+  const reason = record.reason;
+  if (title) {
+    return `${String(title)}${category ? ` / ${String(category)}` : ""}${priority ? ` / ${String(priority)}` : ""}`;
+  }
+  if (reason) {
+    return `${category ? `${String(category)} / ` : ""}${priority ? `${String(priority)} / ` : ""}${String(reason)}`;
+  }
+  return JSON.stringify(output).slice(0, 120);
+}
+
+function AILogsPanel({
+  isApiMode,
+  onApiError,
+  taskVersion,
+  token,
+}: {
+  isApiMode: boolean;
+  onApiError: (error: unknown) => string;
+  taskVersion: number;
+  token: string;
+}) {
+  const [status, setStatus] = useState<"全部" | ApiAiLog["status"]>("全部");
+  const [page, setPage] = useState(1);
+  const [logs, setLogs] = useState<ApiAiLog[]>([]);
+  const [total, setTotal] = useState(0);
+  const [error, setError] = useState("");
+  const [isLoading, setLoading] = useState(false);
+  const pageSize = 5;
+
+  useEffect(() => {
+    setPage(1);
+  }, [status]);
+
+  useEffect(() => {
+    if (!isApiMode || !token) {
+      setLogs([]);
+      setTotal(0);
+      return;
+    }
+
+    let isCancelled = false;
+    const params = new URLSearchParams({ page: String(page), page_size: String(pageSize) });
+    if (status !== "全部") {
+      params.set("status", status);
+    }
+    setLoading(true);
+    setError("");
+    void apiRequest<ApiPageResult<ApiAiLog>>(`/ai/logs?${params.toString()}`, { token })
+      .then((data) => {
+        if (isCancelled) {
+          return;
+        }
+        setLogs(data.items);
+        setTotal(data.pagination.total);
+      })
+      .catch((requestError) => {
+        if (!isCancelled) {
+          setError(onApiError(requestError));
+        }
+      })
+      .finally(() => {
+        if (!isCancelled) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [isApiMode, onApiError, page, status, taskVersion, token]);
+
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+  return (
+    <section className="content-card ai-logs-panel">
+      <div className="section-title">
+        <div>
+          <h2>AI 调用记录</h2>
+          <p>来自 /ai/logs，用于确认解析、创建和推荐请求已由后端处理。</p>
+        </div>
+        <select value={status} onChange={(event) => setStatus(event.target.value as typeof status)}>
+          <option value="全部">全部状态</option>
+          <option value="success">success</option>
+          <option value="mocked">mocked</option>
+          <option value="failed">failed</option>
+        </select>
+      </div>
+      {!isApiMode ? (
+        <EmptyState title="本地演示模式无 AI 日志" description="登录后端账号后，这里会展示真实 /ai/logs 返回。" />
+      ) : isLoading ? (
+        <p className="table-state">正在读取 AI 日志...</p>
+      ) : error ? (
+        <p className="form-error">{error}</p>
+      ) : logs.length ? (
+        <>
+          <div className="ai-log-list">
+            {logs.map((log) => (
+              <article className="ai-log-row" key={log.id}>
+                <span className={`ai-log-status ${log.status}`}>{log.status}</span>
+                <div>
+                  <strong>{log.input_text}</strong>
+                  <p>{formatAiLogOutput(log.output_json)}</p>
+                </div>
+                <small>
+                  {log.model_name || "mock"}
+                  <br />
+                  {new Date(log.created_at).toLocaleString()}
+                </small>
+              </article>
+            ))}
+          </div>
+          <div className="pagination-row">
+            <button className="ghost-button" type="button" onClick={() => setPage((value) => Math.max(1, value - 1))} disabled={page <= 1}>
+              上一页
+            </button>
+            <span>
+              第 {page} / {totalPages} 页
+            </span>
+            <button
+              className="ghost-button"
+              type="button"
+              onClick={() => setPage((value) => Math.min(totalPages, value + 1))}
+              disabled={page >= totalPages}
+            >
+              下一页
+            </button>
+          </div>
+        </>
+      ) : (
+        <EmptyState title="暂无 AI 调用记录" description="使用 AI 生成任务或获取字段建议后会出现记录。" />
+      )}
+    </section>
   );
 }
 
@@ -2630,15 +2969,80 @@ function AISuggestTool({
   );
 }
 
-function CalendarPage({ onOpenTask, tasks }: { onOpenTask: (task: Task) => void; tasks: Task[] }) {
+function CalendarPage({
+  isApiMode,
+  onApiError,
+  onOpenTask,
+  taskVersion,
+  tasks,
+  token,
+}: {
+  isApiMode: boolean;
+  onApiError: (error: unknown) => string;
+  onOpenTask: (task: Task) => void;
+  taskVersion: number;
+  tasks: Task[];
+  token: string;
+}) {
   const [view, setView] = useState<CalendarView>("7");
+  const [remoteTasks, setRemoteTasks] = useState<Task[]>([]);
+  const [remoteError, setRemoteError] = useState("");
+  const [isRemoteLoading, setRemoteLoading] = useState(false);
   const dayCount = view === "14" ? 14 : view === "30" ? 30 : 7;
   const days = Array.from({ length: dayCount }, (_, index) => dateFromToday(index));
-  const todayTimedTasks = tasks.filter((task) => isToday(task.dueDate) && Boolean(task.dueTime));
-  const todayUntimedTasks = tasks.filter((task) => isToday(task.dueDate) && !task.dueTime);
+  const calendarTasks = isApiMode ? remoteTasks : tasks;
+  const todayTimedTasks = calendarTasks.filter((task) => isToday(task.dueDate) && Boolean(task.dueTime));
+  const todayUntimedTasks = calendarTasks.filter((task) => isToday(task.dueDate) && !task.dueTime);
   const unscheduledTasks = tasks.filter((task) => !task.dueDate);
-  const overdueTasks = tasks.filter(isOverdue).sort((left, right) => left.dueDate.localeCompare(right.dueDate));
+  const overdueTasks = calendarTasks.filter(isOverdue).sort((left, right) => left.dueDate.localeCompare(right.dueDate));
   const currentHour = new Date().getHours();
+
+  useEffect(() => {
+    if (!isApiMode || !token) {
+      return;
+    }
+
+    let isCancelled = false;
+    const params = new URLSearchParams({
+      page: "1",
+      page_size: "100",
+      sort_by: "due_time",
+      sort_order: "asc",
+    });
+
+    if (view === "overdue") {
+      params.set("status", "todo");
+      params.set("due_to", apiRangeIso(dateFromToday(-1), "23:59"));
+    } else {
+      const endOffset = view === "24h" ? 0 : dayCount - 1;
+      const range = buildDateRange(dateFromToday(0), dateFromToday(endOffset));
+      params.set("due_from", range.from);
+      params.set("due_to", range.to);
+    }
+
+    setRemoteLoading(true);
+    setRemoteError("");
+    void apiRequest<ApiPageResult<ApiTask>>(`/tasks?${params.toString()}`, { token })
+      .then((data) => {
+        if (!isCancelled) {
+          setRemoteTasks(data.items.map((item) => mapApiTask(item)));
+        }
+      })
+      .catch((error) => {
+        if (!isCancelled) {
+          setRemoteError(onApiError(error));
+        }
+      })
+      .finally(() => {
+        if (!isCancelled) {
+          setRemoteLoading(false);
+        }
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [dayCount, isApiMode, onApiError, taskVersion, token, view]);
 
   return (
     <main className="page-content">
@@ -2656,6 +3060,8 @@ function CalendarPage({ onOpenTask, tasks }: { onOpenTask: (task: Task) => void;
           </button>
         ))}
       </section>
+      {isRemoteLoading && <p className="table-state">正在同步当前日历范围...</p>}
+      {remoteError && <p className="form-error">{remoteError}</p>}
 
       {view === "24h" ? (
         <section className="timeline-layout">
@@ -2723,7 +3129,7 @@ function CalendarPage({ onOpenTask, tasks }: { onOpenTask: (task: Task) => void;
       ) : (
         <div className={`calendar-grid calendar-grid-${view}`}>
           {days.map((day) => {
-            const dayTasks = tasks.filter((task) => task.dueDate === day);
+            const dayTasks = calendarTasks.filter((task) => task.dueDate === day);
             return (
               <section className={`calendar-day ${day === dateFromToday(0) ? "today" : ""}`} key={day}>
                 <strong>{day}</strong>
@@ -2746,18 +3152,36 @@ function CalendarPage({ onOpenTask, tasks }: { onOpenTask: (task: Task) => void;
   );
 }
 
-function StatsPage({ remoteStats, tasks }: { remoteStats: RemoteStatsState; tasks: Task[] }) {
+function StatsPage({
+  isApiMode,
+  onApiError,
+  remoteStats,
+  taskVersion,
+  tasks,
+  token,
+}: {
+  isApiMode: boolean;
+  onApiError: (error: unknown) => string;
+  remoteStats: RemoteStatsState;
+  taskVersion: number;
+  tasks: Task[];
+  token: string;
+}) {
   const [range, setRange] = useState<"7" | "14" | "30" | "24h">("7");
+  const [rangeStats, setRangeStats] = useState<RemoteStatsState | null>(null);
+  const [remoteError, setRemoteError] = useState("");
+  const [isRemoteLoading, setRemoteLoading] = useState(false);
+  const statsSource = rangeStats || remoteStats;
   const localDone = tasks.filter((task) => task.status === "已完成").length;
-  const totalTasks = remoteStats.overview?.total_tasks ?? tasks.length;
-  const done = remoteStats.overview?.done_tasks ?? localDone;
-  const todo = remoteStats.overview?.todo_tasks ?? tasks.length - localDone;
-  const completion = remoteStats.overview ? Math.round(remoteStats.overview.completion_rate * 100) : tasks.length ? Math.round((localDone / tasks.length) * 100) : 0;
-  const aiCreated = remoteStats.overview?.ai_created_tasks ?? tasks.filter((task) => task.isAiCreated).length;
-  const todayDue = remoteStats.overview?.today_due_tasks ?? tasks.filter((task) => isToday(task.dueDate)).length;
-  const overdueTotal = remoteStats.overview?.overdue_tasks ?? tasks.filter(isOverdue).length;
-  const categoryStats = remoteStats.categories.length
-    ? remoteStats.categories.map((item) => [item.category, item.total] as [string, number])
+  const totalTasks = statsSource.overview?.total_tasks ?? tasks.length;
+  const done = statsSource.overview?.done_tasks ?? localDone;
+  const todo = statsSource.overview?.todo_tasks ?? tasks.length - localDone;
+  const completion = statsSource.overview ? Math.round(statsSource.overview.completion_rate * 100) : tasks.length ? Math.round((localDone / tasks.length) * 100) : 0;
+  const aiCreated = statsSource.overview?.ai_created_tasks ?? tasks.filter((task) => task.isAiCreated).length;
+  const todayDue = statsSource.overview?.today_due_tasks ?? tasks.filter((task) => isToday(task.dueDate)).length;
+  const overdueTotal = statsSource.overview?.overdue_tasks ?? tasks.filter(isOverdue).length;
+  const categoryStats = statsSource.categories.length
+    ? statsSource.categories.map((item) => [item.category, item.total] as [string, number])
     : Array.from(tasks.reduce((map, task) => map.set(task.category, (map.get(task.category) || 0) + 1), new Map<string, number>())).sort(
         (left, right) => right[1] - left[1],
       );
@@ -2777,7 +3201,7 @@ function StatsPage({ remoteStats, tasks }: { remoteStats: RemoteStatsState; task
     created: tasks.filter((task) => task.createdAt === day).length,
     done: tasks.filter((task) => task.completedAt === day).length,
   }));
-  const remoteTrend = remoteStats.trend.map((item) => ({ day: item.date, created: item.created, done: item.done })).slice(-trendDayCount);
+  const remoteTrend = statsSource.trend.map((item) => ({ day: item.date, created: item.created, done: item.done })).slice(-trendDayCount);
   const trend = remoteTrend.length ? remoteTrend : localTrend;
   const maxTrendValue = Math.max(1, ...trend.map((item) => Math.max(item.created, item.done)));
   const hourlyTrend = Array.from({ length: 24 }, (_, hour) => ({
@@ -2786,9 +3210,56 @@ function StatsPage({ remoteStats, tasks }: { remoteStats: RemoteStatsState; task
   }));
   const maxHourlyValue = Math.max(1, ...hourlyTrend.map((item) => item.due));
 
+  useEffect(() => {
+    if (!isApiMode || !token) {
+      setRangeStats(null);
+      return;
+    }
+
+    let isCancelled = false;
+    const days = range === "30" ? 30 : range === "14" ? 14 : 7;
+    const endDate = dateFromToday(0);
+    const startDate = range === "24h" ? endDate : dateFromToday(-(days - 1));
+    const rangeQuery = new URLSearchParams(buildDateRange(startDate, endDate)).toString();
+
+    setRemoteLoading(true);
+    setRemoteError("");
+    void Promise.all([
+      apiRequest<ApiStatsOverview>(`/stats/overview?${rangeQuery}`, { token }),
+      apiRequest<ApiCategoryStats[]>(`/stats/category?${rangeQuery}`, { token }),
+      apiRequest<ApiTrendStats[]>(`/stats/trend?days=${days}`, { token }),
+    ])
+      .then(([overview, categories, trend]) => {
+        if (!isCancelled) {
+          setRangeStats({
+            overview,
+            categories,
+            priorities: remoteStats.priorities,
+            trend,
+          });
+        }
+      })
+      .catch((error) => {
+        if (!isCancelled) {
+          setRemoteError(onApiError(error));
+        }
+      })
+      .finally(() => {
+        if (!isCancelled) {
+          setRemoteLoading(false);
+        }
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [isApiMode, onApiError, range, remoteStats.priorities, taskVersion, token]);
+
   return (
     <main className="page-content">
       <PageHeading title="数据统计" description="查看任务完成趋势、分类分布、优先级分布与 AI 创建占比。" />
+      {isRemoteLoading && <p className="table-state">正在同步统计范围...</p>}
+      {remoteError && <p className="form-error">{remoteError}</p>}
       <section className="stats-grid stats-grid-wide">
         <StatsCard icon={ListTodo} label="任务总数" value={totalTasks} tone="blue" />
         <StatsCard icon={CheckCircle2} label="已完成" value={done} tone="green" />
@@ -2902,23 +3373,50 @@ function TagsPage({ tasks }: { tasks: Task[] }) {
 
 function SettingsPage({
   onSave,
+  onSaveProfile,
   onTest,
+  profile,
   settings,
 }: {
   onSave: (settings: SettingsState) => Promise<string | void>;
+  onSaveProfile: (profile: ProfileState) => Promise<string | void>;
   onTest: (settings: SettingsState) => Promise<string>;
+  profile: ProfileState;
   settings: SettingsState;
 }) {
   const [draft, setDraft] = useState(settings);
+  const [profileDraft, setProfileDraft] = useState(profile);
   const [feedback, setFeedback] = useState("");
   const [feedbackTone, setFeedbackTone] = useState<"idle" | "success" | "failed">("idle");
   const [isSaving, setSaving] = useState(false);
+  const [isSavingProfile, setSavingProfile] = useState(false);
   const [isTesting, setTesting] = useState(false);
   const apiBaseUrl = API_BASE_URL;
 
   useEffect(() => {
     setDraft(settings);
   }, [settings]);
+
+  useEffect(() => {
+    setProfileDraft(profile);
+  }, [profile]);
+
+  const saveProfile = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setSavingProfile(true);
+    setFeedback("");
+    try {
+      const message = await onSaveProfile(profileDraft);
+      const isFailure = (message || "").includes("不能") || (message || "").includes("无效") || (message || "").includes("不能为空");
+      setFeedback(message || "用户资料已保存。");
+      setFeedbackTone(isFailure ? "failed" : "success");
+    } catch (error) {
+      setFeedback(asErrorMessage(error));
+      setFeedbackTone("failed");
+    } finally {
+      setSavingProfile(false);
+    }
+  };
 
   const save = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -2956,6 +3454,32 @@ function SettingsPage({
     <main className="page-content">
       <PageHeading title="设置" description="配置 AI 模型、OpenAI Key 和前端联调信息。" />
       <section className="settings-layout">
+        <form className="content-card settings-form" onSubmit={saveProfile}>
+          <h2>个人资料</h2>
+          <label>
+            用户名
+            <input
+              value={profileDraft.username}
+              onChange={(event) => setProfileDraft({ ...profileDraft, username: event.target.value })}
+              placeholder="请输入用户名"
+            />
+          </label>
+          <label>
+            邮箱
+            <input
+              value={profileDraft.email}
+              onChange={(event) => setProfileDraft({ ...profileDraft, email: event.target.value })}
+              placeholder="you@qq.com"
+            />
+          </label>
+          <div className="settings-actions">
+            <button className="primary-button" type="submit" disabled={isSavingProfile}>
+              {isSavingProfile ? "保存中..." : "保存资料"}
+            </button>
+          </div>
+          <p>保存会调用 /users/me，用于验证后端用户资料更新能力。</p>
+        </form>
+
         <form className="content-card settings-form" onSubmit={save}>
           <h2>AI 配置</h2>
           <label>
@@ -3022,13 +3546,15 @@ function PageHeading({ description, title }: { description: string; title: strin
 }
 
 interface TaskDetailDrawerProps {
+  detailState: TaskDetailState;
+  isApiMode: boolean;
   onClose: () => void;
   onDelete: (taskId: number) => void;
   onToggleComplete: (taskId: number) => void;
   task: Task | null;
 }
 
-function TaskDetailDrawer({ onClose, onDelete, onToggleComplete, task }: TaskDetailDrawerProps) {
+function TaskDetailDrawer({ detailState, isApiMode, onClose, onDelete, onToggleComplete, task }: TaskDetailDrawerProps) {
   if (!task) {
     return null;
   }
@@ -3044,19 +3570,27 @@ function TaskDetailDrawer({ onClose, onDelete, onToggleComplete, task }: TaskDet
           <X size={18} />
         </button>
       </div>
+      {detailState.isLoading && <p className="table-state">{`正在读取 /tasks/${task.id} ...`}</p>}
+      {detailState.error && <p className="form-error">{detailState.error}</p>}
       <p className="drawer-description">{task.description}</p>
       <div className="drawer-fields">
         <Field label="状态"><StatusBadge status={task.status} /></Field>
         <Field label="优先级"><PriorityBadge priority={task.priority} /></Field>
         <Field label="截止时间">{formatDue(task)}</Field>
-        <Field label="标签">{task.tags.join(" / ")}</Field>
+        {!isApiMode && <Field label="标签">{task.tags.join(" / ")}</Field>}
         <Field label="创建来源">{task.isAiCreated ? "AI 生成" : "自定义创建"}</Field>
       </div>
       <section className="subtasks">
         <h3>子任务</h3>
-        <label><input type="checkbox" /> 确认字段结构</label>
-        <label><input type="checkbox" /> 联调后端接口</label>
-        <label><input type="checkbox" /> 补充验收截图</label>
+        {isApiMode ? (
+          <p>后端任务模型暂未提供子任务字段，前端不再展示假数据。</p>
+        ) : (
+          <>
+            <label><input type="checkbox" /> 确认字段结构</label>
+            <label><input type="checkbox" /> 联调后端接口</label>
+            <label><input type="checkbox" /> 补充验收截图</label>
+          </>
+        )}
       </section>
       <section className="ai-analysis">
         <Sparkles size={18} />
