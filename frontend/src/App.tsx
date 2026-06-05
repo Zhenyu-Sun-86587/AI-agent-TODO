@@ -3505,7 +3505,7 @@ function StatsPage({
   tasks: Task[];
   token: string;
 }) {
-  const [range, setRange] = useState<"7" | "14" | "30" | "24h">("7");
+  const [range, setRange] = useState<"7" | "24h">("7");
   const [rangeStats, setRangeStats] = useState<RemoteStatsState | null>(null);
   const [remoteError, setRemoteError] = useState("");
   const [isRemoteLoading, setRemoteLoading] = useState(false);
@@ -3532,7 +3532,7 @@ function StatsPage({
         priority,
         total: tasks.filter((task) => task.priority === priority).length,
       }));
-  const trendDayCount = range === "30" ? 30 : range === "14" ? 14 : 7;
+  const trendDayCount = 7;
   const trendDays = Array.from({ length: trendDayCount }, (_, index) => dateFromToday(index - trendDayCount + 1));
   const localTrend = trendDays.map((day) => ({
     day,
@@ -3555,7 +3555,7 @@ function StatsPage({
     }
 
     let isCancelled = false;
-    const days = range === "30" ? 30 : range === "14" ? 14 : 7;
+    const days = 7;
     const endDate = dateFromToday(0);
     const startDate = range === "24h" ? endDate : dateFromToday(-(days - 1));
     const rangeQuery = new URLSearchParams(buildDateRange(startDate, endDate)).toString();
@@ -3622,8 +3622,6 @@ function StatsPage({
               <div className="range-tabs">
                 {[
                   ["7", "近 7 天"],
-                  ["14", "近 14 天"],
-                  ["30", "近 30 天"],
                   ["24h", "今日 24 小时"],
                 ].map(([key, label]) => (
                   <button className={range === key ? "active" : ""} key={key} type="button" onClick={() => setRange(key as typeof range)}>
