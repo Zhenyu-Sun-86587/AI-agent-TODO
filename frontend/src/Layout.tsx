@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
-import { Bell, LogOut, Moon, Plus, Search, Sparkles, Sun, User } from "lucide-react";
+import { Bell, LayoutDashboard, LogOut, Moon, Plus, Search, Sparkles, Sun, User } from "lucide-react";
 
 export interface MinimalNavItem {
   key: string;
@@ -43,6 +43,7 @@ export default function Layout({
   const [openPanel, setOpenPanel] = useState<"notifications" | "user" | null>(null);
   const mobilePrimaryItems = navItems.filter((item) => item.key === "dashboard" || item.key === "all");
   const mobileSecondaryItems = navItems.filter((item) => item.key === "ai" || item.key === "stats");
+  const mobileMoreItems = navItems.filter((item) => !["dashboard", "all", "ai", "stats"].includes(item.key));
 
   return (
     <div className={`minimal-shell ${isDark ? "minimal-shell-dark" : "minimal-shell-light"}`}>
@@ -104,6 +105,30 @@ export default function Layout({
                 </div>
               )}
             </div>
+            <div className="minimal-action-wrap minimal-mobile-more-wrap">
+              <button
+                className="minimal-icon minimal-mobile-more"
+                type="button"
+                onClick={() => setOpenPanel((panel) => (panel === "notifications" ? null : "notifications"))}
+                aria-expanded={openPanel === "notifications"}
+                aria-label="更多页面"
+              >
+                <LayoutDashboard size={18} />
+              </button>
+              {openPanel === "notifications" && (
+                <div className="minimal-popover minimal-mobile-more-panel" role="menu">
+                  {mobileMoreItems.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <button key={item.key} type="button" onClick={() => onNavigate(item.key)} role="menuitem">
+                        <Icon size={15} />
+                        {item.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
             <button className="minimal-icon minimal-theme-toggle" type="button" onClick={onToggleTheme} aria-label="切换主题">
               {isDark ? <Sun size={18} /> : <Moon size={18} />}
             </button>
@@ -162,6 +187,17 @@ export default function Layout({
             onClick={() => onNavigate(item.key)}
           />
         ))}
+      </nav>
+      <nav className="minimal-mobile-more-nav" aria-label="移动端更多页面">
+        {mobileMoreItems.map((item) => {
+          const Icon = item.icon;
+          return (
+            <button className={item.key === activePage ? "active" : ""} key={item.key} type="button" onClick={() => onNavigate(item.key)}>
+              <Icon size={16} />
+              {item.label}
+            </button>
+          );
+        })}
       </nav>
     </div>
   );

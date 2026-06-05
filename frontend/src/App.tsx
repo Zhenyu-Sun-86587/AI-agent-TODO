@@ -33,6 +33,7 @@ import Layout from "./Layout";
 
 type PageKey =
   | "dashboard"
+  | "today"
   | "all"
   | "ai"
   | "board"
@@ -308,6 +309,7 @@ function writeStoredJson(key: string, value: unknown) {
 
 const pagePaths: Record<PageKey, string> = {
   dashboard: "/",
+  today: "/today",
   all: "/tasks",
   ai: "/ai",
   board: "/board",
@@ -316,6 +318,14 @@ const pagePaths: Record<PageKey, string> = {
   tags: "/tags",
   settings: "/settings",
 };
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function isKnownPagePath(pathname: string) {
+  return Object.values(pagePaths).includes(pathname);
+}
 
 function getPageFromPath(pathname: string): PageKey {
   const matchedPage = (Object.entries(pagePaths).find(([, path]) => path === pathname)?.[0] || "dashboard") as PageKey;
@@ -756,6 +766,7 @@ const initialTasks: Task[] = [
 
 const navItems: Array<{ key: PageKey; label: string; icon: LucideIcon }> = [
   { key: "dashboard", label: "Dashboard", icon: Home },
+  { key: "today", label: "今日任务", icon: Clock3 },
   { key: "all", label: "全部任务", icon: ListTodo },
   { key: "ai", label: "AI 推荐", icon: Sparkles },
   { key: "board", label: "任务看板", icon: LayoutDashboard },
@@ -777,6 +788,68 @@ function isOverdue(task: Task) {
   return task.status !== "已完成" && Boolean(task.dueDate) && task.dueDate < dateFromToday(0);
 }
 
+function readStoredSession() {
+  const storedSession = readStoredJson<unknown>(SESSION_STORAGE_KEY, null);
+  if (!isRecord(storedSession) || typeof storedSession.name !== "string" || typeof storedSession.email !== "string") {
+    return null;
+  }
+
+  return {
+    name: storedSession.name,
+    email: storedSession.email,
+    token: typeof storedSession.token === "string" ? storedSession.token : "",
+    isApiSession: storedSession.isApiSession === true,
+  };
+}
+
+function readStoredTheme() {
+  return readStoredJson<unknown>(THEME_STORAGE_KEY, false) === true;
+}
+
+function normalizeStoredTask(item: unknown, index: number): Task | null {
+  if (!isRecord(item) || typeof item.title !== "string") {
+    return null;
+  }
+
+  const status = statusOptions.includes(item.status as TaskStatus) ? (item.status as TaskStatus) : "待办";
+  const priority = priorityOptions.includes(item.priority as TaskPriority) ? (item.priority as TaskPriority) : "中";
+  const category = typeof item.category === "string" && item.category.trim() ? item.category : "未分类";
+
+  return {
+    id: typeof item.id === "number" && Number.isFinite(item.id) ? item.id : Date.now() + index,
+    title: item.title,
+    description: typeof item.description === "string" ? item.description : "",
+    status,
+    priority,
+    category,
+    dueDate: typeof item.dueDate === "string" ? item.dueDate : "",
+    dueTime: typeof item.dueTime === "string" ? item.dueTime : "",
+    createdAt: typeof item.createdAt === "string" ? item.createdAt : dateFromToday(0),
+    completedAt: typeof item.completedAt === "string" ? item.completedAt : null,
+    tags: Array.isArray(item.tags) ? item.tags.filter((tag): tag is string => typeof tag === "string") : [category],
+    aiReason: typeof item.aiReason === "string" ? item.aiReason : "AI 将根据截止时间、优先级和任务上下文持续更新建议。",
+    estimatedTime: typeof item.estimatedTime === "string" ? item.estimatedTime : priority === "高" ? "2小时" : "1小时",
+    aiCategory: typeof item.aiCategory === "string" ? item.aiCategory : category,
+    isAiCreated: item.isAiCreated === true,
+    confidence: typeof item.confidence === "number" ? item.confidence : undefined,
+    rawDueText: typeof item.rawDueText === "string" ? item.rawDueText : undefined,
+    sourceText: typeof item.sourceText === "string" ? item.sourceText : undefined,
+  };
+}
+
+function readStoredTasks() {
+  const storedTasks = readStoredJson<unknown>(TASKS_STORAGE_KEY, null);
+  if (!Array.isArray(storedTasks)) {
+    return initialTasks;
+  }
+
+  const normalizedTasks = storedTasks
+    .map((item, index) => normalizeStoredTask(item, index))
+    .filter((task): task is Task => Boolean(task));
+
+  return normalizedTasks.length ? normalizedTasks : initialTasks;
+}
+
 function createEmptyTask(): NewTaskInput {
   return {
     title: "",
@@ -787,6 +860,25 @@ function createEmptyTask(): NewTaskInput {
     dueDate: dateFromToday(3),
     dueTime: "15:00",
     tags: "React, UI设计",
+  };
+}
+
+function normalizeTaskInput(input: NewTaskInput): NewTaskInput {
+  const category = input.category.trim() || "未分类";
+  return {
+    ...input,
+    title: input.title.trim(),
+    description: input.description.trim(),
+    category,
+    tags: input.tags
+      .split(",")
+      .map((tag) => tag.trim())
+      .filter(Boolean)
+      .join(", "),
+    aiReason: input.aiReason?.trim(),
+    estimatedTime: input.estimatedTime?.trim(),
+    aiCategory: input.aiCategory?.trim() || category,
+    sourceText: input.sourceText?.trim(),
   };
 }
 
@@ -967,12 +1059,12 @@ const emptyRemoteStats: RemoteStatsState = {
 };
 
 export function App() {
-  const [session, setSession] = useState<DemoSession | null>(() => readStoredJson<DemoSession | null>(SESSION_STORAGE_KEY, null));
+  const [session, setSession] = useState<DemoSession | null>(() => readStoredSession());
   const [profile, setProfile] = useState<ProfileState>(() => ({
     username: session?.name || "Demo User",
     email: session?.email || "demo@aitodo.local",
   }));
-  const [tasks, setTasks] = useState<Task[]>(() => readStoredJson<Task[]>(TASKS_STORAGE_KEY, initialTasks));
+  const [tasks, setTasks] = useState<Task[]>(() => readStoredTasks());
   const [settings, setSettings] = useState<SettingsState>(() => readStoredJson<SettingsState>(SETTINGS_STORAGE_KEY, defaultSettings));
   const [remoteStats, setRemoteStats] = useState<RemoteStatsState>(emptyRemoteStats);
   const [remoteCategories, setRemoteCategories] = useState<string[]>([]);
@@ -988,7 +1080,7 @@ export function App() {
   const [deleteCandidate, setDeleteCandidate] = useState<Task | null>(null);
   const [isCreateOpen, setCreateOpen] = useState(false);
   const [isSidebarOpen, setSidebarOpen] = useState(false);
-  const [isDark, setIsDark] = useState(() => readStoredJson<boolean>(THEME_STORAGE_KEY, false));
+  const [isDark, setIsDark] = useState(() => readStoredTheme());
   const [globalSearch, setGlobalSearch] = useState("");
   const [taskDetailState, setTaskDetailState] = useState<TaskDetailState>({ isLoading: false, error: "" });
   const activeToken = session?.isApiSession ? session.token : "";
@@ -1109,9 +1201,15 @@ export function App() {
         setAuthMode(pathname === "/register" ? "register" : "login");
         return;
       }
+      if (!isKnownPagePath(pathname)) {
+        window.history.replaceState(null, "", pagePaths.dashboard);
+        setActivePage("dashboard");
+        return;
+      }
       setActivePage(getPageFromPath(pathname));
     };
 
+    syncPageFromPath();
     window.addEventListener("popstate", syncPageFromPath);
     return () => window.removeEventListener("popstate", syncPageFromPath);
   }, []);
@@ -1366,51 +1464,53 @@ export function App() {
   };
 
   const createLocalTask = (input: NewTaskInput) => {
+    const normalizedInput = normalizeTaskInput(input);
     const task: Task = {
       id: Math.max(0, ...tasks.map((item) => item.id)) + 1,
-      title: input.title,
-      description: input.description,
-      status: input.status,
-      priority: input.priority,
-      category: input.category,
-      dueDate: input.dueDate,
-      dueTime: input.dueTime,
+      title: normalizedInput.title,
+      description: normalizedInput.description,
+      status: normalizedInput.status,
+      priority: normalizedInput.priority,
+      category: normalizedInput.category,
+      dueDate: normalizedInput.dueDate,
+      dueTime: normalizedInput.dueTime,
       createdAt: dateFromToday(0),
-      completedAt: input.status === "已完成" ? dateFromToday(0) : null,
+      completedAt: normalizedInput.status === "已完成" ? dateFromToday(0) : null,
       tags: Array.from(
         new Set(
-          input.tags
+          normalizedInput.tags
             .split(",")
             .map((tag) => tag.trim())
             .filter(Boolean)
-            .concat(input.isAiCreated ? ["AI生成"] : []),
+            .concat(normalizedInput.isAiCreated ? ["AI生成"] : []),
         ),
       ),
-      aiReason: input.aiReason || "AI 将根据截止时间、优先级和任务上下文持续更新建议。",
-      estimatedTime: input.estimatedTime || (input.priority === "高" ? "2小时" : "1小时"),
-      aiCategory: input.aiCategory || input.category,
-      isAiCreated: Boolean(input.isAiCreated),
-      confidence: input.confidence,
-      rawDueText: input.rawDueText,
-      sourceText: input.sourceText,
+      aiReason: normalizedInput.aiReason || "AI 将根据截止时间、优先级和任务上下文持续更新建议。",
+      estimatedTime: normalizedInput.estimatedTime || (normalizedInput.priority === "高" ? "2小时" : "1小时"),
+      aiCategory: normalizedInput.aiCategory || normalizedInput.category,
+      isAiCreated: Boolean(normalizedInput.isAiCreated),
+      confidence: normalizedInput.confidence,
+      rawDueText: normalizedInput.rawDueText,
+      sourceText: normalizedInput.sourceText,
     };
     setTasks((currentTasks) => [task, ...currentTasks]);
     setCreateOpen(false);
   };
 
   const createTask = async (input: NewTaskInput) => {
+    const normalizedInput = normalizeTaskInput(input);
     if (activeToken) {
       try {
         setApiState("loading");
-        setApiMessage(input.isAiCreated ? "正在通过 AI 创建任务..." : "正在创建任务...");
-        if (input.isAiCreated && input.aiBackendMode !== "frontend-fallback") {
+        setApiMessage(normalizedInput.isAiCreated ? "正在通过 AI 创建任务..." : "正在创建任务...");
+        if (normalizedInput.isAiCreated && normalizedInput.aiBackendMode !== "frontend-fallback") {
           const data = await apiRequest<ApiAiCreateResponse>("/ai/create-task", {
             method: "POST",
             token: activeToken,
             body: JSON.stringify({
-              text: input.sourceText || `${input.title}\n${input.description}`.trim(),
+              text: normalizedInput.sourceText || `${normalizedInput.title}\n${normalizedInput.description}`.trim(),
               timezone: "Asia/Shanghai",
-              overrides: inputToApiTaskPayload(input),
+              overrides: inputToApiTaskPayload(normalizedInput),
             }),
           });
           setTasks((currentTasks) => [mapApiTask(data.task, data.parsed_task), ...currentTasks]);
@@ -1418,7 +1518,7 @@ export function App() {
           const task = await apiRequest<ApiTask>("/tasks", {
             method: "POST",
             token: activeToken,
-            body: JSON.stringify(inputToApiTaskPayload(input)),
+            body: JSON.stringify(inputToApiTaskPayload(normalizedInput)),
           });
           setTasks((currentTasks) => [mapApiTask(task), ...currentTasks]);
         }
@@ -1430,22 +1530,23 @@ export function App() {
       return;
     }
 
-    createLocalTask(input);
+    createLocalTask(normalizedInput);
   };
 
   const updateTask = async (taskId: number, input: NewTaskInput) => {
+    const normalizedInput = normalizeTaskInput(input);
     if (activeToken) {
       try {
-        setApiState("loading");
-        setApiMessage("正在保存任务...");
-        const task = await apiRequest<ApiTask>(`/tasks/${taskId}`, {
-          method: "PUT",
-          token: activeToken,
-          body: JSON.stringify({
-            ...inputToApiTaskPayload(input),
-            status: statusToApi(input.status),
-          }),
-        });
+	        setApiState("loading");
+	        setApiMessage("正在保存任务...");
+	        const task = await apiRequest<ApiTask>(`/tasks/${taskId}`, {
+	          method: "PUT",
+	          token: activeToken,
+	          body: JSON.stringify({
+	            ...inputToApiTaskPayload(normalizedInput),
+	            status: statusToApi(normalizedInput.status),
+	          }),
+	        });
         const updatedTask = mapApiTask(task);
         setTasks((currentTasks) => currentTasks.map((currentTask) => (currentTask.id === taskId ? updatedTask : currentTask)));
         setSelectedTask((currentTask) => (currentTask?.id === taskId ? updatedTask : currentTask));
@@ -1463,7 +1564,7 @@ export function App() {
         if (task.id !== taskId) {
           return task;
         }
-        updatedTask = mergeTaskInput(task, input);
+        updatedTask = mergeTaskInput(task, normalizedInput);
         return updatedTask;
       }),
     );
@@ -2030,6 +2131,18 @@ function PageRenderer({
     );
   }
 
+  if (activePage === "today") {
+    return (
+      <TodayTasksPage
+        onDelete={onDelete}
+        onEditTask={onEditTask}
+        onOpenTask={onOpenTask}
+        onToggleComplete={onToggleComplete}
+        tasks={tasks}
+      />
+    );
+  }
+
   if (activePage === "all") {
     return (
       <AllTasksPage
@@ -2135,6 +2248,54 @@ function DashboardPage({
   );
 }
 
+function TodayTasksPage({
+  onDelete,
+  onEditTask,
+  onOpenTask,
+  onToggleComplete,
+  tasks,
+}: {
+  onDelete: (taskId: number) => void;
+  onEditTask: (task: Task) => void;
+  onOpenTask: (task: Task) => void;
+  onToggleComplete: (taskId: number) => void;
+  tasks: Task[];
+}) {
+  const todayTasks = tasks
+    .filter((task) => isToday(task.dueDate))
+    .sort((left, right) => (left.dueTime || "23:59").localeCompare(right.dueTime || "23:59"));
+  const done = todayTasks.filter((task) => task.status === "已完成").length;
+  const remaining = todayTasks.length - done;
+  const aiRecommended = todayTasks.filter((task) => task.isAiCreated || task.priority === "高").length;
+
+  return (
+    <main className="page-content">
+      <PageHeading title="今日任务" description="聚焦今天截止的任务，快速检查优先级、完成状态和 AI 建议。" />
+      <section className="stats-grid">
+        <StatsCard icon={CalendarDays} label="今日任务" value={todayTasks.length} tone="blue" />
+        <StatsCard icon={CheckCircle2} label="已完成" value={done} tone="green" />
+        <StatsCard icon={Clock3} label="待处理" value={remaining} tone="purple" />
+        <StatsCard icon={Sparkles} label="AI 重点" value={aiRecommended} tone="purple" />
+      </section>
+      <section className="content-card table-card">
+        <div className="section-title">
+          <div>
+            <h2>今天的执行清单</h2>
+            <p>按截止时段排列，点击任务可打开详情抽屉。</p>
+          </div>
+        </div>
+        <TaskTable
+          onDelete={onDelete}
+          onEditTask={onEditTask}
+          onOpenTask={onOpenTask}
+          onToggleComplete={onToggleComplete}
+          tasks={todayTasks}
+        />
+      </section>
+    </main>
+  );
+}
+
 interface StatsCardProps {
   icon: LucideIcon;
   label: string;
@@ -2190,9 +2351,13 @@ function AIAssistantCard({ onOpenTask, tasks }: AIAssistantCardProps) {
               <div>
                 <strong>{task.title}</strong>
                 <p>推荐原因：{task.aiReason}</p>
+                <div className="ai-recommend-meta">
+                  <span>AI 分类：{task.aiCategory}</span>
+                  <span>预计：{task.estimatedTime}</span>
+                  <span>截止：{formatDue(task)}</span>
+                </div>
               </div>
               <span className={`priority-badge priority-${task.priority}`}>{task.priority}</span>
-              <small>{formatDue(task)}</small>
             </button>
           ))
         ) : (
@@ -3309,8 +3474,8 @@ function CalendarPage({
                 {dayTasks.length ? (
                   dayTasks.map((task) => (
                     <button key={task.id} type="button" onClick={() => onOpenTask(task)}>
-                      <span>{task.dueTime || "全天"}</span>
-                      {task.title}
+                      <strong className="calendar-task-title">{task.title}</strong>
+                      <span className="calendar-task-time">{task.dueTime || "全天"}</span>
                     </button>
                   ))
                 ) : (
@@ -3358,8 +3523,8 @@ function StatsPage({
     : Array.from(tasks.reduce((map, task) => map.set(task.category, (map.get(task.category) || 0) + 1), new Map<string, number>())).sort(
         (left, right) => right[1] - left[1],
       );
-  const priorityStats = remoteStats.priorities.length
-    ? remoteStats.priorities.map((item) => ({
+  const priorityStats = statsSource.priorities.length
+    ? statsSource.priorities.map((item) => ({
         priority: priorityFromApi(item.priority),
         total: item.total,
       }))
@@ -3736,67 +3901,70 @@ function TaskDetailDrawer({ detailState, isApiMode, onClose, onDelete, onEdit, o
   }
 
   return (
-    <aside className="drawer">
-      <div className="drawer-header">
-        <div>
-          <p className="eyebrow">任务详情</p>
-          <h2>{task.title}</h2>
+    <>
+      <button className="drawer-backdrop" type="button" onClick={onClose} aria-label="关闭任务详情遮罩" />
+      <aside className="drawer">
+        <div className="drawer-header">
+          <div>
+            <p className="eyebrow">任务详情</p>
+            <h2>{task.title}</h2>
+          </div>
+          <button className="icon-button" type="button" onClick={onClose} aria-label="关闭详情">
+            <X size={18} />
+          </button>
         </div>
-        <button className="icon-button" type="button" onClick={onClose} aria-label="关闭详情">
-          <X size={18} />
-        </button>
-      </div>
-      {detailState.isLoading && <p className="table-state">{`正在读取 /tasks/${task.id} ...`}</p>}
-      {detailState.error && <p className="form-error">{detailState.error}</p>}
-      <p className="drawer-description">{task.description}</p>
-      <div className="drawer-fields">
-        <Field label="状态"><StatusBadge status={task.status} /></Field>
-        <Field label="优先级"><PriorityBadge priority={task.priority} /></Field>
-        <Field label="截止时间">{formatDue(task)}</Field>
-        {!isApiMode && <Field label="标签">{task.tags.join(" / ")}</Field>}
-        <Field label="创建来源">{task.isAiCreated ? "AI 生成" : "自定义创建"}</Field>
-      </div>
-      <section className="subtasks">
-        <h3>子任务</h3>
-        {isApiMode ? (
-          <p>后端任务模型暂未提供子任务字段，前端不再展示假数据。</p>
-        ) : (
-          <>
-            <label><input type="checkbox" /> 确认字段结构</label>
-            <label><input type="checkbox" /> 联调后端接口</label>
-            <label><input type="checkbox" /> 补充验收截图</label>
-          </>
-        )}
-      </section>
-      <section className="ai-analysis">
-        <div className="ai-analysis-heading">
-          <Sparkles size={18} />
-          <h3>AI 分析结果</h3>
-          {task.isAiCreated && <AITag confidence={task.confidence}>AI 生成</AITag>}
+        {detailState.isLoading && <p className="table-state">{`正在读取 /tasks/${task.id} ...`}</p>}
+        {detailState.error && <p className="form-error">{detailState.error}</p>}
+        <p className="drawer-description">{task.description || "暂无描述。"}</p>
+        <div className="drawer-fields">
+          <Field label="状态"><StatusBadge status={task.status} /></Field>
+          <Field label="优先级"><PriorityBadge priority={task.priority} /></Field>
+          <Field label="截止时间">{formatDue(task)}</Field>
+          {!isApiMode && <Field label="标签">{task.tags.join(" / ") || "未设置"}</Field>}
+          <Field label="创建来源">{task.isAiCreated ? "AI 生成" : "自定义创建"}</Field>
         </div>
-        <div className="ai-analysis-grid">
-          <Field label="AI 自动分类">{task.aiCategory}</Field>
-          <Field label="AI 推荐优先级">{task.priority}</Field>
-          <Field label="AI 预计完成时间">{task.estimatedTime}</Field>
-          <Field label="AI 解析置信度">{task.confidence ? `${Math.round(task.confidence * 100)}%` : "待确认"}</Field>
+        <section className="subtasks">
+          <h3>子任务</h3>
+          {isApiMode ? (
+            <p>后端任务模型暂未提供子任务字段，前端不再展示假数据。</p>
+          ) : (
+            <>
+              <label><input type="checkbox" /> 确认字段结构</label>
+              <label><input type="checkbox" /> 联调后端接口</label>
+              <label><input type="checkbox" /> 补充验收截图</label>
+            </>
+          )}
+        </section>
+        <section className="ai-analysis">
+          <div className="ai-analysis-heading">
+            <Sparkles size={18} />
+            <h3>AI 分析结果</h3>
+            {task.isAiCreated && <AITag confidence={task.confidence}>AI 生成</AITag>}
+          </div>
+          <div className="ai-analysis-grid">
+            <Field label="AI 自动分类">{task.aiCategory}</Field>
+            <Field label="AI 推荐优先级">{task.priority}</Field>
+            <Field label="AI 预计完成时间">{task.estimatedTime}</Field>
+            <Field label="AI 解析置信度">{task.confidence ? `${Math.round(task.confidence * 100)}%` : "待确认"}</Field>
+          </div>
+          <AIReasonBlock
+            reason={task.aiReason || "该任务建议安排在今天下午完成，因为它优先级较高，并且会影响后续开发进度。"}
+            source={task.isAiCreated ? "任务生成" : "任务分析"}
+          />
+        </section>
+        <div className="drawer-actions">
+          <button className="ghost-button" type="button" onClick={() => onEdit(task)}>
+            编辑任务
+          </button>
+          <button className="primary-button" type="button" onClick={() => onToggleComplete(task.id)}>
+            {task.status === "已完成" ? "恢复待办" : "标记完成"}
+          </button>
+          <button className="danger-button" type="button" onClick={() => onDelete(task.id)}>
+            删除任务
+          </button>
         </div>
-        <AIReasonBlock
-          reason={task.aiReason || "该任务建议安排在今天下午完成，因为它优先级较高，并且会影响后续开发进度。"}
-          source={task.isAiCreated ? "任务生成" : "任务分析"}
-        />
-      </section>
-      <div className="drawer-actions">
-        <button className="ghost-button" type="button" onClick={() => onEdit(task)}>
-          编辑任务
-        </button>
-        <button className="primary-button" type="button" onClick={() => onToggleComplete(task.id)}>
-          {task.status === "已完成" ? "恢复待办" : "标记完成"}
-        </button>
-        <button className="danger-button" type="button" onClick={() => onDelete(task.id)}>
-          删除任务
-        </button>
-      </div>
-    </aside>
+      </aside>
+    </>
   );
 }
 

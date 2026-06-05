@@ -75,7 +75,7 @@ export default function Dashboard({
                     </div>
                     <p>智能分析：{task.aiReason}</p>
                   </div>
-                  <span>{task.priority}</span>
+                  <span className="minimal-recommend-priority">{task.priority}</span>
                   <small>
                     <Clock3 size={12} />
                     {formatDue(task)}
