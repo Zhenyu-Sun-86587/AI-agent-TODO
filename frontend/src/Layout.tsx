@@ -1,0 +1,142 @@
+import type { ReactNode } from "react";
+import type { LucideIcon } from "lucide-react";
+import { Bell, LogOut, Moon, Plus, Search, Sparkles, Sun, User } from "lucide-react";
+
+export interface MinimalNavItem {
+  key: string;
+  label: string;
+  icon: LucideIcon;
+}
+
+export interface LayoutProps {
+  activePage: string;
+  apiMessage: string;
+  apiState: "local" | "loading" | "online" | "offline";
+  children: ReactNode;
+  globalSearch: string;
+  isDark: boolean;
+  navItems: MinimalNavItem[];
+  onCreateTask: () => void;
+  onLogout: () => void;
+  onNavigate: (page: string) => void;
+  onSearchChange: (value: string) => void;
+  onToggleTheme: () => void;
+  userName: string;
+}
+
+export default function Layout({
+  activePage,
+  apiMessage,
+  apiState,
+  children,
+  globalSearch,
+  isDark,
+  navItems,
+  onCreateTask,
+  onLogout,
+  onNavigate,
+  onSearchChange,
+  onToggleTheme,
+  userName,
+}: LayoutProps) {
+  const statusLabel = apiState === "online" ? "API" : apiState === "loading" ? "同步中" : apiState === "offline" ? "离线" : "本地";
+
+  return (
+    <div className={`minimal-shell ${isDark ? "minimal-shell-dark" : ""}`}>
+      <aside className="minimal-sidebar">
+        <div className="minimal-brand">
+          <span>
+            <Sparkles size={16} />
+          </span>
+          <div>
+            <strong>AI TODO</strong>
+            <small>Workspace</small>
+          </div>
+        </div>
+
+        <nav className="minimal-nav" aria-label="主导航">
+          {navItems.map((item) => (
+            <NavItem
+              active={item.key === activePage}
+              icon={item.icon}
+              key={item.key}
+              label={item.label}
+              onClick={() => onNavigate(item.key)}
+            />
+          ))}
+        </nav>
+      </aside>
+
+      <main className="minimal-workspace">
+        <header className="minimal-header">
+          <label className="minimal-search">
+            <Search size={16} />
+            <input
+              type="text"
+              value={globalSearch}
+              onChange={(event) => onSearchChange(event.target.value)}
+              placeholder="搜索任务、标签或项目..."
+            />
+          </label>
+
+          <div className="minimal-actions">
+            <button className="minimal-primary" type="button" onClick={onCreateTask}>
+              <Plus size={16} />
+              新建任务
+            </button>
+            <button className="minimal-icon" type="button" aria-label="通知">
+              <Bell size={18} />
+            </button>
+            <button className="minimal-icon" type="button" onClick={onToggleTheme} aria-label="切换主题">
+              {isDark ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
+            <span className={`minimal-status ${apiState}`} title={apiMessage}>
+              <i />
+              {statusLabel}
+            </span>
+            <button className="minimal-user" type="button">
+              <User size={16} />
+              <span>{userName}</span>
+            </button>
+            <button className="minimal-icon" type="button" onClick={onLogout} aria-label="退出登录">
+              <LogOut size={18} />
+            </button>
+          </div>
+        </header>
+
+        <div className="minimal-page">{children}</div>
+      </main>
+
+      <nav className="minimal-mobile-nav" aria-label="移动端导航">
+        {navItems.map((item) => (
+          <NavItem
+            active={item.key === activePage}
+            icon={item.icon}
+            key={item.key}
+            label={item.label}
+            onClick={() => onNavigate(item.key)}
+          />
+        ))}
+      </nav>
+    </div>
+  );
+}
+
+function NavItem({
+  active = false,
+  icon: Icon,
+  label,
+  onClick,
+}: {
+  active?: boolean;
+  icon: LucideIcon;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button className={`minimal-nav-item ${active ? "active" : ""}`} type="button" onClick={onClick}>
+      <Icon size={18} />
+      {label}
+    </button>
+  );
+}

@@ -28,6 +28,8 @@ import {
   UserRound,
   X,
 } from "lucide-react";
+import MinimalDashboard from "./Dashboard";
+import Layout from "./Layout";
 
 type PageKey =
   | "dashboard"
@@ -86,6 +88,7 @@ interface NewTaskInput {
   confidence?: number;
   rawDueText?: string;
   sourceText?: string;
+  aiBackendMode?: "backend" | "frontend-fallback";
 }
 
 interface SettingsState {
@@ -247,6 +250,7 @@ interface TaskFieldSuggestion {
   priority: TaskPriority;
   category: string;
   reason: string;
+  source?: string;
 }
 
 class ApiError extends Error {
@@ -558,6 +562,19 @@ function asErrorMessage(error: unknown) {
     return error.message;
   }
   return "请求失败，请稍后再试。";
+}
+
+function isAiConfigError(error: unknown) {
+  return error instanceof ApiError && (error.code === 4001 || error.code === 4002 || error.message.includes("OpenAI API Key"));
+}
+
+function buildFrontendFallbackTask(prompt: string, reason: string) {
+  const task = generateTaskFromPrompt(prompt);
+  return {
+    ...task,
+    aiBackendMode: "frontend-fallback" as const,
+    aiReason: `${reason}，已使用前端规则生成预览。`,
+  };
 }
 
 const initialTasks: Task[] = [
@@ -1237,7 +1254,13 @@ export function App() {
       setApiMessage("用户资料已同步后端");
       return "用户资料已保存到后端。";
     } catch (error) {
-      return handleApiError(error);
+      if (error instanceof ApiError && error.status === 401) {
+        return handleApiError(error);
+      }
+      const message = asErrorMessage(error);
+      setApiState("online");
+      setApiMessage(message);
+      return message;
     }
   };
 
@@ -1360,7 +1383,7 @@ export function App() {
       try {
         setApiState("loading");
         setApiMessage(input.isAiCreated ? "正在通过 AI 创建任务..." : "正在创建任务...");
-        if (input.isAiCreated) {
+        if (input.isAiCreated && input.aiBackendMode !== "frontend-fallback") {
           const data = await apiRequest<ApiAiCreateResponse>("/ai/create-task", {
             method: "POST",
             token: activeToken,
@@ -1445,8 +1468,14 @@ export function App() {
       });
       setApiState("online");
       setApiMessage(`AI 解析完成：${data.ai_status}`);
-      return mapParsedTaskToInput(data.parsed_task, prompt);
+      return { ...mapParsedTaskToInput(data.parsed_task, prompt), aiBackendMode: "backend" as const };
     } catch (error) {
+      if (isAiConfigError(error)) {
+        const message = asErrorMessage(error);
+        setApiState("online");
+        setApiMessage(message);
+        return buildFrontendFallbackTask(prompt, message);
+      }
       handleApiError(error);
       throw error;
     }
@@ -1459,6 +1488,7 @@ export function App() {
         priority: suggestion.priority,
         category: suggestion.category,
         reason: suggestion.aiReason || "本地规则已根据关键词推荐分类与优先级。",
+        source: "前端规则兜底",
       };
     }
 
@@ -1476,8 +1506,20 @@ export function App() {
         priority: priorityFromApi(data.priority),
         category: data.category || "未分类",
         reason: data.reason || "后端 AI 已返回推荐结果。",
+        source: "/ai/suggest",
       };
     } catch (error) {
+      if (isAiConfigError(error)) {
+        const suggestion = generateTaskFromPrompt(`${title}\n${description}`);
+        setApiState("online");
+        setApiMessage(asErrorMessage(error));
+        return {
+          priority: suggestion.priority,
+          category: suggestion.category,
+          reason: "后端 AI Key 未配置，已使用前端规则推荐分类与优先级。",
+          source: "前端规则兜底",
+        };
+      }
       handleApiError(error);
       throw error;
     }
@@ -1510,7 +1552,13 @@ export function App() {
       setApiMessage("设置已同步后端");
       return "设置已保存到后端。";
     } catch (error) {
-      return handleApiError(error);
+      if (error instanceof ApiError && error.status === 401) {
+        return handleApiError(error);
+      }
+      const message = asErrorMessage(error);
+      setApiState("online");
+      setApiMessage(message);
+      return message;
     }
   };
 
@@ -1565,6 +1613,7 @@ export function App() {
       onSuggestTaskFields={suggestTaskFields}
       onTestOpenAIKey={testOpenAIKey}
       onToggleComplete={toggleComplete}
+      profile={profile}
       recommendedTasks={recommendedTasks}
       profile={profile}
       remoteStats={remoteStats}
@@ -1592,32 +1641,21 @@ export function App() {
   }
 
   return (
-    <div className={`app-dashboard ${isDark ? "theme-dark" : ""}`}>
-      <Sidebar
-        activePage={activePage}
-        isOpen={isSidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-        onNavigate={(pageKey) => {
-          navigateTo(pageKey);
-          setSidebarOpen(false);
-        }}
-      />
-      <div className="app-workspace">
-        <Header
-          apiMessage={apiMessage}
-          apiState={apiState}
-          globalSearch={globalSearch}
-          isDark={isDark}
-          session={session}
-          onCreateTask={() => setCreateOpen(true)}
-          onLogout={logout}
-          onMenu={() => setSidebarOpen(true)}
-          onSearchChange={setGlobalSearch}
-          onToggleTheme={() => setIsDark((value) => !value)}
-        />
-        {page}
-      </div>
-      <MobileBottomNav activePage={activePage} onCreateTask={() => setCreateOpen(true)} onNavigate={navigateTo} />
+    <Layout
+      activePage={activePage}
+      apiMessage={apiMessage}
+      apiState={apiState}
+      globalSearch={globalSearch}
+      isDark={isDark}
+      navItems={navItems}
+      onCreateTask={() => setCreateOpen(true)}
+      onLogout={logout}
+      onNavigate={(pageKey) => navigateTo(pageKey as PageKey)}
+      onSearchChange={setGlobalSearch}
+      onToggleTheme={() => setIsDark((value) => !value)}
+      userName={session.name}
+    >
+      {page}
       <TaskDetailDrawer
         detailState={taskDetailState}
         isApiMode={Boolean(activeToken)}
@@ -1644,7 +1682,7 @@ export function App() {
           task={editingTask}
         />
       )}
-    </div>
+    </Layout>
   );
 }
 
@@ -2046,55 +2084,19 @@ function DashboardPage({
   tasks,
 }: DashboardPageProps) {
   const todayTasks = tasks.filter((task) => isToday(task.dueDate));
-  const visibleTasks = todayTasks.slice(0, 5);
   const completedToday = todayTasks.filter((task) => task.status === "已完成").length;
   const overdue = tasks.filter(isOverdue).length;
 
   return (
-    <main className="page-content">
-      <section className="welcome-panel">
-        <div>
-          <p className="eyebrow">AI TODO Dashboard</p>
-          <h1>早上好，今天也要高效完成任务！</h1>
-          <p>AI 已根据截止时间、优先级和依赖关系，为你整理好今日重点。</p>
-        </div>
-        <div className="welcome-progress">
-          <span>今日完成率</span>
-          <strong>{todayTasks.length ? Math.round((completedToday / todayTasks.length) * 100) : 0}%</strong>
-        </div>
-      </section>
-
-      <section className="stats-grid">
-        <StatsCard icon={CalendarDays} label="今日任务" value={todayTasks.length} tone="blue" />
-        <StatsCard icon={CheckCircle2} label="已完成" value={completedToday} tone="green" />
-        <StatsCard icon={AlertCircle} label="逾期任务" value={overdue} tone="red" />
-        <StatsCard icon={Sparkles} label="AI 推荐优先处理" value={recommendedTasks.length} tone="purple" />
-      </section>
-
-      <section className="dashboard-grid">
-        <AIAssistantCard onOpenTask={onOpenTask} tasks={recommendedTasks} />
-        <div className="content-card">
-          <div className="section-title">
-            <div>
-              <h2>今日任务</h2>
-              <p>按截止时间和 AI 优先级排序。</p>
-            </div>
-            <button className="ghost-button" type="button" onClick={() => onPageChange("all")}>
-              查看全部
-            </button>
-          </div>
-          <div className="task-card-list">
-            {visibleTasks.length ? (
-              visibleTasks.map((task) => (
-                <TaskCard key={task.id} onOpen={onOpenTask} onToggleComplete={onToggleComplete} task={task} />
-              ))
-            ) : (
-              <EmptyState title="今天没有截止任务" description="可以用底部或顶部的新建按钮添加一个今日任务。" />
-            )}
-          </div>
-        </div>
-      </section>
-    </main>
+    <MinimalDashboard
+      completedToday={completedToday}
+      onOpenTask={(task) => onOpenTask(task as Task)}
+      onPageChange={() => onPageChange("all")}
+      onToggleComplete={onToggleComplete}
+      overdueCount={overdue}
+      recommendedTasks={recommendedTasks}
+      todayTasks={todayTasks}
+    />
   );
 }
 
@@ -2531,6 +2533,18 @@ function TaskTable({ onDelete, onEditTask, onOpenTask, onToggleComplete, tasks }
                     onClick={(event) => {
                       event.stopPropagation();
                       setOpenMenuTaskId(null);
+                      onOpenTask(task);
+                    }}
+                    aria-label="查看详情"
+                    title="查看详情"
+                  >
+                    <FileText size={15} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setOpenMenuTaskId(null);
                       onToggleComplete(task.id);
                     }}
                     aria-label={toggleTaskActionLabel(task.status)}
@@ -2823,11 +2837,10 @@ function AILogsPanel({
     setError("");
     void apiRequest<ApiPageResult<ApiAiLog>>(`/ai/logs?${params.toString()}`, { token })
       .then((data) => {
-        if (isCancelled) {
-          return;
+        if (!isCancelled) {
+          setLogs(data.items);
+          setTotal(data.pagination.total);
         }
-        setLogs(data.items);
-        setTotal(data.pagination.total);
       })
       .catch((requestError) => {
         if (!isCancelled) {
@@ -2921,6 +2934,7 @@ function AISuggestTool({
     priority: fallbackSuggestion.priority,
     category: fallbackSuggestion.category,
     reason: fallbackSuggestion.aiReason || "本地规则已根据关键词推荐分类与优先级。",
+    source: "前端规则兜底",
   }));
   const [isLoading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -2960,7 +2974,7 @@ function AISuggestTool({
         <div className="suggest-result">
           <Field label="推荐优先级"><PriorityBadge priority={suggestion.priority} /></Field>
           <Field label="推荐分类">{suggestion.category}</Field>
-          <Field label="建议来源">/ai/suggest</Field>
+          <Field label="建议来源">{suggestion.source || "/ai/suggest"}</Field>
           <p>{suggestion.reason}</p>
           {error && <p className="form-error">{error}</p>}
         </div>
@@ -3937,6 +3951,7 @@ function GeneratedTaskPreview({ onEdit, onRegenerate, onUse, task }: GeneratedTa
         <Field label="预计耗时">{task.estimatedTime}</Field>
         <Field label="标签">{task.tags}</Field>
         <Field label="AI 分类">{task.aiCategory}</Field>
+        <Field label="AI 来源">{task.aiBackendMode === "frontend-fallback" ? "前端规则兜底" : "后端 AI"}</Field>
         <Field label="置信度">{task.confidence ? `${Math.round(task.confidence * 100)}%` : "待确认"}</Field>
         <Field label="原始时间">{task.rawDueText || "默认规划"}</Field>
       </div>
