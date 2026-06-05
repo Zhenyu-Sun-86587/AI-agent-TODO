@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent, type ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 import {
   AlertCircle,
@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import MinimalDashboard from "./Dashboard";
 import Layout from "./Layout";
+import ToastViewport, { type ToastMessage, type ToastTone } from "./components/Toast";
 
 type PageKey =
   | "dashboard"
@@ -271,6 +272,7 @@ const SESSION_STORAGE_KEY = "ai-agent-todo.session";
 const THEME_STORAGE_KEY = "ai-agent-todo.theme";
 const SETTINGS_STORAGE_KEY = "ai-agent-todo.settings";
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000/api").replace(/\/$/, "");
+const OVERLAY_EXIT_MS = 180;
 
 function formatLocalDate(date: Date) {
   const year = date.getFullYear();
@@ -788,6 +790,22 @@ function isOverdue(task: Task) {
   return task.status !== "已完成" && Boolean(task.dueDate) && task.dueDate < dateFromToday(0);
 }
 
+function isAiPriorityTask(task: Pick<Task, "isAiCreated" | "priority" | "status">) {
+  return task.status !== "已完成" && (task.isAiCreated || task.priority === "高");
+}
+
+function getTaskOverview(tasks: Task[]) {
+  const todayTasks = tasks.filter((task) => isToday(task.dueDate));
+  const completedToday = todayTasks.filter((task) => task.status === "已完成").length;
+
+  return {
+    aiPriorityCount: tasks.filter(isAiPriorityTask).length,
+    completedToday,
+    overdueCount: tasks.filter(isOverdue).length,
+    todayTasks,
+  };
+}
+
 function readStoredSession() {
   const storedSession = readStoredJson<unknown>(SESSION_STORAGE_KEY, null);
   if (!isRecord(storedSession) || typeof storedSession.name !== "string" || typeof storedSession.email !== "string") {
@@ -1083,7 +1101,22 @@ export function App() {
   const [isDark, setIsDark] = useState(() => readStoredTheme());
   const [globalSearch, setGlobalSearch] = useState("");
   const [taskDetailState, setTaskDetailState] = useState<TaskDetailState>({ isLoading: false, error: "" });
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const toastIdRef = useRef(0);
   const activeToken = session?.isApiSession ? session.token : "";
+  const markTaskDataChanged = useCallback(() => {
+    setTaskVersion((value) => value + 1);
+  }, []);
+
+  const dismissToast = useCallback((id: number) => {
+    setToasts((currentToasts) => currentToasts.filter((toast) => toast.id !== id));
+  }, []);
+
+  const showToast = useCallback((title: string, message?: string, tone: ToastTone = "info") => {
+    toastIdRef.current += 1;
+    const id = toastIdRef.current;
+    setToasts((currentToasts) => [...currentToasts.slice(-2), { id, message, title, tone }]);
+  }, []);
 
   const clearSession = () => {
     setSession(null);
@@ -1117,6 +1150,7 @@ export function App() {
 
   const handleApiError = (error: unknown) => {
     if (error instanceof ApiError && error.status === 401) {
+      showToast("登录已过期", "请重新登录后继续操作。", "error");
       clearSession();
       return "登录已过期，请重新登录。";
     }
@@ -1124,6 +1158,7 @@ export function App() {
     const message = asErrorMessage(error);
     setApiState("offline");
     setApiMessage(message);
+    showToast("请求失败", message, "error");
     return message;
   };
 
@@ -1381,31 +1416,33 @@ export function App() {
   );
 
   const toggleComplete = async (taskId: number) => {
-    if (activeToken) {
-      const task = tasks.find((item) => item.id === taskId);
-      if (!task) {
-        return;
-      }
+    const currentTask = tasks.find((item) => item.id === taskId);
+    if (!currentTask) {
+      return;
+    }
 
+    if (activeToken) {
       try {
         setApiState("loading");
         setApiMessage("正在更新任务状态...");
         const updatedStatus = await apiRequest<{ id: number; status: ApiTaskStatus; updated_at: string }>(`/tasks/${taskId}/status`, {
           method: "PATCH",
           token: activeToken,
-          body: JSON.stringify({ status: task.status === "已完成" ? "todo" : "done" }),
+          body: JSON.stringify({ status: currentTask.status === "已完成" ? "todo" : "done" }),
         });
         const nextStatus = statusFromApi(updatedStatus.status);
+        const updateTaskStatus = (task: Task): Task => ({
+          ...task,
+          status: nextStatus,
+          completedAt: nextStatus === "已完成" ? dateFromIso(updatedStatus.updated_at) : null,
+        });
+        setTasks((currentTasks) => currentTasks.map((task) => (task.id === taskId ? updateTaskStatus(task) : task)));
         setSelectedTask((currentTask) =>
-          currentTask?.id === taskId
-            ? {
-                ...currentTask,
-                status: nextStatus,
-                completedAt: nextStatus === "已完成" ? dateFromIso(updatedStatus.updated_at) : null,
-              }
-            : currentTask,
+          currentTask?.id === taskId ? updateTaskStatus(currentTask) : currentTask,
         );
+        markTaskDataChanged();
         await loadRemoteWorkspace(activeToken);
+        showToast(nextStatus === "已完成" ? "任务已完成" : "任务已恢复", currentTask.title, "success");
       } catch (error) {
         handleApiError(error);
       }
@@ -1425,6 +1462,9 @@ export function App() {
       currentTasks.map((task) => (task.id === taskId ? toggleTaskStatus(task) : task)),
     );
     setSelectedTask((currentTask) => (currentTask?.id === taskId ? toggleTaskStatus(currentTask) : currentTask));
+    markTaskDataChanged();
+    const nextStatus = currentTask.status === "已完成" ? "待办" : "已完成";
+    showToast(nextStatus === "已完成" ? "任务已完成" : "任务已恢复", currentTask.title, "success");
   };
 
   const requestDeleteTask = (taskId: number) => {
@@ -1435,6 +1475,8 @@ export function App() {
   };
 
   const deleteTask = async (taskId: number) => {
+    const taskTitle = deleteCandidate?.id === taskId ? deleteCandidate.title : tasks.find((task) => task.id === taskId)?.title;
+    setDeleteCandidate(null);
     if (activeToken) {
       try {
         setApiState("loading");
@@ -1443,10 +1485,12 @@ export function App() {
           method: "DELETE",
           token: activeToken,
         });
-        setDeleteCandidate(null);
         setSelectedTask(null);
         setEditingTask(null);
+        setTasks((currentTasks) => currentTasks.filter((task) => task.id !== taskId));
+        markTaskDataChanged();
         await loadRemoteWorkspace(activeToken);
+        showToast("任务已删除", taskTitle, "success");
       } catch (error) {
         handleApiError(error);
       }
@@ -1454,13 +1498,14 @@ export function App() {
     }
 
     setTasks((currentTasks) => currentTasks.filter((task) => task.id !== taskId));
-    setDeleteCandidate(null);
     if (selectedTask?.id === taskId) {
       setSelectedTask(null);
     }
     if (editingTask?.id === taskId) {
       setEditingTask(null);
     }
+    markTaskDataChanged();
+    showToast("任务已删除", taskTitle, "success");
   };
 
   const createLocalTask = (input: NewTaskInput) => {
@@ -1494,7 +1539,9 @@ export function App() {
       sourceText: normalizedInput.sourceText,
     };
     setTasks((currentTasks) => [task, ...currentTasks]);
+    markTaskDataChanged();
     setCreateOpen(false);
+    showToast("任务已创建", task.title, "success");
   };
 
   const createTask = async (input: NewTaskInput) => {
@@ -1522,8 +1569,10 @@ export function App() {
           });
           setTasks((currentTasks) => [mapApiTask(task), ...currentTasks]);
         }
+        markTaskDataChanged();
         setCreateOpen(false);
         await loadRemoteWorkspace(activeToken);
+        showToast("任务已创建", normalizedInput.title, "success");
       } catch (error) {
         handleApiError(error);
       }
@@ -1551,26 +1600,30 @@ export function App() {
         setTasks((currentTasks) => currentTasks.map((currentTask) => (currentTask.id === taskId ? updatedTask : currentTask)));
         setSelectedTask((currentTask) => (currentTask?.id === taskId ? updatedTask : currentTask));
         setEditingTask(null);
+        markTaskDataChanged();
         await loadRemoteWorkspace(activeToken);
+        showToast("任务已更新", updatedTask.title, "success");
       } catch (error) {
         handleApiError(error);
       }
       return;
     }
 
-    let updatedTask: Task | null = null;
-    setTasks((currentTasks) =>
-      currentTasks.map((task) => {
-        if (task.id !== taskId) {
-          return task;
-        }
-        updatedTask = mergeTaskInput(task, normalizedInput);
-        return updatedTask;
-      }),
-    );
-    if (updatedTask) {
+    const originalTask = tasks.find((task) => task.id === taskId);
+    if (originalTask) {
+      const updatedTask = mergeTaskInput(originalTask, normalizedInput);
+      setTasks((currentTasks) =>
+        currentTasks.map((task) => {
+          if (task.id !== taskId) {
+            return task;
+          }
+          return updatedTask;
+        }),
+      );
       setSelectedTask((currentTask) => (currentTask?.id === taskId ? updatedTask : currentTask));
       setEditingTask(null);
+      markTaskDataChanged();
+      showToast("任务已更新", updatedTask.title, "success");
     }
   };
 
@@ -1601,7 +1654,6 @@ export function App() {
       throw error;
     }
   };
-
   const suggestTaskFields = async (title: string, description: string): Promise<TaskFieldSuggestion> => {
     if (!activeToken) {
       const suggestion = generateTaskFromPrompt(`${title}\n${description}`);
@@ -1818,6 +1870,7 @@ export function App() {
           task={deleteCandidate}
         />
       )}
+      <ToastViewport items={toasts} onDismiss={dismissToast} />
     </Layout>
   );
 }
@@ -2231,17 +2284,16 @@ function DashboardPage({
   recommendedTasks,
   tasks,
 }: DashboardPageProps) {
-  const todayTasks = tasks.filter((task) => isToday(task.dueDate));
-  const completedToday = todayTasks.filter((task) => task.status === "已完成").length;
-  const overdue = tasks.filter(isOverdue).length;
+  const { aiPriorityCount, completedToday, overdueCount, todayTasks } = getTaskOverview(tasks);
 
   return (
     <MinimalDashboard
+      aiPriorityCount={aiPriorityCount}
       completedToday={completedToday}
       onOpenTask={(task) => onOpenTask(task as Task)}
       onPageChange={() => onPageChange("all")}
       onToggleComplete={onToggleComplete}
-      overdueCount={overdue}
+      overdueCount={overdueCount}
       recommendedTasks={recommendedTasks}
       todayTasks={todayTasks}
     />
@@ -2266,7 +2318,7 @@ function TodayTasksPage({
     .sort((left, right) => (left.dueTime || "23:59").localeCompare(right.dueTime || "23:59"));
   const done = todayTasks.filter((task) => task.status === "已完成").length;
   const remaining = todayTasks.length - done;
-  const aiRecommended = todayTasks.filter((task) => task.isAiCreated || task.priority === "高").length;
+  const aiRecommended = todayTasks.filter(isAiPriorityTask).length;
 
   return (
     <main className="page-content">
@@ -2305,13 +2357,13 @@ interface StatsCardProps {
 
 function StatsCard({ icon: Icon, label, tone, value }: StatsCardProps) {
   return (
-    <article className={`stats-card ${tone}`}>
+    <article className={`stats-card ${tone}`} data-value={value}>
       <span>
         <Icon size={20} />
       </span>
       <div>
         <p>{label}</p>
-        <strong>{value}</strong>
+        <strong key={value}>{value}</strong>
       </div>
     </article>
   );
@@ -2346,8 +2398,14 @@ function AIAssistantCard({ onOpenTask, tasks }: AIAssistantCardProps) {
       </div>
       <div className="ai-recommend-list">
         {tasks.length ? (
-          tasks.map((task) => (
-            <button key={task.id} type="button" onClick={() => onOpenTask(task)}>
+          tasks.map((task, index) => (
+            <button
+              className="ai-recommend-item"
+              key={task.id}
+              style={{ "--stagger-index": index } as CSSProperties}
+              type="button"
+              onClick={() => onOpenTask(task)}
+            >
               <div>
                 <strong>{task.title}</strong>
                 <p>推荐原因：{task.aiReason}</p>
@@ -2376,11 +2434,12 @@ interface TaskCardProps {
 
 function TaskCard({ onOpen, onToggleComplete, task }: TaskCardProps) {
   const toggleLabel = toggleTaskActionLabel(task.status);
+  const isDone = task.status === "已完成";
 
   return (
-    <article className="task-card" onClick={() => onOpen(task)}>
+    <article className={`task-card motion-enter ${isDone ? "is-complete" : ""} ${task.priority === "高" ? "is-high-priority" : ""}`} onClick={() => onOpen(task)}>
       <button
-        className={`task-check ${task.status === "已完成" ? "checked" : ""}`}
+        className={`task-check ${isDone ? "checked" : ""}`}
         type="button"
         onClick={(event) => {
           event.stopPropagation();
@@ -2393,7 +2452,7 @@ function TaskCard({ onOpen, onToggleComplete, task }: TaskCardProps) {
       </button>
       <div className="task-card-body">
         <div className="task-card-title">
-          <h3>{task.title}</h3>
+          <h3 className={isDone ? "task-title-done" : ""}>{task.title}</h3>
           <PriorityBadge priority={task.priority} />
         </div>
         <p>{task.description}</p>
@@ -2451,6 +2510,40 @@ function useEscapeToClose(onClose: () => void) {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [onClose]);
+}
+
+function useAnimatedDismiss(onClose: () => void, duration = OVERLAY_EXIT_MS, resetKey?: unknown) {
+  const [isClosing, setClosing] = useState(false);
+  const timeoutRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    setClosing(false);
+    if (timeoutRef.current !== null) {
+      window.clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+  }, [resetKey]);
+
+  useEffect(
+    () => () => {
+      if (timeoutRef.current !== null) {
+        window.clearTimeout(timeoutRef.current);
+      }
+    },
+    [],
+  );
+
+  const closeWithAnimation = useCallback((afterClose = onClose) => {
+    if (isClosing) {
+      return;
+    }
+    setClosing(true);
+    timeoutRef.current = window.setTimeout(() => {
+      afterClose();
+    }, duration);
+  }, [duration, isClosing, onClose]);
+
+  return { closeWithAnimation, isClosing };
 }
 
 interface AllTasksPageProps {
@@ -2746,9 +2839,11 @@ function TaskTable({ onDelete, onEditTask, onOpenTask, onToggleComplete, tasks }
             </tr>
           </thead>
           <tbody>
-            {tasks.map((task) => (
+            {tasks.map((task, index) => (
                 <tr
+                  className={`task-table-row ${task.status === "已完成" ? "is-complete" : ""} ${task.priority === "高" ? "is-high-priority" : ""}`}
                   key={task.id}
+                  style={{ "--stagger-index": index } as CSSProperties}
                   onClick={() => {
                     setOpenMenuTaskId(null);
                     onOpenTask(task);
@@ -2756,7 +2851,7 @@ function TaskTable({ onDelete, onEditTask, onOpenTask, onToggleComplete, tasks }
                 >
                 <td>
                   <div className="table-title">
-                    <strong>{task.title}</strong>
+                    <strong className={task.status === "已完成" ? "task-title-done" : ""}>{task.title}</strong>
                     <span>{task.description}</span>
                   </div>
                 </td>
@@ -2787,8 +2882,13 @@ function TaskTable({ onDelete, onEditTask, onOpenTask, onToggleComplete, tasks }
       </div>
 
       <div className="mobile-card-list">
-        {tasks.map((task) => (
-          <article className="mobile-task-card" key={task.id} onClick={() => onOpenTask(task)}>
+        {tasks.map((task, index) => (
+          <article
+            className={`mobile-task-card ${task.status === "已完成" ? "is-complete" : ""} ${task.priority === "高" ? "is-high-priority" : ""}`}
+            key={task.id}
+            style={{ "--stagger-index": index } as CSSProperties}
+            onClick={() => onOpenTask(task)}
+          >
             <div className="mobile-task-card-header">
               <div className="mobile-task-title">
                 <button
@@ -3016,8 +3116,9 @@ function TaskBoard({ categories, isApiMode, onCreateTask, onOpenTask, tasks }: T
         </button>
       </div>
       <div className="kanban-board">
-        {(isApiMode ? apiStatusOptions : statusOptions).map((status) => (
+        {(isApiMode ? apiStatusOptions : statusOptions).map((status, index) => (
           <TaskColumn
+            columnIndex={index}
             key={status}
             onOpenTask={onOpenTask}
             status={status}
@@ -3030,22 +3131,29 @@ function TaskBoard({ categories, isApiMode, onCreateTask, onOpenTask, tasks }: T
 }
 
 interface TaskColumnProps {
+  columnIndex: number;
   onOpenTask: (task: Task) => void;
   status: TaskStatus;
   tasks: Task[];
 }
 
-function TaskColumn({ onOpenTask, status, tasks }: TaskColumnProps) {
+function TaskColumn({ columnIndex, onOpenTask, status, tasks }: TaskColumnProps) {
   return (
-    <section className="task-column">
+    <section className="task-column" style={{ "--stagger-index": columnIndex } as CSSProperties}>
       <header>
         <h2>{status}</h2>
         <span>{tasks.length}</span>
       </header>
       <div className="task-column-list">
         {tasks.length ? (
-          tasks.map((task) => (
-            <button className="kanban-card" key={task.id} type="button" onClick={() => onOpenTask(task)}>
+          tasks.map((task, index) => (
+            <button
+              className={`kanban-card ${task.status === "已完成" ? "is-complete" : ""} ${task.priority === "高" ? "is-high-priority" : ""}`}
+              key={task.id}
+              style={{ "--stagger-index": index } as CSSProperties}
+              type="button"
+              onClick={() => onOpenTask(task)}
+            >
               <div>
                 <strong>{task.title}</strong>
                 <PriorityBadge priority={task.priority} />
@@ -3283,7 +3391,18 @@ function AISuggestTool({
           <p>点击后调用 /ai/suggest；本地演示模式会使用前端规则兜底。</p>
         </div>
         <button className="ghost-button" type="button" onClick={requestSuggestion} disabled={isLoading}>
-          {isLoading ? "分析中..." : "获取建议"}
+          {isLoading ? (
+            <>
+              分析中
+              <span className="thinking-dots" aria-hidden="true">
+                <i />
+                <i />
+                <i />
+              </span>
+            </>
+          ) : (
+            "获取建议"
+          )}
         </button>
       </div>
       <div className="ai-suggest-grid">
@@ -3892,7 +4011,8 @@ interface TaskDetailDrawerProps {
 }
 
 function TaskDetailDrawer({ detailState, isApiMode, onClose, onDelete, onEdit, onToggleComplete, task }: TaskDetailDrawerProps) {
-  useEscapeToClose(onClose);
+  const { closeWithAnimation, isClosing } = useAnimatedDismiss(onClose, OVERLAY_EXIT_MS, task?.id ?? null);
+  useEscapeToClose(closeWithAnimation);
 
   if (!task) {
     return null;
@@ -3900,14 +4020,19 @@ function TaskDetailDrawer({ detailState, isApiMode, onClose, onDelete, onEdit, o
 
   return (
     <>
-      <button className="drawer-backdrop" type="button" onClick={onClose} aria-label="关闭任务详情遮罩" />
-      <aside className="drawer">
+      <button
+        className={`drawer-backdrop ${isClosing ? "closing" : ""}`}
+        type="button"
+        onClick={() => closeWithAnimation()}
+        aria-label="关闭任务详情遮罩"
+      />
+      <aside className={`drawer ${isClosing ? "closing" : ""}`}>
         <div className="drawer-header">
           <div>
             <p className="eyebrow">任务详情</p>
             <h2>{task.title}</h2>
           </div>
-          <button className="icon-button" type="button" onClick={onClose} aria-label="关闭详情">
+          <button className="icon-button" type="button" onClick={() => closeWithAnimation()} aria-label="关闭详情">
             <X size={18} />
           </button>
         </div>
@@ -4000,17 +4125,18 @@ function DeleteConfirmModal({
   onConfirm: () => void;
   task: Task;
 }) {
-  useEscapeToClose(onCancel);
+  const { closeWithAnimation, isClosing } = useAnimatedDismiss(onCancel, OVERLAY_EXIT_MS);
+  useEscapeToClose(closeWithAnimation);
 
   return (
-    <div className="modal-backdrop">
-      <div className="create-modal confirm-modal">
+    <div className={`modal-backdrop ${isClosing ? "closing" : ""}`}>
+      <div className={`create-modal confirm-modal ${isClosing ? "closing" : ""}`}>
         <div className="drawer-header">
           <div>
             <p className="eyebrow">Delete Task</p>
             <h2>确认删除任务？</h2>
           </div>
-          <button className="icon-button" type="button" onClick={onCancel} aria-label="关闭确认">
+          <button className="icon-button" type="button" onClick={() => closeWithAnimation()} aria-label="关闭确认">
             <X size={18} />
           </button>
         </div>
@@ -4020,10 +4146,10 @@ function DeleteConfirmModal({
           {task.description && <span>{task.description}</span>}
         </div>
         <div className="preview-actions">
-          <button className="ghost-button" type="button" onClick={onCancel}>
+          <button className="ghost-button" type="button" onClick={() => closeWithAnimation()}>
             取消
           </button>
-          <button className="danger-button" type="button" onClick={onConfirm}>
+          <button className="danger-button" type="button" onClick={() => closeWithAnimation(onConfirm)}>
             确认删除
           </button>
         </div>
@@ -4033,7 +4159,8 @@ function DeleteConfirmModal({
 }
 
 function EditTaskModal({ categories, isApiMode, onClose, onUpdate, task }: EditTaskModalProps) {
-  useEscapeToClose(onClose);
+  const { closeWithAnimation, isClosing } = useAnimatedDismiss(onClose, OVERLAY_EXIT_MS);
+  useEscapeToClose(closeWithAnimation);
 
   const [form, setForm] = useState<NewTaskInput>(() => taskToInput(task));
 
@@ -4045,14 +4172,14 @@ function EditTaskModal({ categories, isApiMode, onClose, onUpdate, task }: EditT
   };
 
   return (
-    <div className="modal-backdrop">
-      <div className="create-modal">
+    <div className={`modal-backdrop ${isClosing ? "closing" : ""}`}>
+      <div className={`create-modal ${isClosing ? "closing" : ""}`}>
         <div className="drawer-header">
           <div>
             <p className="eyebrow">Edit Task</p>
             <h2>编辑任务</h2>
           </div>
-          <button className="icon-button" type="button" onClick={onClose} aria-label="关闭弹窗">
+          <button className="icon-button" type="button" onClick={() => closeWithAnimation()} aria-label="关闭弹窗">
             <X size={18} />
           </button>
         </div>
@@ -4072,7 +4199,8 @@ function EditTaskModal({ categories, isApiMode, onClose, onUpdate, task }: EditT
 type CreateMode = "manual" | "ai";
 
 function CreateTaskModal({ categories, isApiMode, onClose, onCreate, onParseTask }: CreateTaskModalProps) {
-  useEscapeToClose(onClose);
+  const { closeWithAnimation, isClosing } = useAnimatedDismiss(onClose, OVERLAY_EXIT_MS);
+  useEscapeToClose(closeWithAnimation);
 
   const [mode, setMode] = useState<CreateMode>("ai");
   const [form, setForm] = useState<NewTaskInput>(() => createEmptyTask());
@@ -4105,14 +4233,14 @@ function CreateTaskModal({ categories, isApiMode, onClose, onCreate, onParseTask
   };
 
   return (
-    <div className="modal-backdrop">
-      <div className="create-modal">
+    <div className={`modal-backdrop ${isClosing ? "closing" : ""}`}>
+      <div className={`create-modal ${isClosing ? "closing" : ""}`}>
         <div className="drawer-header">
           <div>
             <p className="eyebrow">Create Task</p>
             <h2>新建任务</h2>
           </div>
-          <button className="icon-button" type="button" onClick={onClose} aria-label="关闭弹窗">
+          <button className="icon-button" type="button" onClick={() => closeWithAnimation()} aria-label="关闭弹窗">
             <X size={18} />
           </button>
         </div>
@@ -4311,6 +4439,7 @@ function AITaskGenerator({
     <section className="ai-task-generator">
       <label htmlFor="ai-task-prompt">告诉 AI 你想做什么</label>
       <textarea
+        className="ai-natural-input"
         id="ai-task-prompt"
         value={prompt}
         onChange={(event) => onPromptChange(event.target.value)}
@@ -4319,7 +4448,18 @@ function AITaskGenerator({
       />
       <button className="primary-button full" type="button" onClick={onGenerate} disabled={isGenerating}>
         <Sparkles size={17} />
-        {isGenerating ? "AI 解析中..." : "AI 生成 TODO"}
+        {isGenerating ? (
+          <>
+            AI 解析中
+            <span className="thinking-dots" aria-hidden="true">
+              <i />
+              <i />
+              <i />
+            </span>
+          </>
+        ) : (
+          "AI 生成 TODO"
+        )}
       </button>
       {error && <p className="form-error">{error}</p>}
       {generatedTask ? (

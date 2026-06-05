@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 import { Bell, LayoutDashboard, LogOut, Moon, Plus, Search, Sparkles, Sun, User } from "lucide-react";
 
@@ -40,10 +40,46 @@ export default function Layout({
   userName,
 }: LayoutProps) {
   const statusLabel = apiState === "online" ? "API" : apiState === "loading" ? "同步中" : apiState === "offline" ? "离线" : "本地";
-  const [openPanel, setOpenPanel] = useState<"notifications" | "user" | null>(null);
+  const [openPanel, setOpenPanel] = useState<"notifications" | "mobileMore" | "user" | null>(null);
+  const [isMobileMoreClosing, setMobileMoreClosing] = useState(false);
+  const mobileMoreCloseTimer = useRef<number | null>(null);
   const mobilePrimaryItems = navItems.filter((item) => item.key === "dashboard" || item.key === "all");
   const mobileSecondaryItems = navItems.filter((item) => item.key === "ai" || item.key === "stats");
   const mobileMoreItems = navItems.filter((item) => !["dashboard", "all", "ai", "stats"].includes(item.key));
+
+  useEffect(
+    () => () => {
+      if (mobileMoreCloseTimer.current !== null) {
+        window.clearTimeout(mobileMoreCloseTimer.current);
+      }
+    },
+    [],
+  );
+
+  const closeMobileMore = () => {
+    if (openPanel !== "mobileMore" || isMobileMoreClosing) {
+      return;
+    }
+    setMobileMoreClosing(true);
+    mobileMoreCloseTimer.current = window.setTimeout(() => {
+      setOpenPanel(null);
+      setMobileMoreClosing(false);
+      mobileMoreCloseTimer.current = null;
+    }, 160);
+  };
+
+  const toggleMobileMore = () => {
+    if (openPanel === "mobileMore") {
+      closeMobileMore();
+      return;
+    }
+    if (mobileMoreCloseTimer.current !== null) {
+      window.clearTimeout(mobileMoreCloseTimer.current);
+      mobileMoreCloseTimer.current = null;
+    }
+    setMobileMoreClosing(false);
+    setOpenPanel("mobileMore");
+  };
 
   return (
     <div className={`minimal-shell ${isDark ? "minimal-shell-dark" : "minimal-shell-light"}`}>
@@ -109,18 +145,26 @@ export default function Layout({
               <button
                 className="minimal-icon minimal-mobile-more"
                 type="button"
-                onClick={() => setOpenPanel((panel) => (panel === "notifications" ? null : "notifications"))}
-                aria-expanded={openPanel === "notifications"}
+                onClick={toggleMobileMore}
+                aria-expanded={openPanel === "mobileMore"}
                 aria-label="更多页面"
               >
                 <LayoutDashboard size={18} />
               </button>
-              {openPanel === "notifications" && (
-                <div className="minimal-popover minimal-mobile-more-panel" role="menu">
+              {openPanel === "mobileMore" && (
+                <div className={`minimal-popover minimal-mobile-more-panel ${isMobileMoreClosing ? "closing" : ""}`} role="menu">
                   {mobileMoreItems.map((item) => {
                     const Icon = item.icon;
                     return (
-                      <button key={item.key} type="button" onClick={() => onNavigate(item.key)} role="menuitem">
+                      <button
+                        key={item.key}
+                        type="button"
+                        onClick={() => {
+                          onNavigate(item.key);
+                          closeMobileMore();
+                        }}
+                        role="menuitem"
+                      >
                         <Icon size={15} />
                         {item.label}
                       </button>
@@ -163,6 +207,15 @@ export default function Layout({
 
         <div className="minimal-page">{children}</div>
       </main>
+
+      {openPanel === "mobileMore" && (
+        <button
+          className={`minimal-mobile-menu-backdrop ${isMobileMoreClosing ? "closing" : ""}`}
+          type="button"
+          onClick={closeMobileMore}
+          aria-label="关闭更多页面菜单"
+        />
+      )}
 
       <nav className="minimal-mobile-nav mobile-bottom-nav" aria-label="移动端导航">
         {mobilePrimaryItems.map((item) => (

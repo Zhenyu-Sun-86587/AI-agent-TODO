@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { AlertCircle, Calendar, Check, CheckCircle2, Clock3, FileText, Sparkles } from "lucide-react";
 
 export interface DashboardTask {
@@ -14,6 +14,7 @@ export interface DashboardTask {
 }
 
 export interface DashboardProps {
+  aiPriorityCount: number;
   completedToday: number;
   onOpenTask: (task: DashboardTask) => void;
   onPageChange: () => void;
@@ -24,6 +25,7 @@ export interface DashboardProps {
 }
 
 export default function Dashboard({
+  aiPriorityCount,
   completedToday,
   onOpenTask,
   onPageChange,
@@ -44,7 +46,7 @@ export default function Dashboard({
         </div>
         <div className="minimal-rate">
           <span>今日完成率</span>
-          <strong>
+          <strong key={completionRate}>
             {completionRate}
             <small>%</small>
           </strong>
@@ -52,10 +54,10 @@ export default function Dashboard({
       </section>
 
       <section className="minimal-stats" aria-label="今日概览">
-        <StatCard icon={<Calendar size={20} />} label="今日任务" tone="blue" value={todayTasks.length} />
-        <StatCard icon={<CheckCircle2 size={20} />} label="已完成" tone="green" value={completedToday} />
-        <StatCard icon={<AlertCircle size={20} />} label="逾期任务" tone="red" value={overdueCount} />
-        <StatCard icon={<Sparkles size={20} />} label="AI 推荐优先" tone="purple" value={recommendedTasks.length} />
+        <StatCard icon={<Calendar size={20} />} index={0} label="今日任务" tone="blue" value={todayTasks.length} />
+        <StatCard icon={<CheckCircle2 size={20} />} index={1} label="已完成" tone="green" value={completedToday} />
+        <StatCard icon={<AlertCircle size={20} />} index={2} label="逾期任务" tone="red" value={overdueCount} />
+        <StatCard icon={<Sparkles size={20} />} index={3} label="AI 推荐优先" tone="purple" value={aiPriorityCount} />
       </section>
 
       <section className="minimal-grid">
@@ -66,8 +68,14 @@ export default function Dashboard({
           </div>
           {recommendedTasks.length ? (
             <div className="minimal-recommend-list">
-              {recommendedTasks.map((task) => (
-                <button key={task.id} type="button" onClick={() => onOpenTask(task)}>
+              {recommendedTasks.map((task, index) => (
+                <button
+                  className="minimal-recommend-item"
+                  key={task.id}
+                  style={{ "--stagger-index": index } as CSSProperties}
+                  type="button"
+                  onClick={() => onOpenTask(task)}
+                >
                   <div>
                     <div className="minimal-ai-title-line">
                       <strong>{task.title}</strong>
@@ -101,10 +109,15 @@ export default function Dashboard({
           </div>
           {visibleTasks.length ? (
             <div className="minimal-task-list">
-              {visibleTasks.map((task) => {
+              {visibleTasks.map((task, index) => {
                 const isDone = task.status === "已完成";
                 return (
-                  <article key={task.id} className="minimal-task-row" onClick={() => onOpenTask(task)}>
+                  <article
+                    key={task.id}
+                    className={`minimal-task-row ${isDone ? "is-complete" : ""} ${task.priority === "高" ? "is-high-priority" : ""}`}
+                    style={{ "--stagger-index": index } as CSSProperties}
+                    onClick={() => onOpenTask(task)}
+                  >
                     <button
                       className={isDone ? "done" : ""}
                       type="button"
@@ -150,21 +163,23 @@ function formatDue(task: Pick<DashboardTask, "dueDate" | "dueTime">) {
 
 function StatCard({
   icon,
+  index,
   label,
   tone,
   value,
 }: {
   icon: ReactNode;
+  index: number;
   label: string;
   tone: "blue" | "green" | "red" | "purple";
   value: number;
 }) {
   return (
-    <article className="minimal-stat">
+    <article className="minimal-stat" style={{ "--stagger-index": index } as CSSProperties}>
       <span className={`minimal-stat-icon ${tone}`}>{icon}</span>
       <div>
         <p>{label}</p>
-        <strong>{value}</strong>
+        <strong key={value}>{value}</strong>
       </div>
     </article>
   );
