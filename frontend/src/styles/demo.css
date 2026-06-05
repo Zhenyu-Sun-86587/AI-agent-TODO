@@ -20,6 +20,10 @@
   --orange: #f97316;
   --red: #dc2626;
   --shadow: 0 16px 34px rgba(15, 23, 42, 0.08);
+  --duration-fast: 120ms;
+  --duration-base: 160ms;
+  --ease-quick: ease;
+  --ease-modal: cubic-bezier(0.2, 0.8, 0.2, 1);
   background: var(--bg);
   color: var(--text);
   font-synthesis: none;
@@ -202,6 +206,11 @@ html,
   gap: 12px;
 }
 
+.minimal-action-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
 .minimal-primary,
 .minimal-icon,
 .minimal-user {
@@ -261,6 +270,40 @@ html,
   background: #121214;
   color: #e2e8f0;
   font-weight: 700;
+}
+
+.minimal-popover {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 140;
+  width: 220px;
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  background: #18181b;
+  color: #cbd5e1;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.28);
+}
+
+.minimal-popover strong {
+  color: #f8fafc;
+}
+
+.minimal-popover p {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.minimal-popover button {
+  min-height: 34px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  background: #121214;
+  color: #e2e8f0;
+  font-weight: 900;
 }
 
 .minimal-page {
@@ -669,6 +712,177 @@ html,
   border-color: rgba(255, 255, 255, 0.06);
 }
 
+.minimal-shell-light {
+  background: #f5f7fb;
+  color: #172033;
+}
+
+.minimal-shell-light .minimal-sidebar {
+  border-right-color: #e4e7ec;
+  background: #ffffff;
+}
+
+.minimal-shell-light .minimal-brand strong,
+.minimal-shell-light .minimal-hero h1,
+.minimal-shell-light .minimal-rate strong,
+.minimal-shell-light .minimal-panel-title.split,
+.minimal-shell-light .minimal-panel-title h2,
+.minimal-shell-light .minimal-stat strong,
+.minimal-shell-light .minimal-recommend-list strong,
+.minimal-shell-light .minimal-task-row strong,
+.minimal-shell-light .page-heading h1,
+.minimal-shell-light .section-title h2,
+.minimal-shell-light .drawer-header h2,
+.minimal-shell-light .task-card-title h3,
+.minimal-shell-light .kanban-card strong,
+.minimal-shell-light .drawer-field strong,
+.minimal-shell-light .empty-state strong,
+.minimal-shell-light .ai-reason-header strong {
+  color: #172033;
+}
+
+.minimal-shell-light .minimal-brand small,
+.minimal-shell-light .minimal-hero p,
+.minimal-shell-light .minimal-rate span,
+.minimal-shell-light .minimal-rate small,
+.minimal-shell-light .minimal-stat p,
+.minimal-shell-light .minimal-panel-title button,
+.minimal-shell-light .minimal-empty,
+.minimal-shell-light .minimal-empty p,
+.minimal-shell-light .minimal-recommend-list p,
+.minimal-shell-light .minimal-task-row p,
+.minimal-shell-light .minimal-task-row small,
+.minimal-shell-light .page-heading p,
+.minimal-shell-light .section-title p,
+.minimal-shell-light .drawer-description,
+.minimal-shell-light .empty-state p,
+.minimal-shell-light .task-card p,
+.minimal-shell-light .task-meta,
+.minimal-shell-light .ai-recommend-list p,
+.minimal-shell-light .task-table-row p,
+.minimal-shell-light .drawer-field span,
+.minimal-shell-light .minimal-popover p {
+  color: #667085;
+}
+
+.minimal-shell-light .minimal-nav-item {
+  color: #667085;
+}
+
+.minimal-shell-light .minimal-nav-item:hover {
+  background: #f8fafc;
+  color: #172033;
+}
+
+.minimal-shell-light .minimal-nav-item.active {
+  background: #eef2ff;
+  color: #4f46e5;
+}
+
+.minimal-shell-light .minimal-search,
+.minimal-shell-light .minimal-user,
+.minimal-shell-light .minimal-popover,
+.minimal-shell-light .minimal-stat,
+.minimal-shell-light .minimal-panel,
+.minimal-shell-light .minimal-recommend-list button,
+.minimal-shell-light .minimal-task-row,
+.minimal-shell-light .welcome-panel,
+.minimal-shell-light .content-card,
+.minimal-shell-light .stats-card,
+.minimal-shell-light .ai-card,
+.minimal-shell-light .task-column,
+.minimal-shell-light .calendar-day,
+.minimal-shell-light .today-timeline,
+.minimal-shell-light .unscheduled-panel,
+.minimal-shell-light .overdue-list,
+.minimal-shell-light .drawer,
+.minimal-shell-light .create-modal,
+.minimal-shell-light .task-card,
+.minimal-shell-light .kanban-card,
+.minimal-shell-light .drawer-field,
+.minimal-shell-light .timeline-hour,
+.minimal-shell-light .task-table-row,
+.minimal-shell-light .ai-log-row,
+.minimal-shell-light .mobile-task-card,
+.minimal-shell-light .task-table,
+.minimal-shell-light .filter-search,
+.minimal-shell-light .row-actions button,
+.minimal-shell-light .row-menu,
+.minimal-shell-light .table-footer button {
+  border-color: #e4e7ec;
+  background: #ffffff;
+  color: #172033;
+}
+
+.minimal-shell-light .minimal-search input,
+.minimal-shell-light input,
+.minimal-shell-light textarea,
+.minimal-shell-light select,
+.minimal-shell-light .ai-suggest-grid input,
+.minimal-shell-light .ai-suggest-grid textarea,
+.minimal-shell-light .settings-form input {
+  border-color: #e4e7ec;
+  background: #ffffff;
+  color: #172033;
+}
+
+.minimal-shell-light .minimal-search input::placeholder {
+  color: #98a2b3;
+}
+
+.minimal-shell-light .minimal-icon,
+.minimal-shell-light .ghost-button,
+.minimal-shell-light .icon-button,
+.minimal-shell-light .mobile-card-more,
+.minimal-shell-light .mobile-quick-actions button {
+  border-color: #e4e7ec;
+  background: #ffffff;
+  color: #667085;
+}
+
+.minimal-shell-light .minimal-icon:hover,
+.minimal-shell-light .minimal-panel-title button:hover {
+  color: #172033;
+}
+
+.minimal-shell-light .minimal-stat-icon,
+.minimal-shell-light .minimal-empty span,
+.minimal-shell-light .mobile-card-more,
+.minimal-shell-light .mobile-quick-actions button,
+.minimal-shell-light .distribution-row div,
+.minimal-shell-light .trend-bars,
+.minimal-shell-light .ai-empty-preview {
+  background: #f8fafc;
+}
+
+.minimal-shell-light .minimal-stat:hover,
+.minimal-shell-light .minimal-user:hover,
+.minimal-shell-light .minimal-recommend-list button:hover,
+.minimal-shell-light .minimal-task-row:hover,
+.minimal-shell-light .task-table tbody tr:hover,
+.minimal-shell-light .row-menu button:hover,
+.minimal-shell-light .mobile-task-card:active {
+  background: #f8fafc;
+}
+
+.minimal-shell-light .minimal-hero {
+  border-bottom-color: #e4e7ec;
+}
+
+.minimal-shell-light .minimal-popover {
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
+}
+
+.minimal-shell-light .minimal-mobile-nav {
+  border-top-color: #e4e7ec;
+  background: rgba(255, 255, 255, 0.96);
+}
+
+.minimal-shell-light .calendar-grid,
+.minimal-shell-light .timeline-hour {
+  border-color: #e4e7ec;
+}
+
 @media (max-width: 900px) {
   .minimal-shell {
     display: block;
@@ -723,6 +937,23 @@ html,
   }
 
   .minimal-icon {
+    display: none;
+  }
+
+  .minimal-theme-toggle {
+    display: inline-flex;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: #18181b;
+    color: #cbd5e1;
+  }
+
+  .minimal-shell-light .minimal-theme-toggle {
+    border-color: #e4e7ec;
+    background: #ffffff;
+    color: #667085;
+  }
+
+  .minimal-action-wrap:has(.minimal-icon) {
     display: none;
   }
 
@@ -1712,6 +1943,18 @@ p {
   border-radius: 14px;
 }
 
+.responsive-task-container {
+  min-width: 0;
+}
+
+.desktop-table-wrapper {
+  display: block;
+}
+
+.mobile-card-list {
+  display: none;
+}
+
 .task-table {
   width: 100%;
   min-width: 900px;
@@ -1897,6 +2140,109 @@ p {
   border-radius: 999px;
   background: var(--surface);
   color: var(--muted);
+  font-weight: 900;
+}
+
+.mobile-task-card {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+}
+
+.mobile-task-card:active {
+  background: var(--surface-soft);
+}
+
+.mobile-task-card-header,
+.mobile-task-title,
+.mobile-task-meta,
+.mobile-quick-actions {
+  display: flex;
+  align-items: center;
+}
+
+.mobile-task-card-header {
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.mobile-task-title {
+  min-width: 0;
+  gap: 10px;
+}
+
+.mobile-task-title strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--text);
+}
+
+.mobile-task-card p {
+  color: var(--muted);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.mobile-task-meta {
+  flex-wrap: wrap;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.mobile-card-more {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-soft);
+  color: var(--muted);
+}
+
+.mobile-quick-actions {
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+
+.mobile-quick-actions button {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-soft);
+  color: var(--text);
+  font-weight: 900;
+}
+
+.mobile-quick-actions button.danger {
+  border-color: rgba(220, 38, 38, 0.22);
+  color: var(--red);
+}
+
+.task-title-done {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+.ai-tiny-tag {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 0 8px;
+  border: 1px solid rgba(79, 70, 229, 0.28);
+  border-radius: 999px;
+  background: rgba(79, 70, 229, 0.12);
+  color: #a5b4fc;
+  font-size: 11px;
   font-weight: 900;
 }
 
@@ -2353,6 +2699,7 @@ p {
   background: var(--surface);
   box-shadow: -16px 0 38px rgba(15, 23, 42, 0.12);
   overflow: auto;
+  animation: drawerSlideIn 200ms var(--ease-modal) forwards;
 }
 
 .drawer-header h2 {
@@ -2407,12 +2754,67 @@ p {
   background: linear-gradient(135deg, rgba(79, 70, 229, 0.12), rgba(124, 58, 237, 0.1));
 }
 
+.ai-analysis-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ai-analysis-heading h3 {
+  flex: 1;
+}
+
+.ai-analysis-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
 .ai-analysis svg {
   color: var(--primary);
 }
 
 .ai-analysis p {
   color: var(--muted);
+}
+
+.ai-brand-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 24px;
+  padding: 2px 8px;
+  border: 1px solid rgba(79, 70, 229, 0.3);
+  border-radius: 999px;
+  background: rgba(79, 70, 229, 0.15);
+  color: #a5b4fc;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.ai-brand-tag i {
+  font-style: normal;
+  color: #c4b5fd;
+}
+
+.ai-reason-block {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid rgba(79, 70, 229, 0.24);
+  border-left: 3px solid var(--primary);
+  border-radius: 0 12px 12px 0;
+  background: linear-gradient(145deg, rgba(79, 70, 229, 0.08), rgba(124, 58, 237, 0.06));
+}
+
+.ai-reason-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ai-reason-header strong {
+  color: var(--text);
 }
 
 .drawer-actions {
@@ -2428,6 +2830,7 @@ p {
   place-items: center;
   padding: 18px;
   background: rgba(15, 23, 42, 0.38);
+  animation: fadeIn var(--duration-base) var(--ease-quick) forwards;
 }
 
 .create-modal {
@@ -2440,6 +2843,59 @@ p {
   background: var(--surface);
   box-shadow: var(--shadow);
   overflow: auto;
+  animation: modalSlideUp var(--duration-base) var(--ease-modal) forwards;
+}
+
+.confirm-modal {
+  width: min(440px, 100%);
+}
+
+.confirm-target {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-soft);
+}
+
+.confirm-target strong {
+  overflow-wrap: anywhere;
+}
+
+.confirm-target span {
+  color: var(--muted);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modalSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes drawerSlideIn {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
 }
 
 .mode-segment {
@@ -2686,9 +3142,19 @@ p {
   .filter-bar,
   .board-toolbar,
   .drawer-fields,
+  .ai-analysis-grid,
   .preview-grid,
   .form-grid {
     grid-template-columns: 1fr;
+  }
+
+  .desktop-table-wrapper {
+    display: none;
+  }
+
+  .mobile-card-list {
+    display: grid;
+    gap: 12px;
   }
 
   .preview-actions .primary-button {

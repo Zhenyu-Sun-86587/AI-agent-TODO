@@ -985,6 +985,7 @@ export function App() {
   );
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [deleteCandidate, setDeleteCandidate] = useState<Task | null>(null);
   const [isCreateOpen, setCreateOpen] = useState(false);
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [isDark, setIsDark] = useState(() => readStoredJson<boolean>(THEME_STORAGE_KEY, false));
@@ -1318,6 +1319,13 @@ export function App() {
     setSelectedTask((currentTask) => (currentTask?.id === taskId ? toggleTaskStatus(currentTask) : currentTask));
   };
 
+  const requestDeleteTask = (taskId: number) => {
+    const task = selectedTask?.id === taskId ? selectedTask : editingTask?.id === taskId ? editingTask : tasks.find((item) => item.id === taskId);
+    if (task) {
+      setDeleteCandidate(task);
+    }
+  };
+
   const deleteTask = async (taskId: number) => {
     if (activeToken) {
       try {
@@ -1327,6 +1335,7 @@ export function App() {
           method: "DELETE",
           token: activeToken,
         });
+        setDeleteCandidate(null);
         setSelectedTask(null);
         setEditingTask(null);
         await loadRemoteWorkspace(activeToken);
@@ -1337,6 +1346,7 @@ export function App() {
     }
 
     setTasks((currentTasks) => currentTasks.filter((task) => task.id !== taskId));
+    setDeleteCandidate(null);
     if (selectedTask?.id === taskId) {
       setSelectedTask(null);
     }
@@ -1596,7 +1606,7 @@ export function App() {
       categories={visibleCategories}
       globalSearch={globalSearch}
       isApiMode={Boolean(activeToken)}
-      onDelete={deleteTask}
+      onDelete={requestDeleteTask}
       onCreateTask={() => setCreateOpen(true)}
       onEditTask={setEditingTask}
       onApiError={handleApiError}
@@ -1653,7 +1663,7 @@ export function App() {
         detailState={taskDetailState}
         isApiMode={Boolean(activeToken)}
         onClose={() => setSelectedTask(null)}
-        onDelete={deleteTask}
+        onDelete={requestDeleteTask}
         onToggleComplete={toggleComplete}
         task={selectedTask}
       />
@@ -1673,6 +1683,15 @@ export function App() {
           onClose={() => setEditingTask(null)}
           onUpdate={(input) => updateTask(editingTask.id, input)}
           task={editingTask}
+        />
+      )}
+      {deleteCandidate && (
+        <DeleteConfirmModal
+          onCancel={() => setDeleteCandidate(null)}
+          onConfirm={() => {
+            void deleteTask(deleteCandidate.id);
+          }}
+          task={deleteCandidate}
         />
       )}
     </Layout>
@@ -2211,6 +2230,41 @@ function StatusBadge({ status }: { status: TaskStatus }) {
   return <span className={`status-badge status-${status}`}>{status}</span>;
 }
 
+function AITag({ children, confidence }: { children: ReactNode; confidence?: number }) {
+  return (
+    <span className="ai-brand-tag">
+      <Sparkles size={12} />
+      {children}
+      {confidence ? <i>{Math.round(confidence * 100)}%</i> : null}
+    </span>
+  );
+}
+
+function AIReasonBlock({ reason, source }: { reason: string; source?: string }) {
+  return (
+    <div className="ai-reason-block">
+      <div className="ai-reason-header">
+        <Sparkles size={16} />
+        <strong>AI 智能分析</strong>
+        {source ? <AITag>{source}</AITag> : null}
+      </div>
+      <p>{reason}</p>
+    </div>
+  );
+}
+
+function useEscapeToClose(onClose: () => void) {
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+}
+
 interface AllTasksPageProps {
   categories: string[];
   globalSearch: string;
@@ -2480,151 +2534,240 @@ interface TaskTableProps {
 function TaskTable({ onDelete, onEditTask, onOpenTask, onToggleComplete, tasks }: TaskTableProps) {
   const [openMenuTaskId, setOpenMenuTaskId] = useState<number | null>(null);
 
+  if (!tasks.length) {
+    return (
+      <div className="responsive-task-container">
+        <EmptyState title="没有匹配任务" description="调整搜索词或筛选条件后再试一次。" />
+      </div>
+    );
+  }
+
   return (
-    <div className="task-table-wrap">
-      <table className="task-table">
-        <thead>
-          <tr>
-            <th>任务名称</th>
-            <th>状态</th>
-            <th>优先级</th>
-            <th>分类</th>
-            <th>截止时间</th>
-            <th>创建时间</th>
-            <th>操作</th>
-          </tr>
-        </thead>
-        <tbody>
-          {tasks.length ? (
-            tasks.map((task) => (
-              <tr
-                key={task.id}
-                onClick={() => {
-                  setOpenMenuTaskId(null);
-                  onOpenTask(task);
-                }}
-              >
-              <td>
-                <div className="table-title">
-                  <strong>{task.title}</strong>
-                  <span>{task.description}</span>
-                </div>
-              </td>
-              <td>
-                <StatusBadge status={task.status} />
-              </td>
-              <td>
-                <PriorityBadge priority={task.priority} />
-              </td>
-              <td>{task.category}</td>
-              <td>{formatDue(task)}</td>
-              <td>{task.createdAt}</td>
-              <td>
-                <div className="row-actions">
-                  <button
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      setOpenMenuTaskId(null);
-                      onOpenTask(task);
-                    }}
-                    aria-label="查看详情"
-                    title="查看详情"
-                  >
-                    <FileText size={15} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      setOpenMenuTaskId(null);
-                      onToggleComplete(task.id);
-                    }}
-                    aria-label={toggleTaskActionLabel(task.status)}
-                    title={toggleTaskActionLabel(task.status)}
-                  >
-                    <Check size={15} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      setOpenMenuTaskId(null);
-                      onEditTask(task);
-                    }}
-                    aria-label="编辑任务"
-                  >
-                    <Pencil size={15} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      setOpenMenuTaskId(null);
-                      onDelete(task.id);
-                    }}
-                    aria-label="删除任务"
-                  >
-                    <Trash2 size={15} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      setOpenMenuTaskId((currentTaskId) => (currentTaskId === task.id ? null : task.id));
-                    }}
-                    aria-expanded={openMenuTaskId === task.id}
-                    aria-label="更多操作"
-                  >
-                    <MoreHorizontal size={15} />
-                  </button>
-                  {openMenuTaskId === task.id && (
-                    <div className="row-menu" role="menu" onClick={(event) => event.stopPropagation()}>
-                      <button
-                        type="button"
-                        role="menuitem"
-                        onClick={() => {
-                          setOpenMenuTaskId(null);
-                          onOpenTask(task);
-                        }}
-                      >
-                        查看详情
-                      </button>
-                      <button
-                        type="button"
-                        role="menuitem"
-                        onClick={() => {
-                          setOpenMenuTaskId(null);
-                          onEditTask(task);
-                        }}
-                      >
-                        编辑任务
-                      </button>
-                      <button
-                        type="button"
-                        role="menuitem"
-                        onClick={() => {
-                          setOpenMenuTaskId(null);
-                          onDelete(task.id);
-                        }}
-                      >
-                        删除任务
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </td>
-              </tr>
-            ))
-          ) : (
+    <div className="responsive-task-container">
+      <div className="desktop-table-wrapper task-table-wrap">
+        <table className="task-table">
+          <thead>
             <tr>
-              <td colSpan={7}>
-                <EmptyState title="没有匹配任务" description="调整搜索词或筛选条件后再试一次。" />
-              </td>
+              <th>任务名称</th>
+              <th>状态</th>
+              <th>优先级</th>
+              <th>分类</th>
+              <th>截止时间</th>
+              <th>创建时间</th>
+              <th>操作</th>
             </tr>
-          )}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {tasks.map((task) => (
+                <tr
+                  key={task.id}
+                  onClick={() => {
+                    setOpenMenuTaskId(null);
+                    onOpenTask(task);
+                  }}
+                >
+                <td>
+                  <div className="table-title">
+                    <strong>{task.title}</strong>
+                    <span>{task.description}</span>
+                  </div>
+                </td>
+                <td>
+                  <StatusBadge status={task.status} />
+                </td>
+                <td>
+                  <PriorityBadge priority={task.priority} />
+                </td>
+                <td>{task.category}</td>
+                <td>{formatDue(task)}</td>
+                <td>{task.createdAt}</td>
+                <td>
+                  <TaskRowActions
+                    isMenuOpen={openMenuTaskId === task.id}
+                    onDelete={onDelete}
+                    onEditTask={onEditTask}
+                    onMenuChange={setOpenMenuTaskId}
+                    onOpenTask={onOpenTask}
+                    onToggleComplete={onToggleComplete}
+                    task={task}
+                  />
+                </td>
+                </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="mobile-card-list">
+        {tasks.map((task) => (
+          <article className="mobile-task-card" key={task.id} onClick={() => onOpenTask(task)}>
+            <div className="mobile-task-card-header">
+              <div className="mobile-task-title">
+                <button
+                  className={`task-check ${task.status === "已完成" ? "checked" : ""}`}
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onToggleComplete(task.id);
+                  }}
+                  aria-label={toggleTaskActionLabel(task.status)}
+                  title={toggleTaskActionLabel(task.status)}
+                >
+                  {task.status === "已完成" && <Check size={14} />}
+                </button>
+                <strong className={task.status === "已完成" ? "task-title-done" : ""}>{task.title}</strong>
+              </div>
+              <button
+                className="mobile-card-more"
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setOpenMenuTaskId((currentTaskId) => (currentTaskId === task.id ? null : task.id));
+                }}
+                aria-expanded={openMenuTaskId === task.id}
+                aria-label="更多操作"
+              >
+                <MoreHorizontal size={18} />
+              </button>
+            </div>
+            {task.description && <p>{task.description}</p>}
+            <div className="mobile-task-meta">
+              <StatusBadge status={task.status} />
+              <PriorityBadge priority={task.priority} />
+              <span>{task.category}</span>
+              <span>{formatDue(task)}</span>
+              {task.isAiCreated && <span className="ai-tiny-tag">AI</span>}
+            </div>
+            {openMenuTaskId === task.id && (
+              <div className="mobile-quick-actions" onClick={(event) => event.stopPropagation()}>
+                <button type="button" onClick={() => onOpenTask(task)}>
+                  查看详情
+                </button>
+                <button type="button" onClick={() => onEditTask(task)}>
+                  编辑
+                </button>
+                <button className="danger" type="button" onClick={() => onDelete(task.id)}>
+                  删除
+                </button>
+              </div>
+            )}
+          </article>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function TaskRowActions({
+  isMenuOpen,
+  onDelete,
+  onEditTask,
+  onMenuChange,
+  onOpenTask,
+  onToggleComplete,
+  task,
+}: {
+  isMenuOpen: boolean;
+  onDelete: (taskId: number) => void;
+  onEditTask: (task: Task) => void;
+  onMenuChange: (taskId: number | null | ((currentTaskId: number | null) => number | null)) => void;
+  onOpenTask: (task: Task) => void;
+  onToggleComplete: (taskId: number) => void;
+  task: Task;
+}) {
+  return (
+    <div className="row-actions">
+      <button
+        type="button"
+        onClick={(event) => {
+          event.stopPropagation();
+          onMenuChange(null);
+          onOpenTask(task);
+        }}
+        aria-label="查看详情"
+        title="查看详情"
+      >
+        <FileText size={15} />
+      </button>
+      <button
+        type="button"
+        onClick={(event) => {
+          event.stopPropagation();
+          onMenuChange(null);
+          onToggleComplete(task.id);
+        }}
+        aria-label={toggleTaskActionLabel(task.status)}
+        title={toggleTaskActionLabel(task.status)}
+      >
+        <Check size={15} />
+      </button>
+      <button
+        type="button"
+        onClick={(event) => {
+          event.stopPropagation();
+          onMenuChange(null);
+          onEditTask(task);
+        }}
+        aria-label="编辑任务"
+      >
+        <Pencil size={15} />
+      </button>
+      <button
+        type="button"
+        onClick={(event) => {
+          event.stopPropagation();
+          onMenuChange(null);
+          onDelete(task.id);
+        }}
+        aria-label="删除任务"
+      >
+        <Trash2 size={15} />
+      </button>
+      <button
+        type="button"
+        onClick={(event) => {
+          event.stopPropagation();
+          onMenuChange((currentTaskId) => (currentTaskId === task.id ? null : task.id));
+        }}
+        aria-expanded={isMenuOpen}
+        aria-label="更多操作"
+      >
+        <MoreHorizontal size={15} />
+      </button>
+      {isMenuOpen && (
+        <div className="row-menu" role="menu" onClick={(event) => event.stopPropagation()}>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              onMenuChange(null);
+              onOpenTask(task);
+            }}
+          >
+            查看详情
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              onMenuChange(null);
+              onEditTask(task);
+            }}
+          >
+            编辑任务
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              onMenuChange(null);
+              onDelete(task.id);
+            }}
+          >
+            删除任务
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -3562,6 +3705,8 @@ interface TaskDetailDrawerProps {
 }
 
 function TaskDetailDrawer({ detailState, isApiMode, onClose, onDelete, onToggleComplete, task }: TaskDetailDrawerProps) {
+  useEscapeToClose(onClose);
+
   if (!task) {
     return null;
   }
@@ -3600,13 +3745,21 @@ function TaskDetailDrawer({ detailState, isApiMode, onClose, onDelete, onToggleC
         )}
       </section>
       <section className="ai-analysis">
-        <Sparkles size={18} />
-        <h3>AI 分析结果</h3>
-        <p>AI 自动分类：{task.aiCategory}</p>
-        <p>AI 推荐优先级：{task.priority}</p>
-        <p>AI 预计完成时间：{task.estimatedTime}</p>
-        {task.confidence && <p>AI 解析置信度：{Math.round(task.confidence * 100)}%</p>}
-        <strong>AI 建议：该任务建议安排在今天下午完成，因为它优先级较高，并且会影响后续开发进度。</strong>
+        <div className="ai-analysis-heading">
+          <Sparkles size={18} />
+          <h3>AI 分析结果</h3>
+          {task.isAiCreated && <AITag confidence={task.confidence}>AI 生成</AITag>}
+        </div>
+        <div className="ai-analysis-grid">
+          <Field label="AI 自动分类">{task.aiCategory}</Field>
+          <Field label="AI 推荐优先级">{task.priority}</Field>
+          <Field label="AI 预计完成时间">{task.estimatedTime}</Field>
+          <Field label="AI 解析置信度">{task.confidence ? `${Math.round(task.confidence * 100)}%` : "待确认"}</Field>
+        </div>
+        <AIReasonBlock
+          reason={task.aiReason || "该任务建议安排在今天下午完成，因为它优先级较高，并且会影响后续开发进度。"}
+          source={task.isAiCreated ? "任务生成" : "任务分析"}
+        />
       </section>
       <div className="drawer-actions">
         <button className="primary-button" type="button" onClick={() => onToggleComplete(task.id)}>
@@ -3645,7 +3798,50 @@ interface EditTaskModalProps {
   task: Task;
 }
 
+function DeleteConfirmModal({
+  onCancel,
+  onConfirm,
+  task,
+}: {
+  onCancel: () => void;
+  onConfirm: () => void;
+  task: Task;
+}) {
+  useEscapeToClose(onCancel);
+
+  return (
+    <div className="modal-backdrop">
+      <div className="create-modal confirm-modal">
+        <div className="drawer-header">
+          <div>
+            <p className="eyebrow">Delete Task</p>
+            <h2>确认删除任务？</h2>
+          </div>
+          <button className="icon-button" type="button" onClick={onCancel} aria-label="关闭确认">
+            <X size={18} />
+          </button>
+        </div>
+        <p className="drawer-description">删除后无法恢复。请确认是否删除以下任务：</p>
+        <div className="confirm-target">
+          <strong>{task.title}</strong>
+          {task.description && <span>{task.description}</span>}
+        </div>
+        <div className="preview-actions">
+          <button className="ghost-button" type="button" onClick={onCancel}>
+            取消
+          </button>
+          <button className="danger-button" type="button" onClick={onConfirm}>
+            确认删除
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function EditTaskModal({ categories, isApiMode, onClose, onUpdate, task }: EditTaskModalProps) {
+  useEscapeToClose(onClose);
+
   const [form, setForm] = useState<NewTaskInput>(() => taskToInput(task));
 
   const submitEdit = (input: NewTaskInput) => {
@@ -3683,6 +3879,8 @@ function EditTaskModal({ categories, isApiMode, onClose, onUpdate, task }: EditT
 type CreateMode = "manual" | "ai";
 
 function CreateTaskModal({ categories, isApiMode, onClose, onCreate, onParseTask }: CreateTaskModalProps) {
+  useEscapeToClose(onClose);
+
   const [mode, setMode] = useState<CreateMode>("ai");
   const [form, setForm] = useState<NewTaskInput>(() => createEmptyTask());
   const [prompt, setPrompt] = useState("这周要完成前端首页、任务表格筛选、看板页面，还要准备项目演示。");
@@ -3948,10 +4146,10 @@ function GeneratedTaskPreview({ onEdit, onRegenerate, onUse, task }: GeneratedTa
         <Field label="置信度">{task.confidence ? `${Math.round(task.confidence * 100)}%` : "待确认"}</Field>
         <Field label="原始时间">{task.rawDueText || "默认规划"}</Field>
       </div>
-      <div className="ai-reason-box">
-        <Sparkles size={17} />
-        <span>推荐原因：{task.aiReason}</span>
-      </div>
+      <AIReasonBlock
+        reason={`推荐原因：${task.aiReason || "AI 已根据任务上下文生成建议。"}`}
+        source={task.aiBackendMode === "frontend-fallback" ? "前端规则兜底" : "后端 AI"}
+      />
       <div className="preview-actions">
         <button className="ghost-button" type="button" onClick={onRegenerate}>
           重新生成

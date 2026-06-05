@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 import { Bell, LogOut, Moon, Plus, Search, Sparkles, Sun, User } from "lucide-react";
 
@@ -40,9 +40,10 @@ export default function Layout({
   userName,
 }: LayoutProps) {
   const statusLabel = apiState === "online" ? "API" : apiState === "loading" ? "同步中" : apiState === "offline" ? "离线" : "本地";
+  const [openPanel, setOpenPanel] = useState<"notifications" | "user" | null>(null);
 
   return (
-    <div className={`minimal-shell ${isDark ? "minimal-shell-dark" : ""}`}>
+    <div className={`minimal-shell ${isDark ? "minimal-shell-dark" : "minimal-shell-light"}`}>
       <aside className="minimal-sidebar">
         <div className="minimal-brand">
           <span>
@@ -84,20 +85,49 @@ export default function Layout({
               <Plus size={16} />
               新建任务
             </button>
-            <button className="minimal-icon" type="button" aria-label="通知">
-              <Bell size={18} />
-            </button>
-            <button className="minimal-icon" type="button" onClick={onToggleTheme} aria-label="切换主题">
+            <div className="minimal-action-wrap">
+              <button
+                className="minimal-icon"
+                type="button"
+                onClick={() => setOpenPanel((panel) => (panel === "notifications" ? null : "notifications"))}
+                aria-expanded={openPanel === "notifications"}
+                aria-label="通知"
+              >
+                <Bell size={18} />
+              </button>
+              {openPanel === "notifications" && (
+                <div className="minimal-popover" role="status">
+                  <strong>暂无新通知</strong>
+                  <p>任务提醒和 AI 建议更新会显示在这里。</p>
+                </div>
+              )}
+            </div>
+            <button className="minimal-icon minimal-theme-toggle" type="button" onClick={onToggleTheme} aria-label="切换主题">
               {isDark ? <Sun size={18} /> : <Moon size={18} />}
             </button>
             <span className={`minimal-status ${apiState}`} title={apiMessage}>
               <i />
               {statusLabel}
             </span>
-            <button className="minimal-user" type="button">
-              <User size={16} />
-              <span>{userName}</span>
-            </button>
+            <div className="minimal-action-wrap">
+              <button
+                className="minimal-user"
+                type="button"
+                onClick={() => setOpenPanel((panel) => (panel === "user" ? null : "user"))}
+                aria-expanded={openPanel === "user"}
+              >
+                <User size={16} />
+                <span>{userName}</span>
+              </button>
+              {openPanel === "user" && (
+                <div className="minimal-popover user" role="menu">
+                  <strong>{userName}</strong>
+                  <button type="button" onClick={onLogout} role="menuitem">
+                    退出登录
+                  </button>
+                </div>
+              )}
+            </div>
             <button className="minimal-icon" type="button" onClick={onLogout} aria-label="退出登录">
               <LogOut size={18} />
             </button>

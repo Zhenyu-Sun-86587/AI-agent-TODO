@@ -1,137 +1,141 @@
 # 当前前端真实状态总结
 
-这份文档用于给后续 AI 继续美化 / 重构前端时阅读。结论来自真实浏览器观察、截图、computed style 和 `src/styles/demo.css`，不是凭空推测。证据在：
+这份文档用于给后续 AI 继续美化 / 重构前端时阅读。结论来自真实浏览器观察、截图、computed style 和 `frontend/src/styles/demo.css`，不是凭空推测。
 
-- `evidence/computed-styles.json`
-- `evidence/screenshots/`
-- `style-guide.md`
-- `motion-guide.md`
-- `evidence-manifest.md`
+相关文件：
+
+- `doc/frontend/evidence/computed-styles.json`
+- `doc/frontend/evidence/screenshots/`
+- `doc/frontend/style-guide.md`
+- `doc/frontend/motion-guide.md`
+- `doc/frontend/evidence-manifest.md`
 
 ## 给后续 AI 的提示词
 
-你现在要继续美化 AI-agent-TODO 的前端。请先阅读本文件和 `style-guide.md`、`motion-guide.md`、`evidence-manifest.md`，理解当前页面真实样子，再做修改方案或代码实现。不要把它当成空白项目。
+你现在要继续美化 AI-agent-TODO 的前端。请先阅读 `doc/frontend/current-ui-context.md`、`style-guide.md`、`motion-guide.md`、`evidence-manifest.md` 和 `evidence/computed-styles.json`，理解当前页面真实样子，再做修改方案或代码实现。不要把它当成空白项目。
 
-当前项目是一个 AI TODO 工具，前端已经有深色后台管理壳：左侧 Sidebar、顶部 Header、Dashboard、全部任务表格、AI 推荐、任务看板、日历、数据统计、标签管理、设置、新建任务弹窗、任务详情 Drawer、移动底部导航。请保留这些信息结构和业务入口，不要做成营销 landing page。
+当前前端已经是一个 AI TODO 工具型 Dashboard：桌面端有 Sidebar + Header + 页面内容区，移动端有底部 tab 和移动任务卡。请保留业务入口，不要做成营销 landing page。
 
-核心美化方向：
+后续改动要特别注意：
 
-1. 统一深色设计系统，解决浅色 token 和深色 shell 混用。
-2. 强化 AI 产品识别，但保持工具型 SaaS 克制，不要大面积装饰渐变。
-3. 桌面端保留高效管理体验；app 端本质是 WebView，需要底部 tab、安全区、卡片列表、底部 sheet/fullscreen drawer。
-4. 全部任务页桌面可保留表格，移动端改卡片列表。
-5. 日历页重点优化 `近 7 天 / 近 14 天 / 近 30 天 / 今日 24 小时`：7/14/30 使用日历卡片表现，24 小时使用更清晰的时间轴。
-6. Modal、Drawer、按钮、输入框、toast、dropdown 要补统一动效和状态。
+1. 现在文档正式位置是 `doc/frontend/`，后续覆盖这里，不要再写回 `frontend/` 根目录。
+2. 当前移动端任务列表已经是 `.mobile-task-card`，不要再按“移动端表格横滚”去设计。
+3. 主题切换已经存在 `.minimal-shell-light` / `.minimal-shell-dark`，后续要同时验证两套主题。
+4. 编辑任务弹窗、删除确认弹窗、任务详情 Drawer 都已实现，后续需要继续美化，而不是从零假设。
+5. 当前 API 数据偏少且包含安全测试文本，视觉判断要区分“数据状态”与“组件能力”。
 
 ## 当前页面真实风格
 
-当前主应用是深色后台 Dashboard 风格。主背景是近黑 `#09090b`，卡片多为 `#121214`，内层卡片/输入框多为 `#18181b`，主色是紫色 `#4f46e5`。字体为 Inter + 系统中文字体。整体专业、安静、工具感明显。
+主体验是深色 / 浅色双主题的后台管理风格。深色主题背景 `#09090b`，卡片 `#121214` / `#18181b`；浅色主题背景 `#f5f7fb`，卡片 `#ffffff`。主色是紫色 `#4f46e5`，AI 区域使用紫色透明背景、AI tag、AI reason block。
 
-它已经有一定 AI TODO 产品感：Dashboard 有 “AI 智能建议”，AI 推荐页有推荐分类和调用记录，详情抽屉有 AI 分析结果，新建弹窗默认有 AI 生成 TODO。当前 AI 视觉主要靠紫色和文案，后续应形成统一 AI surface。
-
-主要不统一点是：CSS 全局 `:root` 仍是浅色 token，`.minimal-shell` 再覆盖为深色。结果是一些表单、表格、行按钮、badge 会出现浅色变量痕迹，视觉不够一体。
+整体已经比较成熟，尤其是移动任务卡、编辑/删除弹窗、Drawer 入场动画、AI 分析区都比早期更完整。当前不足主要在设计 token 双轨、AI 组件尚未完全统一、移动底部导航入口太多、少数据状态下页面显空。
 
 ## 当前布局结构
 
 桌面端：
 
-- `.minimal-shell` 是主壳，桌面为两列 grid：`240px minmax(0, 1fr)`。
-- `.minimal-sidebar` 是左侧导航，宽 240px，高 100vh。
-- `.minimal-header` 是顶部工具栏，高 64px，右侧有新建任务、通知、主题切换、状态、用户、退出。
-- `.minimal-page` 是可滚动内容区，padding `24px 32px 32px`。
-- Dashboard 内容最大宽约 1120px，居中。
+- `.minimal-shell` 使用 `240px minmax(0,1fr)` 两列布局。
+- 左侧 `.minimal-sidebar` 固定 240px。
+- 右侧 `.minimal-header` 高 64px。
+- `.minimal-page` padding 为 `24px 32px 32px`。
+- Dashboard 最大宽度约 1120px。
 
 移动端：
 
-- `max-width: 900px` 后主壳变 `display: block`。
-- Sidebar 只保留顶部品牌条，主导航隐藏。
-- `.minimal-mobile-nav` 固定底部，390x844 下高约 69px，8 个 tab 横向滚动，背景 `rgba(9,9,11,0.96)`，有 blur。
-- Header 换行，搜索框占第二行，通知/主题/退出图标按钮隐藏。
-- `.minimal-page` padding 变 `18px 16px 28px`。
-- 任务表格移动端仍是 900px 宽横滚，这是 app 端最明显问题。
+- 900px 以下 `.minimal-shell` 变 block。
+- Sidebar 收成顶部品牌栏，桌面 nav 隐藏。
+- `.minimal-mobile-nav` fixed bottom，8 个 tab 横向滚动。
+- Header 换行，搜索占满第二行，主题按钮保留。
+- 820px 以下任务桌面表格隐藏，`.mobile-card-list` 显示。
+- 390px 下 `.mobile-task-card` 约 316px 宽、165px 高。
 
 ## 当前组件样式
 
 Sidebar：
-宽 240px，深色背景，菜单项 42px 高，active 是淡紫背景和紫色文字。移动端转为底部 tab。
+深色背景，42px 菜单项，active 为淡紫背景和紫色文字。移动端变底部 tab。
 
 Header：
-64px 高，搜索框 320px、40px 高、999px 圆角。主按钮 38px 高、999px 圆角、紫色背景。移动端 Header 较拥挤。
+64px 高，包含搜索、新建任务、通知、主题切换、API 状态、用户、退出。移动端会换行。
 
-Dashboard：
-主问候语、完成率、4 个统计卡、AI 智能建议、今日任务。整体是当前最成熟页面之一。
+TaskTable：
+桌面保留 900px min-width 表格，字段完整。移动端 wrapper 隐藏。
 
-全部任务：
-表格列完整，筛选控件完整，操作入口完整。桌面可用，移动端不理想。后续桌面保持表格，移动端改为卡片。
+MobileTaskCard：
+卡片 14px padding、14px 圆角、12px gap，包含标题、描述、状态、优先级、分类、截止时间、完成圆形按钮和更多操作。当前是 app 端任务阅读的主要方向。
 
 AI 推荐：
-包含 AI 智能建议、AI 推荐分类和优先级、AI 调用记录。需要更统一的 AI 视觉语言。
+AI 内容真实存在，包括推荐原因、自动分类、预计时间、置信度、调用日志。AI reason block 和 AI brand tag 已经建立雏形。
 
 任务看板：
-三列 Kanban，列内任务卡信息完整，有 AI 分类。适合作为移动端任务卡片样式来源。
+CSS 支持三列；当前 API 数据下只可见待办/已完成。卡片有 AI 分类和任务 meta。
 
 日历：
-有 `近 7 天 / 近 14 天 / 近 30 天 / 今日 24 小时 / 逾期` 控件。桌面 7 天是 7 列日历，移动端转单列。24 小时轴已存在，但视觉重点不够，应强化当前时间线、小时任务密度和空时段。
+有近 7 天、近 14 天、近 30 天、今日 24 小时、逾期入口。7 天视图为桌面 7 列日历，移动端单列。24 小时轴已有 `.timeline-hour`。
 
 数据统计：
-6 个 KPI 卡、趋势柱状图、分类/优先级分布。能表达数据，但图表更像演示 CSS 图，缺少 tooltip、轴、图例层次。
+KPI、趋势图、分类分布、优先级分布都存在。少数据状态下需要更好的空态和说明。
 
-新建任务弹窗：
-620px 宽，居中，22px padding，18px 圆角。包含 AI 生成和自定义创建分段控件。移动端建议改成更正式 bottom sheet。
+新建 / 编辑 Modal：
+使用 `.create-modal`，桌面 620px，新建任务含 AI 生成 / 自定义创建。编辑任务沿用相似结构。
 
-任务详情 Drawer：
-右侧 460px fixed 抽屉，内容包括字段、子任务、AI 分析、操作按钮。移动端宽 100vw，但应补全屏详情页体验。
+删除确认 Modal：
+`.confirm-modal` 440px，标题 “确认删除任务？”，有目标任务摘要、取消、确认删除。Danger 按钮是浅红底红字。
+
+Drawer：
+右侧 460px fixed，包含字段、子任务空态、AI 分析和操作按钮。已有 200ms slide-in 动画。
 
 ## 当前主要视觉问题
 
-1. 深浅 token 混用：全局浅色变量 + 深色壳覆盖，造成组件不统一。
-2. 表格和行按钮密度偏高，移动端尤其难用。
-3. AI 功能内容存在，但视觉识别分散。
-4. 状态/优先级 badge 多靠文字色，扫描效率不足。
-5. 动效很少，Modal/Drawer 直接出现，缺少精致反馈。
-6. 编辑任务和删除确认没有形成清晰观察证据，后续需要补链路。
+1. light/dark 覆盖规则较多，设计 token 需要重新收敛。
+2. AI 组件有雏形，但没有形成统一的组件 API 和状态规范。
+3. Dashboard 在今日任务为 0 时显空，需要更好的空态。
+4. 当前看板随数据少列显示，布局需要处理“缺列/空列”的一致体验。
+5. 移动底部导航 8 个入口过多，app 端建议收敛。
+6. 部分操作按钮仅图标，发现性和可点击区域仍可提升。
 
 ## 当前主要交互问题
 
-1. 移动端 Header 换行后可用但拥挤。
-2. 移动端底部导航 8 个 tab 横向滚动，入口多但不够 app 化。
-3. 表格移动端横向滚动，操作按钮小。
-4. Dropdown、Toast、Kanban drag 状态未观察到，交互反馈系统不完整。
-5. Dark mode toggle 存在，但主应用已是深色，主题切换的完整状态需要后续验证。
+1. Modal 和 Drawer 有 open 动效，但 close 动效未观察到。
+2. Row menu 有 hover，没有入场动画。
+3. Toast 未观察到。
+4. Kanban drag hover 未观察到。
+5. 主题切换可用，但 localStorage 持久化证据不明显，需要继续确认。
+6. 移动任务卡点击打开详情，更多操作入口存在，但菜单移动端体验还需验证。
 
 ## 当前响应式问题
 
-| 断点 | 当前状态 | 问题 |
+| 尺寸 | 当前布局 | 问题 |
 |---|---|---|
-| 1440x900 | 桌面布局完整 | 可以继续做精细化 |
-| 1280x720 | 桌面仍可用 | 高度略紧 |
-| 1024x768 | 小桌面/平板横向 | 内容可用 |
-| 768x1024 | 移动布局生效 | 底部 tab 出现，内容变长 |
-| 390x844 | 手机主规格 | Header 换行，底部 tab 可用，任务表格横滚 |
-| 375x667 | 小手机 | 高度压力明显，需要减少首屏负担 |
+| 1440x900 | 桌面两列完整 | 可继续精修 |
+| 1280x720 | 桌面结构可用 | 高度略紧 |
+| 1024x768 | 小桌面可用 | 内容密度偏高 |
+| 768x1024 | 移动布局生效 | 底部 tab 入口多 |
+| 390x844 | Dashboard 可用 | Header 换行后首屏占高 |
+| 390x844 | 全部任务卡片可用 | 卡片宽度可更贴合容器 |
+| 375x667 | 小屏压力明显 | 需要降低首屏负担 |
 
 ## 后续修改重点
 
 优先级最高：
 
-1. 统一 theme tokens：把深色应用的背景、surface、text、border、primary、status token 抽出来，避免继续靠 `.minimal-shell` 覆盖浅色变量。
-2. 任务列表移动端重构：390px 下不要展示 900px 表格，改为任务卡片列表，保留筛选、排序、分页/加载更多。
-3. 日历重构：7/14/30 天保留日历卡片，24 小时做纵向时间轴，任务块按时间落位。
-4. App 端壳体验：底部 tab 只保留 4-5 个高频入口，其余进 “更多”；Modal 变 bottom sheet，Drawer 变 fullscreen detail。
-5. AI 视觉统一：统一 AI 卡片、AI 理由、AI 分类、预计时间、调用记录的样式。
+1. 将 light/dark token 抽象成清晰变量，减少大段 `.minimal-shell-light` 覆盖。
+2. 继续完善移动端 app 壳：底部 tab 收敛，更多入口分组，safe-area 统一。
+3. 统一 AI 组件：AI tag、reason block、分类、预计时间、置信度、日志状态。
+4. 给编辑/删除/详情/新建四个覆盖层补移动端专属样式和关闭动画。
+5. 优化少数据和空状态：Dashboard、Kanban、Stats、Calendar 都需要更自然的空态。
 
 可随后处理：
 
-1. 增加 toast、loading、empty、error 状态。
-2. 优化图表专业度。
-3. 补充编辑任务弹窗和删除确认弹窗。
-4. 给按钮、输入框、Drawer、Modal、Dropdown 增加明确动效。
+1. Toast / loading / error 状态。
+2. Row menu 和 dropdown 动效。
+3. Kanban drag hover。
+4. 图表 tooltip、图例、坐标说明。
+5. 安全测试文本的视觉换行和 overflow 策略。
 
 ## 修改时不要做的事
 
-- 不要把首屏改成营销 landing page。
 - 不要删除现有业务入口。
-- 不要引入大面积紫色渐变背景。
-- 不要在工具型页面里放过大的 hero 或装饰图。
-- 不要让 app 端继续依赖横向表格完成主任务浏览。
-- 不要只改颜色不改信息层级和移动交互。
+- 不要把首屏改成营销页面。
+- 不要回退移动端任务列表为横向表格。
+- 不要只美化 dark theme 而忘记 light theme。
+- 不要把 AI 功能只做成紫色装饰；需要保留推荐原因、分类、预计时间、置信度等信息层级。
