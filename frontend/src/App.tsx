@@ -1586,7 +1586,13 @@ export function App() {
         ? `测试通过${data.latency_ms ? `，耗时 ${data.latency_ms}ms` : ""}。`
         : "测试失败，请检查 Key 或模型权限。";
     } catch (error) {
-      return handleApiError(error);
+      if (error instanceof ApiError && error.status === 401) {
+        return handleApiError(error);
+      }
+      const message = asErrorMessage(error);
+      setApiState("online");
+      setApiMessage(message);
+      return message;
     }
   };
 
@@ -1609,6 +1615,7 @@ export function App() {
       onToggleComplete={toggleComplete}
       profile={profile}
       recommendedTasks={recommendedTasks}
+      profile={profile}
       remoteStats={remoteStats}
       settings={settings}
       taskVersion={taskVersion}

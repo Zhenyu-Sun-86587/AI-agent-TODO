@@ -1523,6 +1523,10 @@ p {
   margin-bottom: 16px;
 }
 
+.section-title > div {
+  min-width: 0;
+}
+
 .page-heading h1 {
   font-size: clamp(28px, 3vw, 38px);
 }
@@ -2310,6 +2314,82 @@ p {
   color: var(--red);
 }
 
+.ai-logs-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.ai-logs-panel select {
+  max-width: 100%;
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 800;
+}
+
+.ai-log-list {
+  display: grid;
+  gap: 10px;
+}
+
+.ai-log-row {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr) 150px;
+  gap: 12px;
+  align-items: start;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface-soft);
+}
+
+.ai-log-row strong {
+  display: block;
+  overflow: hidden;
+  color: var(--text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ai-log-row > div {
+  min-width: 0;
+}
+
+.ai-log-row p,
+.ai-log-row small {
+  margin-top: 4px;
+  color: var(--muted);
+}
+
+.ai-log-status {
+  display: inline-grid;
+  place-items: center;
+  justify-self: start;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.ai-log-status.success {
+  background: #dcfce7;
+  color: var(--green);
+}
+
+.ai-log-status.mocked {
+  background: #ede9fe;
+  color: var(--primary);
+}
+
+.ai-log-status.failed {
+  background: #fee2e2;
+  color: var(--red);
+}
+
 .tag-cloud {
   display: flex;
   flex-wrap: wrap;
@@ -2685,6 +2765,7 @@ p {
   .stats-grid,
   .filter-bar,
   .board-toolbar,
+  .ai-log-row,
   .drawer-fields,
   .preview-grid,
   .form-grid {
