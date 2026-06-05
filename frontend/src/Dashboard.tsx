@@ -69,11 +69,17 @@ export default function Dashboard({
               {recommendedTasks.map((task) => (
                 <button key={task.id} type="button" onClick={() => onOpenTask(task)}>
                   <div>
-                    <strong>{task.title}</strong>
-                    <p>推荐原因：{task.aiReason}</p>
+                    <div className="minimal-ai-title-line">
+                      <strong>{task.title}</strong>
+                      <span className="ai-tiny-tag">AI 推荐</span>
+                    </div>
+                    <p>智能分析：{task.aiReason}</p>
                   </div>
                   <span>{task.priority}</span>
-                  <small>{formatDue(task)}</small>
+                  <small>
+                    <Clock3 size={12} />
+                    {formatDue(task)}
+                  </small>
                 </button>
               ))}
             </div>

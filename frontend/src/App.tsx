@@ -1292,11 +1292,21 @@ export function App() {
       try {
         setApiState("loading");
         setApiMessage("正在更新任务状态...");
-        await apiRequest(`/tasks/${taskId}/status`, {
+        const updatedStatus = await apiRequest<{ id: number; status: ApiTaskStatus; updated_at: string }>(`/tasks/${taskId}/status`, {
           method: "PATCH",
           token: activeToken,
           body: JSON.stringify({ status: task.status === "已完成" ? "todo" : "done" }),
         });
+        const nextStatus = statusFromApi(updatedStatus.status);
+        setSelectedTask((currentTask) =>
+          currentTask?.id === taskId
+            ? {
+                ...currentTask,
+                status: nextStatus,
+                completedAt: nextStatus === "已完成" ? dateFromIso(updatedStatus.updated_at) : null,
+              }
+            : currentTask,
+        );
         await loadRemoteWorkspace(activeToken);
       } catch (error) {
         handleApiError(error);
@@ -1596,7 +1606,19 @@ export function App() {
         ? `测试通过${data.latency_ms ? `，耗时 ${data.latency_ms}ms` : ""}。`
         : "测试失败，请检查 Key 或模型权限。";
     } catch (error) {
-      return handleApiError(error);
+      if (isAiConfigError(error)) {
+        const message = asErrorMessage(error);
+        setApiState("online");
+        setApiMessage(message);
+        return message;
+      }
+      if (error instanceof ApiError && error.status === 401) {
+        return handleApiError(error);
+      }
+      const message = asErrorMessage(error);
+      setApiState("online");
+      setApiMessage(message);
+      return message;
     }
   };
 
@@ -1664,6 +1686,7 @@ export function App() {
         isApiMode={Boolean(activeToken)}
         onClose={() => setSelectedTask(null)}
         onDelete={requestDeleteTask}
+        onEdit={setEditingTask}
         onToggleComplete={toggleComplete}
         task={selectedTask}
       />
@@ -3700,11 +3723,12 @@ interface TaskDetailDrawerProps {
   isApiMode: boolean;
   onClose: () => void;
   onDelete: (taskId: number) => void;
+  onEdit: (task: Task) => void;
   onToggleComplete: (taskId: number) => void;
   task: Task | null;
 }
 
-function TaskDetailDrawer({ detailState, isApiMode, onClose, onDelete, onToggleComplete, task }: TaskDetailDrawerProps) {
+function TaskDetailDrawer({ detailState, isApiMode, onClose, onDelete, onEdit, onToggleComplete, task }: TaskDetailDrawerProps) {
   useEscapeToClose(onClose);
 
   if (!task) {
@@ -3762,6 +3786,9 @@ function TaskDetailDrawer({ detailState, isApiMode, onClose, onDelete, onToggleC
         />
       </section>
       <div className="drawer-actions">
+        <button className="ghost-button" type="button" onClick={() => onEdit(task)}>
+          编辑任务
+        </button>
         <button className="primary-button" type="button" onClick={() => onToggleComplete(task.id)}>
           {task.status === "已完成" ? "恢复待办" : "标记完成"}
         </button>
@@ -3897,6 +3924,7 @@ function CreateTaskModal({ categories, isApiMode, onClose, onCreate, onParseTask
 
   const generateTask = async () => {
     if (!prompt.trim()) {
+      setGenerateError("请输入一段自然语言任务描述。");
       return;
     }
     setGenerating(true);
@@ -3931,7 +3959,12 @@ function CreateTaskModal({ categories, isApiMode, onClose, onCreate, onParseTask
             generatedTask={generatedTask}
             isGenerating={isGenerating}
             onGenerate={generateTask}
-            onPromptChange={setPrompt}
+            onPromptChange={(value) => {
+              if (generateError) {
+                setGenerateError("");
+              }
+              setPrompt(value);
+            }}
             onSwitchToManual={(task) => {
               setForm(task);
               setMode("manual");
@@ -3969,6 +4002,7 @@ interface ManualTaskFormProps {
 }
 
 function ManualTaskForm({ categories, form, isApiMode, onChange, onSubmit, submitLabel = "创建任务" }: ManualTaskFormProps) {
+  const [validationError, setValidationError] = useState("");
   const statusChoices = isApiMode ? apiStatusOptions : statusOptions;
   const safeStatus = statusChoices.includes(form.status) ? form.status : "待办";
   const categoryOptions = Array.from(new Set([form.category, ...categories].filter(Boolean)));
@@ -3976,6 +4010,11 @@ function ManualTaskForm({ categories, form, isApiMode, onChange, onSubmit, submi
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!form.title.trim()) {
+      setValidationError("请输入任务标题。");
+      return;
+    }
+    setValidationError("");
     onSubmit({ ...form, status: safeStatus });
   };
 
@@ -3983,7 +4022,18 @@ function ManualTaskForm({ categories, form, isApiMode, onChange, onSubmit, submi
     <form className="manual-task-form" onSubmit={submit}>
       <div className="field-group">
         <label htmlFor={`${fieldPrefix}-title`}>任务标题</label>
-        <input id={`${fieldPrefix}-title`} value={form.title} onChange={(event) => onChange({ ...form, title: event.target.value })} />
+        <input
+          id={`${fieldPrefix}-title`}
+          value={form.title}
+          aria-invalid={Boolean(validationError)}
+          aria-describedby={validationError ? `${fieldPrefix}-title-error` : undefined}
+          onChange={(event) => {
+            if (validationError) {
+              setValidationError("");
+            }
+            onChange({ ...form, title: event.target.value });
+          }}
+        />
       </div>
       <div className="field-group">
         <label htmlFor={`${fieldPrefix}-description`}>描述</label>
@@ -4039,6 +4089,7 @@ function ManualTaskForm({ categories, form, isApiMode, onChange, onSubmit, submi
             id={`${fieldPrefix}-due-date`}
             type="date"
             value={form.dueDate}
+            onInput={(event) => onChange({ ...form, dueDate: event.currentTarget.value })}
             onChange={(event) => onChange({ ...form, dueDate: event.target.value })}
           />
         </div>
@@ -4049,6 +4100,7 @@ function ManualTaskForm({ categories, form, isApiMode, onChange, onSubmit, submi
           id={`${fieldPrefix}-due-time`}
           type="time"
           value={form.dueTime}
+          onInput={(event) => onChange({ ...form, dueTime: event.currentTarget.value })}
           onChange={(event) => onChange({ ...form, dueTime: event.target.value })}
         />
       </div>
@@ -4056,6 +4108,11 @@ function ManualTaskForm({ categories, form, isApiMode, onChange, onSubmit, submi
         <label htmlFor={`${fieldPrefix}-tags`}>标签</label>
         <input id={`${fieldPrefix}-tags`} value={form.tags} onChange={(event) => onChange({ ...form, tags: event.target.value })} />
       </div>
+      {validationError && (
+        <p className="form-error" id={`${fieldPrefix}-title-error`} role="alert">
+          {validationError}
+        </p>
+      )}
       <button className="primary-button full" type="submit">
         {submitLabel}
       </button>

@@ -41,6 +41,8 @@ export default function Layout({
 }: LayoutProps) {
   const statusLabel = apiState === "online" ? "API" : apiState === "loading" ? "同步中" : apiState === "offline" ? "离线" : "本地";
   const [openPanel, setOpenPanel] = useState<"notifications" | "user" | null>(null);
+  const mobilePrimaryItems = navItems.filter((item) => item.key === "dashboard" || item.key === "all");
+  const mobileSecondaryItems = navItems.filter((item) => item.key === "ai" || item.key === "stats");
 
   return (
     <div className={`minimal-shell ${isDark ? "minimal-shell-dark" : "minimal-shell-light"}`}>
@@ -137,8 +139,21 @@ export default function Layout({
         <div className="minimal-page">{children}</div>
       </main>
 
-      <nav className="minimal-mobile-nav" aria-label="移动端导航">
-        {navItems.map((item) => (
+      <nav className="minimal-mobile-nav mobile-bottom-nav" aria-label="移动端导航">
+        {mobilePrimaryItems.map((item) => (
+          <NavItem
+            active={item.key === activePage}
+            icon={item.icon}
+            key={item.key}
+            label={item.label}
+            onClick={() => onNavigate(item.key)}
+          />
+        ))}
+        <button className="mobile-create-action" type="button" onClick={onCreateTask} aria-label="新建任务">
+          <Plus size={20} />
+          <span>新建</span>
+        </button>
+        {mobileSecondaryItems.map((item) => (
           <NavItem
             active={item.key === activePage}
             icon={item.icon}
