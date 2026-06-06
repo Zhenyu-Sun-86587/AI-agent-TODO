@@ -1,6 +1,6 @@
-import type { ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
-import { Bell, LogOut, Moon, Plus, Search, Sparkles, Sun, User } from "lucide-react";
+import { Bell, LayoutDashboard, LogOut, Moon, Plus, Search, Sparkles, Sun, User } from "lucide-react";
 
 export interface MinimalNavItem {
   key: string;
@@ -40,9 +40,49 @@ export default function Layout({
   userName,
 }: LayoutProps) {
   const statusLabel = apiState === "online" ? "API" : apiState === "loading" ? "同步中" : apiState === "offline" ? "离线" : "本地";
+  const [openPanel, setOpenPanel] = useState<"notifications" | "mobileMore" | "user" | null>(null);
+  const [isMobileMoreClosing, setMobileMoreClosing] = useState(false);
+  const mobileMoreCloseTimer = useRef<number | null>(null);
+  const mobilePrimaryItems = navItems.filter((item) => item.key === "dashboard" || item.key === "all");
+  const mobileSecondaryItems = navItems.filter((item) => item.key === "ai" || item.key === "stats");
+  const mobileMoreItems = navItems.filter((item) => !["dashboard", "all", "ai", "stats"].includes(item.key));
+
+  useEffect(
+    () => () => {
+      if (mobileMoreCloseTimer.current !== null) {
+        window.clearTimeout(mobileMoreCloseTimer.current);
+      }
+    },
+    [],
+  );
+
+  const closeMobileMore = () => {
+    if (openPanel !== "mobileMore" || isMobileMoreClosing) {
+      return;
+    }
+    setMobileMoreClosing(true);
+    mobileMoreCloseTimer.current = window.setTimeout(() => {
+      setOpenPanel(null);
+      setMobileMoreClosing(false);
+      mobileMoreCloseTimer.current = null;
+    }, 160);
+  };
+
+  const toggleMobileMore = () => {
+    if (openPanel === "mobileMore") {
+      closeMobileMore();
+      return;
+    }
+    if (mobileMoreCloseTimer.current !== null) {
+      window.clearTimeout(mobileMoreCloseTimer.current);
+      mobileMoreCloseTimer.current = null;
+    }
+    setMobileMoreClosing(false);
+    setOpenPanel("mobileMore");
+  };
 
   return (
-    <div className={`minimal-shell ${isDark ? "minimal-shell-dark" : ""}`}>
+    <div className={`minimal-shell ${isDark ? "minimal-shell-dark" : "minimal-shell-light"}`}>
       <aside className="minimal-sidebar">
         <div className="minimal-brand">
           <span>
@@ -84,20 +124,81 @@ export default function Layout({
               <Plus size={16} />
               新建任务
             </button>
-            <button className="minimal-icon" type="button" aria-label="通知">
-              <Bell size={18} />
-            </button>
-            <button className="minimal-icon" type="button" onClick={onToggleTheme} aria-label="切换主题">
+            <div className="minimal-action-wrap">
+              <button
+                className="minimal-icon"
+                type="button"
+                onClick={() => setOpenPanel((panel) => (panel === "notifications" ? null : "notifications"))}
+                aria-expanded={openPanel === "notifications"}
+                aria-label="通知"
+              >
+                <Bell size={18} />
+              </button>
+              {openPanel === "notifications" && (
+                <div className="minimal-popover" role="status">
+                  <strong>暂无新通知</strong>
+                  <p>任务提醒和 AI 建议更新会显示在这里。</p>
+                </div>
+              )}
+            </div>
+            <div className="minimal-action-wrap minimal-mobile-more-wrap">
+              <button
+                className="minimal-icon minimal-mobile-more"
+                type="button"
+                onClick={toggleMobileMore}
+                aria-expanded={openPanel === "mobileMore"}
+                aria-label="更多页面"
+              >
+                <LayoutDashboard size={18} />
+              </button>
+              {openPanel === "mobileMore" && (
+                <div className={`minimal-popover minimal-mobile-more-panel ${isMobileMoreClosing ? "closing" : ""}`} role="menu">
+                  {mobileMoreItems.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <button
+                        key={item.key}
+                        type="button"
+                        onClick={() => {
+                          onNavigate(item.key);
+                          closeMobileMore();
+                        }}
+                        role="menuitem"
+                      >
+                        <Icon size={15} />
+                        {item.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+            <button className="minimal-icon minimal-theme-toggle" type="button" onClick={onToggleTheme} aria-label="切换主题">
               {isDark ? <Sun size={18} /> : <Moon size={18} />}
             </button>
             <span className={`minimal-status ${apiState}`} title={apiMessage}>
               <i />
               {statusLabel}
             </span>
-            <button className="minimal-user" type="button">
-              <User size={16} />
-              <span>{userName}</span>
-            </button>
+            <div className="minimal-action-wrap">
+              <button
+                className="minimal-user"
+                type="button"
+                onClick={() => setOpenPanel((panel) => (panel === "user" ? null : "user"))}
+                aria-expanded={openPanel === "user"}
+              >
+                <User size={16} />
+                <span>{userName}</span>
+              </button>
+              {openPanel === "user" && (
+                <div className="minimal-popover user" role="menu">
+                  <strong>{userName}</strong>
+                  <button type="button" onClick={onLogout} role="menuitem">
+                    退出登录
+                  </button>
+                </div>
+              )}
+            </div>
             <button className="minimal-icon" type="button" onClick={onLogout} aria-label="退出登录">
               <LogOut size={18} />
             </button>
@@ -107,8 +208,17 @@ export default function Layout({
         <div className="minimal-page">{children}</div>
       </main>
 
-      <nav className="minimal-mobile-nav" aria-label="移动端导航">
-        {navItems.map((item) => (
+      {openPanel === "mobileMore" && (
+        <button
+          className={`minimal-mobile-menu-backdrop ${isMobileMoreClosing ? "closing" : ""}`}
+          type="button"
+          onClick={closeMobileMore}
+          aria-label="关闭更多页面菜单"
+        />
+      )}
+
+      <nav className="minimal-mobile-nav mobile-bottom-nav" aria-label="移动端导航">
+        {mobilePrimaryItems.map((item) => (
           <NavItem
             active={item.key === activePage}
             icon={item.icon}
@@ -117,6 +227,30 @@ export default function Layout({
             onClick={() => onNavigate(item.key)}
           />
         ))}
+        <button className="mobile-create-action" type="button" onClick={onCreateTask} aria-label="新建任务">
+          <Plus size={20} />
+          <span>新建</span>
+        </button>
+        {mobileSecondaryItems.map((item) => (
+          <NavItem
+            active={item.key === activePage}
+            icon={item.icon}
+            key={item.key}
+            label={item.label}
+            onClick={() => onNavigate(item.key)}
+          />
+        ))}
+      </nav>
+      <nav className="minimal-mobile-more-nav" aria-label="移动端更多页面">
+        {mobileMoreItems.map((item) => {
+          const Icon = item.icon;
+          return (
+            <button className={item.key === activePage ? "active" : ""} key={item.key} type="button" onClick={() => onNavigate(item.key)}>
+              <Icon size={16} />
+              {item.label}
+            </button>
+          );
+        })}
       </nav>
     </div>
   );

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent, type ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 import {
   AlertCircle,
@@ -30,9 +30,11 @@ import {
 } from "lucide-react";
 import MinimalDashboard from "./Dashboard";
 import Layout from "./Layout";
+import ToastViewport, { type ToastMessage, type ToastTone } from "./components/Toast";
 
 type PageKey =
   | "dashboard"
+  | "today"
   | "all"
   | "ai"
   | "board"
@@ -270,6 +272,7 @@ const SESSION_STORAGE_KEY = "ai-agent-todo.session";
 const THEME_STORAGE_KEY = "ai-agent-todo.theme";
 const SETTINGS_STORAGE_KEY = "ai-agent-todo.settings";
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000/api").replace(/\/$/, "");
+const OVERLAY_EXIT_MS = 180;
 
 function formatLocalDate(date: Date) {
   const year = date.getFullYear();
@@ -308,6 +311,7 @@ function writeStoredJson(key: string, value: unknown) {
 
 const pagePaths: Record<PageKey, string> = {
   dashboard: "/",
+  today: "/today",
   all: "/tasks",
   ai: "/ai",
   board: "/board",
@@ -316,6 +320,14 @@ const pagePaths: Record<PageKey, string> = {
   tags: "/tags",
   settings: "/settings",
 };
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function isKnownPagePath(pathname: string) {
+  return Object.values(pagePaths).includes(pathname);
+}
 
 function getPageFromPath(pathname: string): PageKey {
   const matchedPage = (Object.entries(pagePaths).find(([, path]) => path === pathname)?.[0] || "dashboard") as PageKey;
@@ -756,6 +768,7 @@ const initialTasks: Task[] = [
 
 const navItems: Array<{ key: PageKey; label: string; icon: LucideIcon }> = [
   { key: "dashboard", label: "Dashboard", icon: Home },
+  { key: "today", label: "今日任务", icon: Clock3 },
   { key: "all", label: "全部任务", icon: ListTodo },
   { key: "ai", label: "AI 推荐", icon: Sparkles },
   { key: "board", label: "任务看板", icon: LayoutDashboard },
@@ -777,6 +790,84 @@ function isOverdue(task: Task) {
   return task.status !== "已完成" && Boolean(task.dueDate) && task.dueDate < dateFromToday(0);
 }
 
+function isAiPriorityTask(task: Pick<Task, "isAiCreated" | "priority" | "status">) {
+  return task.status !== "已完成" && (task.isAiCreated || task.priority === "高");
+}
+
+function getTaskOverview(tasks: Task[]) {
+  const todayTasks = tasks.filter((task) => isToday(task.dueDate));
+  const completedToday = todayTasks.filter((task) => task.status === "已完成").length;
+
+  return {
+    aiPriorityCount: tasks.filter(isAiPriorityTask).length,
+    completedToday,
+    overdueCount: tasks.filter(isOverdue).length,
+    todayTasks,
+  };
+}
+
+function readStoredSession() {
+  const storedSession = readStoredJson<unknown>(SESSION_STORAGE_KEY, null);
+  if (!isRecord(storedSession) || typeof storedSession.name !== "string" || typeof storedSession.email !== "string") {
+    return null;
+  }
+
+  return {
+    name: storedSession.name,
+    email: storedSession.email,
+    token: typeof storedSession.token === "string" ? storedSession.token : "",
+    isApiSession: storedSession.isApiSession === true,
+  };
+}
+
+function readStoredTheme() {
+  return readStoredJson<unknown>(THEME_STORAGE_KEY, false) === true;
+}
+
+function normalizeStoredTask(item: unknown, index: number): Task | null {
+  if (!isRecord(item) || typeof item.title !== "string") {
+    return null;
+  }
+
+  const status = statusOptions.includes(item.status as TaskStatus) ? (item.status as TaskStatus) : "待办";
+  const priority = priorityOptions.includes(item.priority as TaskPriority) ? (item.priority as TaskPriority) : "中";
+  const category = typeof item.category === "string" && item.category.trim() ? item.category : "未分类";
+
+  return {
+    id: typeof item.id === "number" && Number.isFinite(item.id) ? item.id : Date.now() + index,
+    title: item.title,
+    description: typeof item.description === "string" ? item.description : "",
+    status,
+    priority,
+    category,
+    dueDate: typeof item.dueDate === "string" ? item.dueDate : "",
+    dueTime: typeof item.dueTime === "string" ? item.dueTime : "",
+    createdAt: typeof item.createdAt === "string" ? item.createdAt : dateFromToday(0),
+    completedAt: typeof item.completedAt === "string" ? item.completedAt : null,
+    tags: Array.isArray(item.tags) ? item.tags.filter((tag): tag is string => typeof tag === "string") : [category],
+    aiReason: typeof item.aiReason === "string" ? item.aiReason : "AI 将根据截止时间、优先级和任务上下文持续更新建议。",
+    estimatedTime: typeof item.estimatedTime === "string" ? item.estimatedTime : priority === "高" ? "2小时" : "1小时",
+    aiCategory: typeof item.aiCategory === "string" ? item.aiCategory : category,
+    isAiCreated: item.isAiCreated === true,
+    confidence: typeof item.confidence === "number" ? item.confidence : undefined,
+    rawDueText: typeof item.rawDueText === "string" ? item.rawDueText : undefined,
+    sourceText: typeof item.sourceText === "string" ? item.sourceText : undefined,
+  };
+}
+
+function readStoredTasks() {
+  const storedTasks = readStoredJson<unknown>(TASKS_STORAGE_KEY, null);
+  if (!Array.isArray(storedTasks)) {
+    return initialTasks;
+  }
+
+  const normalizedTasks = storedTasks
+    .map((item, index) => normalizeStoredTask(item, index))
+    .filter((task): task is Task => Boolean(task));
+
+  return normalizedTasks.length ? normalizedTasks : initialTasks;
+}
+
 function createEmptyTask(): NewTaskInput {
   return {
     title: "",
@@ -787,6 +878,25 @@ function createEmptyTask(): NewTaskInput {
     dueDate: dateFromToday(3),
     dueTime: "15:00",
     tags: "React, UI设计",
+  };
+}
+
+function normalizeTaskInput(input: NewTaskInput): NewTaskInput {
+  const category = input.category.trim() || "未分类";
+  return {
+    ...input,
+    title: input.title.trim(),
+    description: input.description.trim(),
+    category,
+    tags: input.tags
+      .split(",")
+      .map((tag) => tag.trim())
+      .filter(Boolean)
+      .join(", "),
+    aiReason: input.aiReason?.trim(),
+    estimatedTime: input.estimatedTime?.trim(),
+    aiCategory: input.aiCategory?.trim() || category,
+    sourceText: input.sourceText?.trim(),
   };
 }
 
@@ -967,12 +1077,12 @@ const emptyRemoteStats: RemoteStatsState = {
 };
 
 export function App() {
-  const [session, setSession] = useState<DemoSession | null>(() => readStoredJson<DemoSession | null>(SESSION_STORAGE_KEY, null));
+  const [session, setSession] = useState<DemoSession | null>(() => readStoredSession());
   const [profile, setProfile] = useState<ProfileState>(() => ({
     username: session?.name || "Demo User",
     email: session?.email || "demo@aitodo.local",
   }));
-  const [tasks, setTasks] = useState<Task[]>(() => readStoredJson<Task[]>(TASKS_STORAGE_KEY, initialTasks));
+  const [tasks, setTasks] = useState<Task[]>(() => readStoredTasks());
   const [settings, setSettings] = useState<SettingsState>(() => readStoredJson<SettingsState>(SETTINGS_STORAGE_KEY, defaultSettings));
   const [remoteStats, setRemoteStats] = useState<RemoteStatsState>(emptyRemoteStats);
   const [remoteCategories, setRemoteCategories] = useState<string[]>([]);
@@ -985,12 +1095,28 @@ export function App() {
   );
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [deleteCandidate, setDeleteCandidate] = useState<Task | null>(null);
   const [isCreateOpen, setCreateOpen] = useState(false);
   const [isSidebarOpen, setSidebarOpen] = useState(false);
-  const [isDark, setIsDark] = useState(() => readStoredJson<boolean>(THEME_STORAGE_KEY, false));
+  const [isDark, setIsDark] = useState(() => readStoredTheme());
   const [globalSearch, setGlobalSearch] = useState("");
   const [taskDetailState, setTaskDetailState] = useState<TaskDetailState>({ isLoading: false, error: "" });
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const toastIdRef = useRef(0);
   const activeToken = session?.isApiSession ? session.token : "";
+  const markTaskDataChanged = useCallback(() => {
+    setTaskVersion((value) => value + 1);
+  }, []);
+
+  const dismissToast = useCallback((id: number) => {
+    setToasts((currentToasts) => currentToasts.filter((toast) => toast.id !== id));
+  }, []);
+
+  const showToast = useCallback((title: string, message?: string, tone: ToastTone = "info") => {
+    toastIdRef.current += 1;
+    const id = toastIdRef.current;
+    setToasts((currentToasts) => [...currentToasts.slice(-2), { id, message, title, tone }]);
+  }, []);
 
   const clearSession = () => {
     setSession(null);
@@ -1024,6 +1150,7 @@ export function App() {
 
   const handleApiError = (error: unknown) => {
     if (error instanceof ApiError && error.status === 401) {
+      showToast("登录已过期", "请重新登录后继续操作。", "error");
       clearSession();
       return "登录已过期，请重新登录。";
     }
@@ -1031,6 +1158,7 @@ export function App() {
     const message = asErrorMessage(error);
     setApiState("offline");
     setApiMessage(message);
+    showToast("请求失败", message, "error");
     return message;
   };
 
@@ -1108,9 +1236,15 @@ export function App() {
         setAuthMode(pathname === "/register" ? "register" : "login");
         return;
       }
+      if (!isKnownPagePath(pathname)) {
+        window.history.replaceState(null, "", pagePaths.dashboard);
+        setActivePage("dashboard");
+        return;
+      }
       setActivePage(getPageFromPath(pathname));
     };
 
+    syncPageFromPath();
     window.addEventListener("popstate", syncPageFromPath);
     return () => window.removeEventListener("popstate", syncPageFromPath);
   }, []);
@@ -1282,21 +1416,33 @@ export function App() {
   );
 
   const toggleComplete = async (taskId: number) => {
-    if (activeToken) {
-      const task = tasks.find((item) => item.id === taskId);
-      if (!task) {
-        return;
-      }
+    const currentTask = tasks.find((item) => item.id === taskId);
+    if (!currentTask) {
+      return;
+    }
 
+    if (activeToken) {
       try {
         setApiState("loading");
         setApiMessage("正在更新任务状态...");
-        await apiRequest(`/tasks/${taskId}/status`, {
+        const updatedStatus = await apiRequest<{ id: number; status: ApiTaskStatus; updated_at: string }>(`/tasks/${taskId}/status`, {
           method: "PATCH",
           token: activeToken,
-          body: JSON.stringify({ status: task.status === "已完成" ? "todo" : "done" }),
+          body: JSON.stringify({ status: currentTask.status === "已完成" ? "todo" : "done" }),
         });
+        const nextStatus = statusFromApi(updatedStatus.status);
+        const updateTaskStatus = (task: Task): Task => ({
+          ...task,
+          status: nextStatus,
+          completedAt: nextStatus === "已完成" ? dateFromIso(updatedStatus.updated_at) : null,
+        });
+        setTasks((currentTasks) => currentTasks.map((task) => (task.id === taskId ? updateTaskStatus(task) : task)));
+        setSelectedTask((currentTask) =>
+          currentTask?.id === taskId ? updateTaskStatus(currentTask) : currentTask,
+        );
+        markTaskDataChanged();
         await loadRemoteWorkspace(activeToken);
+        showToast(nextStatus === "已完成" ? "任务已完成" : "任务已恢复", currentTask.title, "success");
       } catch (error) {
         handleApiError(error);
       }
@@ -1316,9 +1462,21 @@ export function App() {
       currentTasks.map((task) => (task.id === taskId ? toggleTaskStatus(task) : task)),
     );
     setSelectedTask((currentTask) => (currentTask?.id === taskId ? toggleTaskStatus(currentTask) : currentTask));
+    markTaskDataChanged();
+    const nextStatus = currentTask.status === "已完成" ? "待办" : "已完成";
+    showToast(nextStatus === "已完成" ? "任务已完成" : "任务已恢复", currentTask.title, "success");
+  };
+
+  const requestDeleteTask = (taskId: number) => {
+    const task = selectedTask?.id === taskId ? selectedTask : editingTask?.id === taskId ? editingTask : tasks.find((item) => item.id === taskId);
+    if (task) {
+      setDeleteCandidate(task);
+    }
   };
 
   const deleteTask = async (taskId: number) => {
+    const taskTitle = deleteCandidate?.id === taskId ? deleteCandidate.title : tasks.find((task) => task.id === taskId)?.title;
+    setDeleteCandidate(null);
     if (activeToken) {
       try {
         setApiState("loading");
@@ -1329,7 +1487,10 @@ export function App() {
         });
         setSelectedTask(null);
         setEditingTask(null);
+        setTasks((currentTasks) => currentTasks.filter((task) => task.id !== taskId));
+        markTaskDataChanged();
         await loadRemoteWorkspace(activeToken);
+        showToast("任务已删除", taskTitle, "success");
       } catch (error) {
         handleApiError(error);
       }
@@ -1343,54 +1504,60 @@ export function App() {
     if (editingTask?.id === taskId) {
       setEditingTask(null);
     }
+    markTaskDataChanged();
+    showToast("任务已删除", taskTitle, "success");
   };
 
   const createLocalTask = (input: NewTaskInput) => {
+    const normalizedInput = normalizeTaskInput(input);
     const task: Task = {
       id: Math.max(0, ...tasks.map((item) => item.id)) + 1,
-      title: input.title,
-      description: input.description,
-      status: input.status,
-      priority: input.priority,
-      category: input.category,
-      dueDate: input.dueDate,
-      dueTime: input.dueTime,
+      title: normalizedInput.title,
+      description: normalizedInput.description,
+      status: normalizedInput.status,
+      priority: normalizedInput.priority,
+      category: normalizedInput.category,
+      dueDate: normalizedInput.dueDate,
+      dueTime: normalizedInput.dueTime,
       createdAt: dateFromToday(0),
-      completedAt: input.status === "已完成" ? dateFromToday(0) : null,
+      completedAt: normalizedInput.status === "已完成" ? dateFromToday(0) : null,
       tags: Array.from(
         new Set(
-          input.tags
+          normalizedInput.tags
             .split(",")
             .map((tag) => tag.trim())
             .filter(Boolean)
-            .concat(input.isAiCreated ? ["AI生成"] : []),
+            .concat(normalizedInput.isAiCreated ? ["AI生成"] : []),
         ),
       ),
-      aiReason: input.aiReason || "AI 将根据截止时间、优先级和任务上下文持续更新建议。",
-      estimatedTime: input.estimatedTime || (input.priority === "高" ? "2小时" : "1小时"),
-      aiCategory: input.aiCategory || input.category,
-      isAiCreated: Boolean(input.isAiCreated),
-      confidence: input.confidence,
-      rawDueText: input.rawDueText,
-      sourceText: input.sourceText,
+      aiReason: normalizedInput.aiReason || "AI 将根据截止时间、优先级和任务上下文持续更新建议。",
+      estimatedTime: normalizedInput.estimatedTime || (normalizedInput.priority === "高" ? "2小时" : "1小时"),
+      aiCategory: normalizedInput.aiCategory || normalizedInput.category,
+      isAiCreated: Boolean(normalizedInput.isAiCreated),
+      confidence: normalizedInput.confidence,
+      rawDueText: normalizedInput.rawDueText,
+      sourceText: normalizedInput.sourceText,
     };
     setTasks((currentTasks) => [task, ...currentTasks]);
+    markTaskDataChanged();
     setCreateOpen(false);
+    showToast("任务已创建", task.title, "success");
   };
 
   const createTask = async (input: NewTaskInput) => {
+    const normalizedInput = normalizeTaskInput(input);
     if (activeToken) {
       try {
         setApiState("loading");
-        setApiMessage(input.isAiCreated ? "正在通过 AI 创建任务..." : "正在创建任务...");
-        if (input.isAiCreated && input.aiBackendMode !== "frontend-fallback") {
+        setApiMessage(normalizedInput.isAiCreated ? "正在通过 AI 创建任务..." : "正在创建任务...");
+        if (normalizedInput.isAiCreated && normalizedInput.aiBackendMode !== "frontend-fallback") {
           const data = await apiRequest<ApiAiCreateResponse>("/ai/create-task", {
             method: "POST",
             token: activeToken,
             body: JSON.stringify({
-              text: input.sourceText || `${input.title}\n${input.description}`.trim(),
+              text: normalizedInput.sourceText || `${normalizedInput.title}\n${normalizedInput.description}`.trim(),
               timezone: "Asia/Shanghai",
-              overrides: inputToApiTaskPayload(input),
+              overrides: inputToApiTaskPayload(normalizedInput),
             }),
           });
           setTasks((currentTasks) => [mapApiTask(data.task, data.parsed_task), ...currentTasks]);
@@ -1398,58 +1565,65 @@ export function App() {
           const task = await apiRequest<ApiTask>("/tasks", {
             method: "POST",
             token: activeToken,
-            body: JSON.stringify(inputToApiTaskPayload(input)),
+            body: JSON.stringify(inputToApiTaskPayload(normalizedInput)),
           });
           setTasks((currentTasks) => [mapApiTask(task), ...currentTasks]);
         }
+        markTaskDataChanged();
         setCreateOpen(false);
         await loadRemoteWorkspace(activeToken);
+        showToast("任务已创建", normalizedInput.title, "success");
       } catch (error) {
         handleApiError(error);
       }
       return;
     }
 
-    createLocalTask(input);
+    createLocalTask(normalizedInput);
   };
 
   const updateTask = async (taskId: number, input: NewTaskInput) => {
+    const normalizedInput = normalizeTaskInput(input);
     if (activeToken) {
       try {
-        setApiState("loading");
-        setApiMessage("正在保存任务...");
-        const task = await apiRequest<ApiTask>(`/tasks/${taskId}`, {
-          method: "PUT",
-          token: activeToken,
-          body: JSON.stringify({
-            ...inputToApiTaskPayload(input),
-            status: statusToApi(input.status),
-          }),
-        });
+	        setApiState("loading");
+	        setApiMessage("正在保存任务...");
+	        const task = await apiRequest<ApiTask>(`/tasks/${taskId}`, {
+	          method: "PUT",
+	          token: activeToken,
+	          body: JSON.stringify({
+	            ...inputToApiTaskPayload(normalizedInput),
+	            status: statusToApi(normalizedInput.status),
+	          }),
+	        });
         const updatedTask = mapApiTask(task);
         setTasks((currentTasks) => currentTasks.map((currentTask) => (currentTask.id === taskId ? updatedTask : currentTask)));
         setSelectedTask((currentTask) => (currentTask?.id === taskId ? updatedTask : currentTask));
         setEditingTask(null);
+        markTaskDataChanged();
         await loadRemoteWorkspace(activeToken);
+        showToast("任务已更新", updatedTask.title, "success");
       } catch (error) {
         handleApiError(error);
       }
       return;
     }
 
-    let updatedTask: Task | null = null;
-    setTasks((currentTasks) =>
-      currentTasks.map((task) => {
-        if (task.id !== taskId) {
-          return task;
-        }
-        updatedTask = mergeTaskInput(task, input);
-        return updatedTask;
-      }),
-    );
-    if (updatedTask) {
+    const originalTask = tasks.find((task) => task.id === taskId);
+    if (originalTask) {
+      const updatedTask = mergeTaskInput(originalTask, normalizedInput);
+      setTasks((currentTasks) =>
+        currentTasks.map((task) => {
+          if (task.id !== taskId) {
+            return task;
+          }
+          return updatedTask;
+        }),
+      );
       setSelectedTask((currentTask) => (currentTask?.id === taskId ? updatedTask : currentTask));
       setEditingTask(null);
+      markTaskDataChanged();
+      showToast("任务已更新", updatedTask.title, "success");
     }
   };
 
@@ -1480,7 +1654,6 @@ export function App() {
       throw error;
     }
   };
-
   const suggestTaskFields = async (title: string, description: string): Promise<TaskFieldSuggestion> => {
     if (!activeToken) {
       const suggestion = generateTaskFromPrompt(`${title}\n${description}`);
@@ -1586,6 +1759,12 @@ export function App() {
         ? `测试通过${data.latency_ms ? `，耗时 ${data.latency_ms}ms` : ""}。`
         : "测试失败，请检查 Key 或模型权限。";
     } catch (error) {
+      if (isAiConfigError(error)) {
+        const message = asErrorMessage(error);
+        setApiState("online");
+        setApiMessage(message);
+        return message;
+      }
       if (error instanceof ApiError && error.status === 401) {
         return handleApiError(error);
       }
@@ -1602,7 +1781,7 @@ export function App() {
       categories={visibleCategories}
       globalSearch={globalSearch}
       isApiMode={Boolean(activeToken)}
-      onDelete={deleteTask}
+      onDelete={requestDeleteTask}
       onCreateTask={() => setCreateOpen(true)}
       onEditTask={setEditingTask}
       onApiError={handleApiError}
@@ -1660,7 +1839,8 @@ export function App() {
         detailState={taskDetailState}
         isApiMode={Boolean(activeToken)}
         onClose={() => setSelectedTask(null)}
-        onDelete={deleteTask}
+        onDelete={requestDeleteTask}
+        onEdit={setEditingTask}
         onToggleComplete={toggleComplete}
         task={selectedTask}
       />
@@ -1682,6 +1862,16 @@ export function App() {
           task={editingTask}
         />
       )}
+      {deleteCandidate && (
+        <DeleteConfirmModal
+          onCancel={() => setDeleteCandidate(null)}
+          onConfirm={() => {
+            void deleteTask(deleteCandidate.id);
+          }}
+          task={deleteCandidate}
+        />
+      )}
+      <ToastViewport items={toasts} onDismiss={dismissToast} />
     </Layout>
   );
 }
@@ -1995,6 +2185,18 @@ function PageRenderer({
     );
   }
 
+  if (activePage === "today") {
+    return (
+      <TodayTasksPage
+        onDelete={onDelete}
+        onEditTask={onEditTask}
+        onOpenTask={onOpenTask}
+        onToggleComplete={onToggleComplete}
+        tasks={tasks}
+      />
+    );
+  }
+
   if (activePage === "all") {
     return (
       <AllTasksPage
@@ -2083,20 +2285,67 @@ function DashboardPage({
   recommendedTasks,
   tasks,
 }: DashboardPageProps) {
-  const todayTasks = tasks.filter((task) => isToday(task.dueDate));
-  const completedToday = todayTasks.filter((task) => task.status === "已完成").length;
-  const overdue = tasks.filter(isOverdue).length;
+  const { aiPriorityCount, completedToday, overdueCount, todayTasks } = getTaskOverview(tasks);
 
   return (
     <MinimalDashboard
+      aiPriorityCount={aiPriorityCount}
       completedToday={completedToday}
       onOpenTask={(task) => onOpenTask(task as Task)}
       onPageChange={() => onPageChange("all")}
       onToggleComplete={onToggleComplete}
-      overdueCount={overdue}
+      overdueCount={overdueCount}
       recommendedTasks={recommendedTasks}
       todayTasks={todayTasks}
     />
+  );
+}
+
+function TodayTasksPage({
+  onDelete,
+  onEditTask,
+  onOpenTask,
+  onToggleComplete,
+  tasks,
+}: {
+  onDelete: (taskId: number) => void;
+  onEditTask: (task: Task) => void;
+  onOpenTask: (task: Task) => void;
+  onToggleComplete: (taskId: number) => void;
+  tasks: Task[];
+}) {
+  const todayTasks = tasks
+    .filter((task) => isToday(task.dueDate))
+    .sort((left, right) => (left.dueTime || "23:59").localeCompare(right.dueTime || "23:59"));
+  const done = todayTasks.filter((task) => task.status === "已完成").length;
+  const remaining = todayTasks.length - done;
+  const aiRecommended = todayTasks.filter(isAiPriorityTask).length;
+
+  return (
+    <main className="page-content">
+      <PageHeading title="今日任务" description="聚焦今天截止的任务，快速检查优先级、完成状态和 AI 建议。" />
+      <section className="stats-grid">
+        <StatsCard icon={CalendarDays} label="今日任务" value={todayTasks.length} tone="blue" />
+        <StatsCard icon={CheckCircle2} label="已完成" value={done} tone="green" />
+        <StatsCard icon={Clock3} label="待处理" value={remaining} tone="purple" />
+        <StatsCard icon={Sparkles} label="AI 重点" value={aiRecommended} tone="purple" />
+      </section>
+      <section className="content-card table-card">
+        <div className="section-title">
+          <div>
+            <h2>今天的执行清单</h2>
+            <p>按截止时段排列，点击任务可打开详情抽屉。</p>
+          </div>
+        </div>
+        <TaskTable
+          onDelete={onDelete}
+          onEditTask={onEditTask}
+          onOpenTask={onOpenTask}
+          onToggleComplete={onToggleComplete}
+          tasks={todayTasks}
+        />
+      </section>
+    </main>
   );
 }
 
@@ -2109,13 +2358,13 @@ interface StatsCardProps {
 
 function StatsCard({ icon: Icon, label, tone, value }: StatsCardProps) {
   return (
-    <article className={`stats-card ${tone}`}>
+    <article className={`stats-card ${tone}`} data-value={value}>
       <span>
         <Icon size={20} />
       </span>
       <div>
         <p>{label}</p>
-        <strong>{value}</strong>
+        <strong key={value}>{value}</strong>
       </div>
     </article>
   );
@@ -2150,14 +2399,24 @@ function AIAssistantCard({ onOpenTask, tasks }: AIAssistantCardProps) {
       </div>
       <div className="ai-recommend-list">
         {tasks.length ? (
-          tasks.map((task) => (
-            <button key={task.id} type="button" onClick={() => onOpenTask(task)}>
+          tasks.map((task, index) => (
+            <button
+              className="ai-recommend-item"
+              key={task.id}
+              style={{ "--stagger-index": index } as CSSProperties}
+              type="button"
+              onClick={() => onOpenTask(task)}
+            >
               <div>
                 <strong>{task.title}</strong>
                 <p>推荐原因：{task.aiReason}</p>
+                <div className="ai-recommend-meta">
+                  <span>AI 分类：{task.aiCategory}</span>
+                  <span>预计：{task.estimatedTime}</span>
+                  <span>截止：{formatDue(task)}</span>
+                </div>
               </div>
               <span className={`priority-badge priority-${task.priority}`}>{task.priority}</span>
-              <small>{formatDue(task)}</small>
             </button>
           ))
         ) : (
@@ -2176,11 +2435,12 @@ interface TaskCardProps {
 
 function TaskCard({ onOpen, onToggleComplete, task }: TaskCardProps) {
   const toggleLabel = toggleTaskActionLabel(task.status);
+  const isDone = task.status === "已完成";
 
   return (
-    <article className="task-card" onClick={() => onOpen(task)}>
+    <article className={`task-card motion-enter ${isDone ? "is-complete" : ""} ${task.priority === "高" ? "is-high-priority" : ""}`} onClick={() => onOpen(task)}>
       <button
-        className={`task-check ${task.status === "已完成" ? "checked" : ""}`}
+        className={`task-check ${isDone ? "checked" : ""}`}
         type="button"
         onClick={(event) => {
           event.stopPropagation();
@@ -2193,7 +2453,7 @@ function TaskCard({ onOpen, onToggleComplete, task }: TaskCardProps) {
       </button>
       <div className="task-card-body">
         <div className="task-card-title">
-          <h3>{task.title}</h3>
+          <h3 className={isDone ? "task-title-done" : ""}>{task.title}</h3>
           <PriorityBadge priority={task.priority} />
         </div>
         <p>{task.description}</p>
@@ -2216,6 +2476,75 @@ function PriorityBadge({ priority }: { priority: TaskPriority }) {
 
 function StatusBadge({ status }: { status: TaskStatus }) {
   return <span className={`status-badge status-${status}`}>{status}</span>;
+}
+
+function AITag({ children, confidence }: { children: ReactNode; confidence?: number }) {
+  return (
+    <span className="ai-brand-tag">
+      <Sparkles size={12} />
+      {children}
+      {confidence ? <i>{Math.round(confidence * 100)}%</i> : null}
+    </span>
+  );
+}
+
+function AIReasonBlock({ reason, source }: { reason: string; source?: string }) {
+  return (
+    <div className="ai-reason-block">
+      <div className="ai-reason-header">
+        <Sparkles size={16} />
+        <strong>AI 智能分析</strong>
+        {source ? <AITag>{source}</AITag> : null}
+      </div>
+      <p>{reason}</p>
+    </div>
+  );
+}
+
+function useEscapeToClose(onClose: () => void) {
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+}
+
+function useAnimatedDismiss(onClose: () => void, duration = OVERLAY_EXIT_MS, resetKey?: unknown) {
+  const [isClosing, setClosing] = useState(false);
+  const timeoutRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    setClosing(false);
+    if (timeoutRef.current !== null) {
+      window.clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+  }, [resetKey]);
+
+  useEffect(
+    () => () => {
+      if (timeoutRef.current !== null) {
+        window.clearTimeout(timeoutRef.current);
+      }
+    },
+    [],
+  );
+
+  const closeWithAnimation = useCallback((afterClose = onClose) => {
+    if (isClosing) {
+      return;
+    }
+    setClosing(true);
+    timeoutRef.current = window.setTimeout(() => {
+      afterClose();
+    }, duration);
+  }, [duration, isClosing, onClose]);
+
+  return { closeWithAnimation, isClosing };
 }
 
 interface AllTasksPageProps {
@@ -2487,151 +2816,247 @@ interface TaskTableProps {
 function TaskTable({ onDelete, onEditTask, onOpenTask, onToggleComplete, tasks }: TaskTableProps) {
   const [openMenuTaskId, setOpenMenuTaskId] = useState<number | null>(null);
 
+  if (!tasks.length) {
+    return (
+      <div className="responsive-task-container">
+        <EmptyState title="没有匹配任务" description="调整搜索词或筛选条件后再试一次。" />
+      </div>
+    );
+  }
+
   return (
-    <div className="task-table-wrap">
-      <table className="task-table">
-        <thead>
-          <tr>
-            <th>任务名称</th>
-            <th>状态</th>
-            <th>优先级</th>
-            <th>分类</th>
-            <th>截止时间</th>
-            <th>创建时间</th>
-            <th>操作</th>
-          </tr>
-        </thead>
-        <tbody>
-          {tasks.length ? (
-            tasks.map((task) => (
-              <tr
-                key={task.id}
-                onClick={() => {
-                  setOpenMenuTaskId(null);
-                  onOpenTask(task);
-                }}
-              >
-              <td>
-                <div className="table-title">
-                  <strong>{task.title}</strong>
-                  <span>{task.description}</span>
-                </div>
-              </td>
-              <td>
-                <StatusBadge status={task.status} />
-              </td>
-              <td>
-                <PriorityBadge priority={task.priority} />
-              </td>
-              <td>{task.category}</td>
-              <td>{formatDue(task)}</td>
-              <td>{task.createdAt}</td>
-              <td>
-                <div className="row-actions">
-                  <button
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      setOpenMenuTaskId(null);
-                      onOpenTask(task);
-                    }}
-                    aria-label="查看详情"
-                    title="查看详情"
-                  >
-                    <FileText size={15} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      setOpenMenuTaskId(null);
-                      onToggleComplete(task.id);
-                    }}
-                    aria-label={toggleTaskActionLabel(task.status)}
-                    title={toggleTaskActionLabel(task.status)}
-                  >
-                    <Check size={15} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      setOpenMenuTaskId(null);
-                      onEditTask(task);
-                    }}
-                    aria-label="编辑任务"
-                  >
-                    <Pencil size={15} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      setOpenMenuTaskId(null);
-                      onDelete(task.id);
-                    }}
-                    aria-label="删除任务"
-                  >
-                    <Trash2 size={15} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      setOpenMenuTaskId((currentTaskId) => (currentTaskId === task.id ? null : task.id));
-                    }}
-                    aria-expanded={openMenuTaskId === task.id}
-                    aria-label="更多操作"
-                  >
-                    <MoreHorizontal size={15} />
-                  </button>
-                  {openMenuTaskId === task.id && (
-                    <div className="row-menu" role="menu" onClick={(event) => event.stopPropagation()}>
-                      <button
-                        type="button"
-                        role="menuitem"
-                        onClick={() => {
-                          setOpenMenuTaskId(null);
-                          onOpenTask(task);
-                        }}
-                      >
-                        查看详情
-                      </button>
-                      <button
-                        type="button"
-                        role="menuitem"
-                        onClick={() => {
-                          setOpenMenuTaskId(null);
-                          onEditTask(task);
-                        }}
-                      >
-                        编辑任务
-                      </button>
-                      <button
-                        type="button"
-                        role="menuitem"
-                        onClick={() => {
-                          setOpenMenuTaskId(null);
-                          onDelete(task.id);
-                        }}
-                      >
-                        删除任务
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </td>
-              </tr>
-            ))
-          ) : (
+    <div className="responsive-task-container">
+      <div className="desktop-table-wrapper task-table-wrap">
+        <table className="task-table">
+          <thead>
             <tr>
-              <td colSpan={7}>
-                <EmptyState title="没有匹配任务" description="调整搜索词或筛选条件后再试一次。" />
-              </td>
+              <th>任务名称</th>
+              <th>状态</th>
+              <th>优先级</th>
+              <th>分类</th>
+              <th>截止时间</th>
+              <th>创建时间</th>
+              <th>操作</th>
             </tr>
-          )}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {tasks.map((task, index) => (
+                <tr
+                  className={`task-table-row ${task.status === "已完成" ? "is-complete" : ""} ${task.priority === "高" ? "is-high-priority" : ""}`}
+                  key={task.id}
+                  style={{ "--stagger-index": index } as CSSProperties}
+                  onClick={() => {
+                    setOpenMenuTaskId(null);
+                    onOpenTask(task);
+                  }}
+                >
+                <td>
+                  <div className="table-title">
+                    <strong className={task.status === "已完成" ? "task-title-done" : ""}>{task.title}</strong>
+                    <span>{task.description}</span>
+                  </div>
+                </td>
+                <td>
+                  <StatusBadge status={task.status} />
+                </td>
+                <td>
+                  <PriorityBadge priority={task.priority} />
+                </td>
+                <td>{task.category}</td>
+                <td>{formatDue(task)}</td>
+                <td>{task.createdAt}</td>
+                <td>
+                  <TaskRowActions
+                    isMenuOpen={openMenuTaskId === task.id}
+                    onDelete={onDelete}
+                    onEditTask={onEditTask}
+                    onMenuChange={setOpenMenuTaskId}
+                    onOpenTask={onOpenTask}
+                    onToggleComplete={onToggleComplete}
+                    task={task}
+                  />
+                </td>
+                </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="mobile-card-list">
+        {tasks.map((task, index) => (
+          <article
+            className={`mobile-task-card ${task.status === "已完成" ? "is-complete" : ""} ${task.priority === "高" ? "is-high-priority" : ""}`}
+            key={task.id}
+            style={{ "--stagger-index": index } as CSSProperties}
+            onClick={() => onOpenTask(task)}
+          >
+            <div className="mobile-task-card-header">
+              <div className="mobile-task-title">
+                <button
+                  className={`task-check ${task.status === "已完成" ? "checked" : ""}`}
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onToggleComplete(task.id);
+                  }}
+                  aria-label={toggleTaskActionLabel(task.status)}
+                  title={toggleTaskActionLabel(task.status)}
+                >
+                  {task.status === "已完成" && <Check size={14} />}
+                </button>
+                <strong className={task.status === "已完成" ? "task-title-done" : ""}>{task.title}</strong>
+              </div>
+              <button
+                className="mobile-card-more"
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setOpenMenuTaskId((currentTaskId) => (currentTaskId === task.id ? null : task.id));
+                }}
+                aria-expanded={openMenuTaskId === task.id}
+                aria-label="更多操作"
+              >
+                <MoreHorizontal size={18} />
+              </button>
+            </div>
+            {task.description && <p>{task.description}</p>}
+            <div className="mobile-task-meta">
+              <StatusBadge status={task.status} />
+              <PriorityBadge priority={task.priority} />
+              <span>{task.category}</span>
+              <span>{formatDue(task)}</span>
+              {task.isAiCreated && <span className="ai-tiny-tag">AI</span>}
+            </div>
+            {openMenuTaskId === task.id && (
+              <div className="mobile-quick-actions" onClick={(event) => event.stopPropagation()}>
+                <button type="button" onClick={() => onOpenTask(task)}>
+                  查看详情
+                </button>
+                <button type="button" onClick={() => onEditTask(task)}>
+                  编辑
+                </button>
+                <button className="danger" type="button" onClick={() => onDelete(task.id)}>
+                  删除
+                </button>
+              </div>
+            )}
+          </article>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function TaskRowActions({
+  isMenuOpen,
+  onDelete,
+  onEditTask,
+  onMenuChange,
+  onOpenTask,
+  onToggleComplete,
+  task,
+}: {
+  isMenuOpen: boolean;
+  onDelete: (taskId: number) => void;
+  onEditTask: (task: Task) => void;
+  onMenuChange: (taskId: number | null | ((currentTaskId: number | null) => number | null)) => void;
+  onOpenTask: (task: Task) => void;
+  onToggleComplete: (taskId: number) => void;
+  task: Task;
+}) {
+  return (
+    <div className="row-actions">
+      <button
+        type="button"
+        onClick={(event) => {
+          event.stopPropagation();
+          onMenuChange(null);
+          onOpenTask(task);
+        }}
+        aria-label="查看详情"
+        title="查看详情"
+      >
+        <FileText size={15} />
+      </button>
+      <button
+        type="button"
+        onClick={(event) => {
+          event.stopPropagation();
+          onMenuChange(null);
+          onToggleComplete(task.id);
+        }}
+        aria-label={toggleTaskActionLabel(task.status)}
+        title={toggleTaskActionLabel(task.status)}
+      >
+        <Check size={15} />
+      </button>
+      <button
+        type="button"
+        onClick={(event) => {
+          event.stopPropagation();
+          onMenuChange(null);
+          onEditTask(task);
+        }}
+        aria-label="编辑任务"
+      >
+        <Pencil size={15} />
+      </button>
+      <button
+        type="button"
+        onClick={(event) => {
+          event.stopPropagation();
+          onMenuChange(null);
+          onDelete(task.id);
+        }}
+        aria-label="删除任务"
+      >
+        <Trash2 size={15} />
+      </button>
+      <button
+        type="button"
+        onClick={(event) => {
+          event.stopPropagation();
+          onMenuChange((currentTaskId) => (currentTaskId === task.id ? null : task.id));
+        }}
+        aria-expanded={isMenuOpen}
+        aria-label="更多操作"
+      >
+        <MoreHorizontal size={15} />
+      </button>
+      {isMenuOpen && (
+        <div className="row-menu" role="menu" onClick={(event) => event.stopPropagation()}>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              onMenuChange(null);
+              onOpenTask(task);
+            }}
+          >
+            查看详情
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              onMenuChange(null);
+              onEditTask(task);
+            }}
+          >
+            编辑任务
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              onMenuChange(null);
+              onDelete(task.id);
+            }}
+          >
+            删除任务
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -2692,8 +3117,9 @@ function TaskBoard({ categories, isApiMode, onCreateTask, onOpenTask, tasks }: T
         </button>
       </div>
       <div className="kanban-board">
-        {(isApiMode ? apiStatusOptions : statusOptions).map((status) => (
+        {(isApiMode ? apiStatusOptions : statusOptions).map((status, index) => (
           <TaskColumn
+            columnIndex={index}
             key={status}
             onOpenTask={onOpenTask}
             status={status}
@@ -2706,22 +3132,29 @@ function TaskBoard({ categories, isApiMode, onCreateTask, onOpenTask, tasks }: T
 }
 
 interface TaskColumnProps {
+  columnIndex: number;
   onOpenTask: (task: Task) => void;
   status: TaskStatus;
   tasks: Task[];
 }
 
-function TaskColumn({ onOpenTask, status, tasks }: TaskColumnProps) {
+function TaskColumn({ columnIndex, onOpenTask, status, tasks }: TaskColumnProps) {
   return (
-    <section className="task-column">
+    <section className="task-column" style={{ "--stagger-index": columnIndex } as CSSProperties}>
       <header>
         <h2>{status}</h2>
         <span>{tasks.length}</span>
       </header>
       <div className="task-column-list">
         {tasks.length ? (
-          tasks.map((task) => (
-            <button className="kanban-card" key={task.id} type="button" onClick={() => onOpenTask(task)}>
+          tasks.map((task, index) => (
+            <button
+              className={`kanban-card ${task.status === "已完成" ? "is-complete" : ""} ${task.priority === "高" ? "is-high-priority" : ""}`}
+              key={task.id}
+              style={{ "--stagger-index": index } as CSSProperties}
+              type="button"
+              onClick={() => onOpenTask(task)}
+            >
               <div>
                 <strong>{task.title}</strong>
                 <PriorityBadge priority={task.priority} />
@@ -2959,7 +3392,18 @@ function AISuggestTool({
           <p>点击后调用 /ai/suggest；本地演示模式会使用前端规则兜底。</p>
         </div>
         <button className="ghost-button" type="button" onClick={requestSuggestion} disabled={isLoading}>
-          {isLoading ? "分析中..." : "获取建议"}
+          {isLoading ? (
+            <>
+              分析中
+              <span className="thinking-dots" aria-hidden="true">
+                <i />
+                <i />
+                <i />
+              </span>
+            </>
+          ) : (
+            "获取建议"
+          )}
         </button>
       </div>
       <div className="ai-suggest-grid">
@@ -3150,8 +3594,8 @@ function CalendarPage({
                 {dayTasks.length ? (
                   dayTasks.map((task) => (
                     <button key={task.id} type="button" onClick={() => onOpenTask(task)}>
-                      <span>{task.dueTime || "全天"}</span>
-                      {task.title}
+                      <strong className="calendar-task-title">{task.title}</strong>
+                      <span className="calendar-task-time">{task.dueTime || "全天"}</span>
                     </button>
                   ))
                 ) : (
@@ -3181,7 +3625,7 @@ function StatsPage({
   tasks: Task[];
   token: string;
 }) {
-  const [range, setRange] = useState<"7" | "14" | "30" | "24h">("7");
+  const [range, setRange] = useState<"7" | "24h">("7");
   const [rangeStats, setRangeStats] = useState<RemoteStatsState | null>(null);
   const [remoteError, setRemoteError] = useState("");
   const [isRemoteLoading, setRemoteLoading] = useState(false);
@@ -3199,8 +3643,8 @@ function StatsPage({
     : Array.from(tasks.reduce((map, task) => map.set(task.category, (map.get(task.category) || 0) + 1), new Map<string, number>())).sort(
         (left, right) => right[1] - left[1],
       );
-  const priorityStats = remoteStats.priorities.length
-    ? remoteStats.priorities.map((item) => ({
+  const priorityStats = statsSource.priorities.length
+    ? statsSource.priorities.map((item) => ({
         priority: priorityFromApi(item.priority),
         total: item.total,
       }))
@@ -3208,7 +3652,7 @@ function StatsPage({
         priority,
         total: tasks.filter((task) => task.priority === priority).length,
       }));
-  const trendDayCount = range === "30" ? 30 : range === "14" ? 14 : 7;
+  const trendDayCount = 7;
   const trendDays = Array.from({ length: trendDayCount }, (_, index) => dateFromToday(index - trendDayCount + 1));
   const localTrend = trendDays.map((day) => ({
     day,
@@ -3231,7 +3675,7 @@ function StatsPage({
     }
 
     let isCancelled = false;
-    const days = range === "30" ? 30 : range === "14" ? 14 : 7;
+    const days = 7;
     const endDate = dateFromToday(0);
     const startDate = range === "24h" ? endDate : dateFromToday(-(days - 1));
     const rangeQuery = new URLSearchParams(buildDateRange(startDate, endDate)).toString();
@@ -3298,8 +3742,6 @@ function StatsPage({
               <div className="range-tabs">
                 {[
                   ["7", "近 7 天"],
-                  ["14", "近 14 天"],
-                  ["30", "近 30 天"],
                   ["24h", "今日 24 小时"],
                 ].map(([key, label]) => (
                   <button className={range === key ? "active" : ""} key={key} type="button" onClick={() => setRange(key as typeof range)}>
@@ -3564,66 +4006,89 @@ interface TaskDetailDrawerProps {
   isApiMode: boolean;
   onClose: () => void;
   onDelete: (taskId: number) => void;
+  onEdit: (task: Task) => void;
   onToggleComplete: (taskId: number) => void;
   task: Task | null;
 }
 
-function TaskDetailDrawer({ detailState, isApiMode, onClose, onDelete, onToggleComplete, task }: TaskDetailDrawerProps) {
+function TaskDetailDrawer({ detailState, isApiMode, onClose, onDelete, onEdit, onToggleComplete, task }: TaskDetailDrawerProps) {
+  const { closeWithAnimation, isClosing } = useAnimatedDismiss(onClose, OVERLAY_EXIT_MS, task?.id ?? null);
+  useEscapeToClose(closeWithAnimation);
+
   if (!task) {
     return null;
   }
 
   return (
-    <aside className="drawer">
-      <div className="drawer-header">
-        <div>
-          <p className="eyebrow">任务详情</p>
-          <h2>{task.title}</h2>
+    <>
+      <button
+        className={`drawer-backdrop ${isClosing ? "closing" : ""}`}
+        type="button"
+        onClick={() => closeWithAnimation()}
+        aria-label="关闭任务详情遮罩"
+      />
+      <aside className={`drawer ${isClosing ? "closing" : ""}`}>
+        <div className="drawer-header">
+          <div>
+            <p className="eyebrow">任务详情</p>
+            <h2>{task.title}</h2>
+          </div>
+          <button className="icon-button" type="button" onClick={() => closeWithAnimation()} aria-label="关闭详情">
+            <X size={18} />
+          </button>
         </div>
-        <button className="icon-button" type="button" onClick={onClose} aria-label="关闭详情">
-          <X size={18} />
-        </button>
-      </div>
-      {detailState.isLoading && <p className="table-state">{`正在读取 /tasks/${task.id} ...`}</p>}
-      {detailState.error && <p className="form-error">{detailState.error}</p>}
-      <p className="drawer-description">{task.description}</p>
-      <div className="drawer-fields">
-        <Field label="状态"><StatusBadge status={task.status} /></Field>
-        <Field label="优先级"><PriorityBadge priority={task.priority} /></Field>
-        <Field label="截止时间">{formatDue(task)}</Field>
-        {!isApiMode && <Field label="标签">{task.tags.join(" / ")}</Field>}
-        <Field label="创建来源">{task.isAiCreated ? "AI 生成" : "自定义创建"}</Field>
-      </div>
-      <section className="subtasks">
-        <h3>子任务</h3>
-        {isApiMode ? (
-          <p>后端任务模型暂未提供子任务字段，前端不再展示假数据。</p>
-        ) : (
-          <>
-            <label><input type="checkbox" /> 确认字段结构</label>
-            <label><input type="checkbox" /> 联调后端接口</label>
-            <label><input type="checkbox" /> 补充验收截图</label>
-          </>
-        )}
-      </section>
-      <section className="ai-analysis">
-        <Sparkles size={18} />
-        <h3>AI 分析结果</h3>
-        <p>AI 自动分类：{task.aiCategory}</p>
-        <p>AI 推荐优先级：{task.priority}</p>
-        <p>AI 预计完成时间：{task.estimatedTime}</p>
-        {task.confidence && <p>AI 解析置信度：{Math.round(task.confidence * 100)}%</p>}
-        <strong>AI 建议：该任务建议安排在今天下午完成，因为它优先级较高，并且会影响后续开发进度。</strong>
-      </section>
-      <div className="drawer-actions">
-        <button className="primary-button" type="button" onClick={() => onToggleComplete(task.id)}>
-          {task.status === "已完成" ? "恢复待办" : "标记完成"}
-        </button>
-        <button className="danger-button" type="button" onClick={() => onDelete(task.id)}>
-          删除任务
-        </button>
-      </div>
-    </aside>
+        {detailState.isLoading && <p className="table-state">{`正在读取 /tasks/${task.id} ...`}</p>}
+        {detailState.error && <p className="form-error">{detailState.error}</p>}
+        <p className="drawer-description">{task.description || "暂无描述。"}</p>
+        <div className="drawer-fields">
+          <Field label="状态"><StatusBadge status={task.status} /></Field>
+          <Field label="优先级"><PriorityBadge priority={task.priority} /></Field>
+          <Field label="截止时间">{formatDue(task)}</Field>
+          {!isApiMode && <Field label="标签">{task.tags.join(" / ") || "未设置"}</Field>}
+          <Field label="创建来源">{task.isAiCreated ? "AI 生成" : "自定义创建"}</Field>
+        </div>
+        <section className="subtasks">
+          <h3>子任务</h3>
+          {isApiMode ? (
+            <p>后端任务模型暂未提供子任务字段，前端不再展示假数据。</p>
+          ) : (
+            <>
+              <label><input type="checkbox" /> 确认字段结构</label>
+              <label><input type="checkbox" /> 联调后端接口</label>
+              <label><input type="checkbox" /> 补充验收截图</label>
+            </>
+          )}
+        </section>
+        <section className="ai-analysis">
+          <div className="ai-analysis-heading">
+            <Sparkles size={18} />
+            <h3>AI 分析结果</h3>
+            {task.isAiCreated && <AITag confidence={task.confidence}>AI 生成</AITag>}
+          </div>
+          <div className="ai-analysis-grid">
+            <Field label="AI 自动分类">{task.aiCategory}</Field>
+            <Field label="AI 推荐优先级">{task.priority}</Field>
+            <Field label="AI 预计完成时间">{task.estimatedTime}</Field>
+            <Field label="AI 解析置信度">{task.confidence ? `${Math.round(task.confidence * 100)}%` : "待确认"}</Field>
+          </div>
+          <AIReasonBlock
+            reason={task.aiReason || "该任务建议安排在今天下午完成，因为它优先级较高，并且会影响后续开发进度。"}
+            source={task.isAiCreated ? "任务生成" : "任务分析"}
+          />
+        </section>
+        <div className="drawer-actions">
+          <button className="ghost-button" type="button" onClick={() => onEdit(task)}>
+            编辑任务
+          </button>
+          <button className="primary-button" type="button" onClick={() => onToggleComplete(task.id)}>
+            {task.status === "已完成" ? "恢复待办" : "标记完成"}
+          </button>
+          <button className="danger-button" type="button" onClick={() => onDelete(task.id)}>
+            删除任务
+          </button>
+        </div>
+      </aside>
+    </>
   );
 }
 
@@ -3652,7 +4117,52 @@ interface EditTaskModalProps {
   task: Task;
 }
 
+function DeleteConfirmModal({
+  onCancel,
+  onConfirm,
+  task,
+}: {
+  onCancel: () => void;
+  onConfirm: () => void;
+  task: Task;
+}) {
+  const { closeWithAnimation, isClosing } = useAnimatedDismiss(onCancel, OVERLAY_EXIT_MS);
+  useEscapeToClose(closeWithAnimation);
+
+  return (
+    <div className={`modal-backdrop ${isClosing ? "closing" : ""}`}>
+      <div className={`create-modal confirm-modal ${isClosing ? "closing" : ""}`}>
+        <div className="drawer-header">
+          <div>
+            <p className="eyebrow">Delete Task</p>
+            <h2>确认删除任务？</h2>
+          </div>
+          <button className="icon-button" type="button" onClick={() => closeWithAnimation()} aria-label="关闭确认">
+            <X size={18} />
+          </button>
+        </div>
+        <p className="drawer-description">删除后无法恢复。请确认是否删除以下任务：</p>
+        <div className="confirm-target">
+          <strong>{task.title}</strong>
+          {task.description && <span>{task.description}</span>}
+        </div>
+        <div className="preview-actions">
+          <button className="ghost-button" type="button" onClick={() => closeWithAnimation()}>
+            取消
+          </button>
+          <button className="danger-button" type="button" onClick={() => closeWithAnimation(onConfirm)}>
+            确认删除
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function EditTaskModal({ categories, isApiMode, onClose, onUpdate, task }: EditTaskModalProps) {
+  const { closeWithAnimation, isClosing } = useAnimatedDismiss(onClose, OVERLAY_EXIT_MS);
+  useEscapeToClose(closeWithAnimation);
+
   const [form, setForm] = useState<NewTaskInput>(() => taskToInput(task));
 
   const submitEdit = (input: NewTaskInput) => {
@@ -3663,14 +4173,14 @@ function EditTaskModal({ categories, isApiMode, onClose, onUpdate, task }: EditT
   };
 
   return (
-    <div className="modal-backdrop">
-      <div className="create-modal">
+    <div className={`modal-backdrop ${isClosing ? "closing" : ""}`}>
+      <div className={`create-modal ${isClosing ? "closing" : ""}`}>
         <div className="drawer-header">
           <div>
             <p className="eyebrow">Edit Task</p>
             <h2>编辑任务</h2>
           </div>
-          <button className="icon-button" type="button" onClick={onClose} aria-label="关闭弹窗">
+          <button className="icon-button" type="button" onClick={() => closeWithAnimation()} aria-label="关闭弹窗">
             <X size={18} />
           </button>
         </div>
@@ -3690,6 +4200,9 @@ function EditTaskModal({ categories, isApiMode, onClose, onUpdate, task }: EditT
 type CreateMode = "manual" | "ai";
 
 function CreateTaskModal({ categories, isApiMode, onClose, onCreate, onParseTask }: CreateTaskModalProps) {
+  const { closeWithAnimation, isClosing } = useAnimatedDismiss(onClose, OVERLAY_EXIT_MS);
+  useEscapeToClose(closeWithAnimation);
+
   const [mode, setMode] = useState<CreateMode>("ai");
   const [form, setForm] = useState<NewTaskInput>(() => createEmptyTask());
   const [prompt, setPrompt] = useState("这周要完成前端首页、任务表格筛选、看板页面，还要准备项目演示。");
@@ -3706,6 +4219,7 @@ function CreateTaskModal({ categories, isApiMode, onClose, onCreate, onParseTask
 
   const generateTask = async () => {
     if (!prompt.trim()) {
+      setGenerateError("请输入一段自然语言任务描述。");
       return;
     }
     setGenerating(true);
@@ -3720,14 +4234,14 @@ function CreateTaskModal({ categories, isApiMode, onClose, onCreate, onParseTask
   };
 
   return (
-    <div className="modal-backdrop">
-      <div className="create-modal">
+    <div className={`modal-backdrop ${isClosing ? "closing" : ""}`}>
+      <div className={`create-modal ${isClosing ? "closing" : ""}`}>
         <div className="drawer-header">
           <div>
             <p className="eyebrow">Create Task</p>
             <h2>新建任务</h2>
           </div>
-          <button className="icon-button" type="button" onClick={onClose} aria-label="关闭弹窗">
+          <button className="icon-button" type="button" onClick={() => closeWithAnimation()} aria-label="关闭弹窗">
             <X size={18} />
           </button>
         </div>
@@ -3740,7 +4254,12 @@ function CreateTaskModal({ categories, isApiMode, onClose, onCreate, onParseTask
             generatedTask={generatedTask}
             isGenerating={isGenerating}
             onGenerate={generateTask}
-            onPromptChange={setPrompt}
+            onPromptChange={(value) => {
+              if (generateError) {
+                setGenerateError("");
+              }
+              setPrompt(value);
+            }}
             onSwitchToManual={(task) => {
               setForm(task);
               setMode("manual");
@@ -3778,6 +4297,7 @@ interface ManualTaskFormProps {
 }
 
 function ManualTaskForm({ categories, form, isApiMode, onChange, onSubmit, submitLabel = "创建任务" }: ManualTaskFormProps) {
+  const [validationError, setValidationError] = useState("");
   const statusChoices = isApiMode ? apiStatusOptions : statusOptions;
   const safeStatus = statusChoices.includes(form.status) ? form.status : "待办";
   const categoryOptions = Array.from(new Set([form.category, ...categories].filter(Boolean)));
@@ -3785,6 +4305,11 @@ function ManualTaskForm({ categories, form, isApiMode, onChange, onSubmit, submi
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!form.title.trim()) {
+      setValidationError("请输入任务标题。");
+      return;
+    }
+    setValidationError("");
     onSubmit({ ...form, status: safeStatus });
   };
 
@@ -3792,7 +4317,18 @@ function ManualTaskForm({ categories, form, isApiMode, onChange, onSubmit, submi
     <form className="manual-task-form" onSubmit={submit}>
       <div className="field-group">
         <label htmlFor={`${fieldPrefix}-title`}>任务标题</label>
-        <input id={`${fieldPrefix}-title`} value={form.title} onChange={(event) => onChange({ ...form, title: event.target.value })} />
+        <input
+          id={`${fieldPrefix}-title`}
+          value={form.title}
+          aria-invalid={Boolean(validationError)}
+          aria-describedby={validationError ? `${fieldPrefix}-title-error` : undefined}
+          onChange={(event) => {
+            if (validationError) {
+              setValidationError("");
+            }
+            onChange({ ...form, title: event.target.value });
+          }}
+        />
       </div>
       <div className="field-group">
         <label htmlFor={`${fieldPrefix}-description`}>描述</label>
@@ -3848,6 +4384,7 @@ function ManualTaskForm({ categories, form, isApiMode, onChange, onSubmit, submi
             id={`${fieldPrefix}-due-date`}
             type="date"
             value={form.dueDate}
+            onInput={(event) => onChange({ ...form, dueDate: event.currentTarget.value })}
             onChange={(event) => onChange({ ...form, dueDate: event.target.value })}
           />
         </div>
@@ -3858,6 +4395,7 @@ function ManualTaskForm({ categories, form, isApiMode, onChange, onSubmit, submi
           id={`${fieldPrefix}-due-time`}
           type="time"
           value={form.dueTime}
+          onInput={(event) => onChange({ ...form, dueTime: event.currentTarget.value })}
           onChange={(event) => onChange({ ...form, dueTime: event.target.value })}
         />
       </div>
@@ -3865,6 +4403,11 @@ function ManualTaskForm({ categories, form, isApiMode, onChange, onSubmit, submi
         <label htmlFor={`${fieldPrefix}-tags`}>标签</label>
         <input id={`${fieldPrefix}-tags`} value={form.tags} onChange={(event) => onChange({ ...form, tags: event.target.value })} />
       </div>
+      {validationError && (
+        <p className="form-error" id={`${fieldPrefix}-title-error`} role="alert">
+          {validationError}
+        </p>
+      )}
       <button className="primary-button full" type="submit">
         {submitLabel}
       </button>
@@ -3897,6 +4440,7 @@ function AITaskGenerator({
     <section className="ai-task-generator">
       <label htmlFor="ai-task-prompt">告诉 AI 你想做什么</label>
       <textarea
+        className="ai-natural-input"
         id="ai-task-prompt"
         value={prompt}
         onChange={(event) => onPromptChange(event.target.value)}
@@ -3905,7 +4449,18 @@ function AITaskGenerator({
       />
       <button className="primary-button full" type="button" onClick={onGenerate} disabled={isGenerating}>
         <Sparkles size={17} />
-        {isGenerating ? "AI 解析中..." : "AI 生成 TODO"}
+        {isGenerating ? (
+          <>
+            AI 解析中
+            <span className="thinking-dots" aria-hidden="true">
+              <i />
+              <i />
+              <i />
+            </span>
+          </>
+        ) : (
+          "AI 生成 TODO"
+        )}
       </button>
       {error && <p className="form-error">{error}</p>}
       {generatedTask ? (
@@ -3955,10 +4510,10 @@ function GeneratedTaskPreview({ onEdit, onRegenerate, onUse, task }: GeneratedTa
         <Field label="置信度">{task.confidence ? `${Math.round(task.confidence * 100)}%` : "待确认"}</Field>
         <Field label="原始时间">{task.rawDueText || "默认规划"}</Field>
       </div>
-      <div className="ai-reason-box">
-        <Sparkles size={17} />
-        <span>推荐原因：{task.aiReason}</span>
-      </div>
+      <AIReasonBlock
+        reason={`推荐原因：${task.aiReason || "AI 已根据任务上下文生成建议。"}`}
+        source={task.aiBackendMode === "frontend-fallback" ? "前端规则兜底" : "后端 AI"}
+      />
       <div className="preview-actions">
         <button className="ghost-button" type="button" onClick={onRegenerate}>
           重新生成
