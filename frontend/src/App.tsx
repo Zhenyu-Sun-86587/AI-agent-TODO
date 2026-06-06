@@ -1794,6 +1794,7 @@ export function App() {
       onToggleComplete={toggleComplete}
       profile={profile}
       recommendedTasks={recommendedTasks}
+      profile={profile}
       remoteStats={remoteStats}
       settings={settings}
       taskVersion={taskVersion}
