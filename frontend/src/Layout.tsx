@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
-import { Bell, LayoutDashboard, LogOut, Moon, Plus, Search, Sparkles, Sun, User } from "lucide-react";
+import { Bell, LayoutDashboard, LogOut, Moon, Plus, Search, Sparkles, Sun, User, Settings } from "lucide-react";
 
 export interface MinimalNavItem {
   key: string;
@@ -19,6 +19,8 @@ export interface LayoutProps {
   onCreateTask: () => void;
   onLogout: () => void;
   onNavigate: (page: string) => void;
+  onOpenProfile?: () => void;
+  onOpenSettings: () => void;
   onSearchChange: (value: string) => void;
   onToggleTheme: () => void;
   userName: string;
@@ -35,6 +37,8 @@ export default function Layout({
   onCreateTask,
   onLogout,
   onNavigate,
+  onOpenProfile,
+  onOpenSettings,
   onSearchChange,
   onToggleTheme,
   userName,
@@ -105,6 +109,48 @@ export default function Layout({
             />
           ))}
         </nav>
+
+        <div className="minimal-sidebar-bottom" style={{ marginTop: "auto", padding: "12px", borderTop: "1px solid rgba(255, 255, 255, 0.06)" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", position: "relative" }}>
+            <button
+              className="user-profile-btn"
+              type="button"
+              onClick={() => setOpenPanel((panel) => (panel === "user" ? null : "user"))}
+              aria-expanded={openPanel === "user"}
+              style={{ display: "flex", alignItems: "center", gap: "10px", background: "transparent", border: "none", color: "inherit", cursor: "pointer", padding: "8px", borderRadius: "8px", flex: 1, textAlign: "left", transition: "background-color 0.2s" }}
+              onMouseOver={(e) => (e.currentTarget.style.backgroundColor = "rgba(128, 128, 128, 0.1)")}
+              onMouseOut={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
+            >
+              <div style={{ width: "32px", height: "32px", borderRadius: "50%", background: "#4f46e5", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: "bold", flexShrink: 0 }}>
+                {userName.charAt(0).toUpperCase()}
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
+                <span className="user-name-text" style={{ fontSize: "14px", fontWeight: 600, whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>{userName}</span>
+                <span style={{ fontSize: "12px", color: "#64748b" }}>{statusLabel}</span>
+              </div>
+            </button>
+            <button
+              className="minimal-icon"
+              type="button"
+              onClick={onOpenSettings}
+              style={{ width: "32px", height: "32px", display: "grid", placeItems: "center", marginLeft: "8px", flexShrink: 0 }}
+            >
+              <Settings size={18} />
+            </button>
+            
+            {openPanel === "user" && (
+              <div className="minimal-popover user" role="menu" style={{ bottom: "calc(100% + 8px)", top: "auto", left: 0, right: "auto", width: "100%", zIndex: 50 }}>
+                <strong>{userName}</strong>
+                <button type="button" onClick={() => { setOpenPanel(null); onOpenProfile?.(); }} role="menuitem">
+                  个人资料
+                </button>
+                <button type="button" onClick={onLogout} role="menuitem">
+                  退出登录
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
       </aside>
 
       <main className="minimal-workspace">
@@ -120,10 +166,6 @@ export default function Layout({
           </label>
 
           <div className="minimal-actions">
-            <button className="minimal-primary" type="button" onClick={onCreateTask}>
-              <Plus size={16} />
-              新建任务
-            </button>
             <div className="minimal-action-wrap">
               <button
                 className="minimal-icon"
@@ -141,6 +183,13 @@ export default function Layout({
                 </div>
               )}
             </div>
+            <button className="minimal-icon minimal-theme-toggle" type="button" onClick={onToggleTheme} aria-label="切换主题">
+              {isDark ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
+            <button className="minimal-primary" type="button" onClick={onCreateTask}>
+              <Plus size={16} />
+              新建任务
+            </button>
             <div className="minimal-action-wrap minimal-mobile-more-wrap">
               <button
                 className="minimal-icon minimal-mobile-more"
@@ -173,35 +222,6 @@ export default function Layout({
                 </div>
               )}
             </div>
-            <button className="minimal-icon minimal-theme-toggle" type="button" onClick={onToggleTheme} aria-label="切换主题">
-              {isDark ? <Sun size={18} /> : <Moon size={18} />}
-            </button>
-            <span className={`minimal-status ${apiState}`} title={apiMessage}>
-              <i />
-              {statusLabel}
-            </span>
-            <div className="minimal-action-wrap">
-              <button
-                className="minimal-user"
-                type="button"
-                onClick={() => setOpenPanel((panel) => (panel === "user" ? null : "user"))}
-                aria-expanded={openPanel === "user"}
-              >
-                <User size={16} />
-                <span>{userName}</span>
-              </button>
-              {openPanel === "user" && (
-                <div className="minimal-popover user" role="menu">
-                  <strong>{userName}</strong>
-                  <button type="button" onClick={onLogout} role="menuitem">
-                    退出登录
-                  </button>
-                </div>
-              )}
-            </div>
-            <button className="minimal-icon" type="button" onClick={onLogout} aria-label="退出登录">
-              <LogOut size={18} />
-            </button>
           </div>
         </header>
 

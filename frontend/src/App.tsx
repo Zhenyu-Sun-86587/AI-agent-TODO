@@ -15,21 +15,19 @@ import {
   ListTodo,
   LogOut,
   Menu,
-  Minimize2,
   Moon,
   MoreHorizontal,
   Pencil,
   Plus,
   Search,
-  Send,
   Settings,
   Sparkles,
   Sun,
-  SlidersHorizontal,
   Trash2,
   UserRound,
   X,
 } from "lucide-react";
+import FloatingChat from "./components/ai-chat/FloatingChat";
 import MinimalDashboard from "./Dashboard";
 import Layout from "./Layout";
 import ToastViewport, { type ToastMessage, type ToastTone } from "./components/Toast";
@@ -255,34 +253,6 @@ interface TaskFieldSuggestion {
   reason: string;
   source?: string;
 }
-
-interface AssistantMessage {
-  id: number;
-  role: "assistant" | "user";
-  text: string;
-  actions?: AssistantAction[];
-  taskCandidates?: Task[];
-}
-
-interface AssistantAction {
-  label: string;
-  tone?: "primary" | "danger";
-  pendingAction: AssistantPendingAction;
-}
-
-type AssistantPendingAction =
-  | { type: "delete"; taskId: number }
-  | { type: "update"; input: NewTaskInput; taskId: number }
-  | { type: "toggle"; taskId: number }
-  | { type: "open"; taskId: number };
-
-type AssistantIntentResult =
-  | { type: "create"; input: NewTaskInput }
-  | { type: "delete"; matches: Task[] }
-  | { type: "update"; matches: Task[]; patch: Partial<NewTaskInput>; summary: string }
-  | { type: "toggle"; matches: Task[]; targetStatus?: TaskStatus }
-  | { type: "open"; matches: Task[] }
-  | { type: "help" };
 
 class ApiError extends Error {
   status: number;
@@ -798,11 +768,9 @@ const navItems: Array<{ key: PageKey; label: string; icon: LucideIcon }> = [
   { key: "dashboard", label: "Dashboard", icon: Home },
   { key: "today", label: "今日任务", icon: Clock3 },
   { key: "all", label: "全部任务", icon: ListTodo },
-  { key: "ai", label: "AI 推荐", icon: Sparkles },
   { key: "board", label: "任务看板", icon: LayoutDashboard },
   { key: "calendar", label: "日历", icon: CalendarDays },
   { key: "stats", label: "数据统计", icon: BarChart3 },
-  { key: "settings", label: "设置", icon: Settings },
 ];
 
 const statusOptions: TaskStatus[] = ["待办", "进行中", "已完成"];
@@ -1046,244 +1014,6 @@ function generateTaskFromPrompt(prompt: string): NewTaskInput {
   };
 }
 
-function normalizeAssistantText(text: string) {
-  return text.replace(/\s+/g, " ").trim();
-}
-
-function escapeRegExp(value: string) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-function stripAssistantIntentWords(text: string) {
-  return normalizeAssistantText(text)
-    .replace(/^(请|帮我|麻烦)?\s*(创建|新建|添加|新增|加一个|删除|移除|修改|更新|把|将|设为|设置|标记|完成|恢复|打开|查看)\s*/i, "")
-    .replace(/(这个|任务|待办|todo|TODO)/g, " ")
-    .replace(/[，。,.；;：:]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function extractTextAfter(text: string, markers: string[]) {
-  for (const marker of markers) {
-    const index = text.indexOf(marker);
-    if (index >= 0) {
-      return text.slice(index + marker.length).trim();
-    }
-  }
-  return "";
-}
-
-function extractQuotedText(text: string) {
-  const match = text.match(/[“"']([^”"']+)[”"']/);
-  return match?.[1]?.trim() || "";
-}
-
-function findAssistantTaskMatches(tasks: Task[], query: string) {
-  const commandText = normalizeAssistantText(query).toLowerCase();
-  const exactTitleMatches = tasks.filter((task) => commandText.includes(task.title.toLowerCase()));
-  if (exactTitleMatches.length) {
-    return exactTitleMatches;
-  }
-  const normalizedQuery = stripAssistantIntentWords(query).toLowerCase();
-  const directQuoted = extractQuotedText(query).toLowerCase();
-  const searchText = directQuoted || normalizedQuery;
-  const tokens = searchText
-    .split(/[\s,，。:：;；]+/)
-    .map((token) => token.trim())
-    .filter((token) => token.length >= 2);
-
-  if (!searchText && !tokens.length) {
-    return [];
-  }
-
-  return tasks
-    .map((task) => {
-      const taskTitle = task.title.toLowerCase();
-      const haystack = [task.title, task.description, task.category, task.tags.join(" ")].join(" ").toLowerCase();
-      let score = 0;
-      if (commandText.includes(taskTitle)) {
-        score += 14;
-      }
-      if (directQuoted && task.title.toLowerCase().includes(directQuoted)) {
-        score += 12;
-      }
-      if (searchText && taskTitle.includes(searchText)) {
-        score += 10;
-      }
-      if (searchText && haystack.includes(searchText)) {
-        score += 4;
-      }
-      score += tokens.filter((token) => haystack.includes(token)).length * 2;
-      return { score, task };
-    })
-    .filter((item) => item.score > 0)
-    .sort((left, right) => right.score - left.score || left.task.id - right.task.id)
-    .slice(0, 5)
-    .map((item) => item.task);
-}
-
-function parseAssistantPriority(text: string): TaskPriority | null {
-  if (/高优先级|优先级.*高|紧急|重要/.test(text)) {
-    return "高";
-  }
-  if (/低优先级|优先级.*低|不急|低/.test(text)) {
-    return "低";
-  }
-  if (/中优先级|优先级.*中|普通|一般/.test(text)) {
-    return "中";
-  }
-  return null;
-}
-
-function parseAssistantStatus(text: string): TaskStatus | null {
-  if (/完成|已完成|done/i.test(text)) {
-    return "已完成";
-  }
-  if (/进行中|处理中/.test(text)) {
-    return "进行中";
-  }
-  if (/恢复|待办|todo|未完成/i.test(text)) {
-    return "待办";
-  }
-  return null;
-}
-
-function parseAssistantDueDate(text: string) {
-  if (/今天|今日/.test(text)) {
-    return dateFromToday(0);
-  }
-  if (/明天|明日/.test(text)) {
-    return dateFromToday(1);
-  }
-  if (/后天/.test(text)) {
-    return dateFromToday(2);
-  }
-  const dayMatch = text.match(/(\d{4}-\d{1,2}-\d{1,2})/);
-  if (dayMatch) {
-    const [year, month, day] = dayMatch[1].split("-").map((part) => part.padStart(2, "0"));
-    return `${year}-${month}-${day}`;
-  }
-  return "";
-}
-
-function parseAssistantDueTime(text: string) {
-  const timeMatch = text.match(/(\d{1,2})[:：点](\d{1,2})?/);
-  if (timeMatch) {
-    const hour = Math.min(23, Math.max(0, Number(timeMatch[1])));
-    const minute = Math.min(59, Math.max(0, Number(timeMatch[2] || "0")));
-    return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
-  }
-  return pickGeneratedDueTime(text.toLowerCase());
-}
-
-function parseAssistantCategory(text: string) {
-  const explicit = text.match(/(?:分类|类别|归类)(?:为|成|到|:|：)?\s*([\u4e00-\u9fa5A-Za-z0-9_-]{2,20})/);
-  if (explicit?.[1]) {
-    return explicit[1].trim();
-  }
-  return "";
-}
-
-function parseAssistantTitlePatch(text: string) {
-  const quoted = extractQuotedText(text);
-  if (/标题|名称|改名|重命名/.test(text) && quoted) {
-    return quoted;
-  }
-  const match = text.match(/(?:标题|名称|改名|重命名)(?:改成|改为|设为|设置为|成|为)\s*([^，。,.；;]+)/);
-  return match?.[1]?.trim() || "";
-}
-
-function parseAssistantDescriptionPatch(text: string) {
-  const match = text.match(/(?:描述|说明|内容)(?:改成|改为|设为|设置为|成|为)\s*([^；;]+)/);
-  return match?.[1]?.trim() || "";
-}
-
-function buildAssistantUpdatePatch(text: string): { patch: Partial<NewTaskInput>; summary: string } {
-  const patch: Partial<NewTaskInput> = {};
-  const summary: string[] = [];
-  const priority = parseAssistantPriority(text);
-  const status = parseAssistantStatus(text);
-  const category = parseAssistantCategory(text);
-  const dueDate = parseAssistantDueDate(text);
-  const dueTime = /上午|下午|晚上|中午|早上|早晨|夜间|\d{1,2}[:：点]/.test(text) ? parseAssistantDueTime(text) : "";
-  const title = parseAssistantTitlePatch(text);
-  const description = parseAssistantDescriptionPatch(text);
-
-  if (priority) {
-    patch.priority = priority;
-    summary.push(`优先级改为${priority}`);
-  }
-  if (status) {
-    patch.status = status;
-    summary.push(`状态改为${status}`);
-  }
-  if (category) {
-    patch.category = category;
-    patch.aiCategory = category;
-    summary.push(`分类改为${category}`);
-  }
-  if (dueDate) {
-    patch.dueDate = dueDate;
-    summary.push(`截止日期改为${dueDate}`);
-  }
-  if (dueTime) {
-    patch.dueTime = dueTime;
-    summary.push(`截止时间改为${dueTime}`);
-  }
-  if (title) {
-    patch.title = title;
-    summary.push(`标题改为${title}`);
-  }
-  if (description) {
-    patch.description = description;
-    summary.push("描述已更新");
-  }
-
-  return { patch, summary: summary.join("，") };
-}
-
-function createInputFromTaskPatch(task: Task, patch: Partial<NewTaskInput>) {
-  return {
-    ...taskToInput(task),
-    ...patch,
-    tags: patch.category && !patch.tags ? Array.from(new Set([...task.tags, patch.category])).join(", ") : (patch.tags ?? task.tags.join(", ")),
-    aiReason: patch.aiReason || task.aiReason,
-    estimatedTime: patch.estimatedTime || task.estimatedTime,
-    aiCategory: patch.aiCategory || patch.category || task.aiCategory,
-  };
-}
-
-function parseAssistantIntent(text: string, tasks: Task[]): AssistantIntentResult {
-  const normalized = normalizeAssistantText(text);
-  if (!normalized) {
-    return { type: "help" };
-  }
-  if (/^(帮助|help|怎么用|你能做什么)$/i.test(normalized)) {
-    return { type: "help" };
-  }
-  if (/(创建|新建|添加|新增|加一个|帮我加)/.test(normalized)) {
-    const prompt = normalized.replace(/^(请|帮我|麻烦)?\s*(创建|新建|添加|新增|加一个|帮我加)\s*/, "");
-    return { type: "create", input: generateTaskFromPrompt(prompt || normalized) };
-  }
-  if (/(删除|移除)/.test(normalized)) {
-    return { type: "delete", matches: findAssistantTaskMatches(tasks, normalized) };
-  }
-  if (/(打开|查看|详情)/.test(normalized)) {
-    return { type: "open", matches: findAssistantTaskMatches(tasks, normalized) };
-  }
-  if (/(标记.*完成|完成|恢复)/.test(normalized)) {
-    return { type: "toggle", matches: findAssistantTaskMatches(tasks, normalized), targetStatus: parseAssistantStatus(normalized) || undefined };
-  }
-  if (/(修改|更新|改成|改为|设为|设置|把|将|优先级|分类|截止|标题|名称|描述)/.test(normalized)) {
-    const { patch, summary } = buildAssistantUpdatePatch(normalized);
-    if (!Object.keys(patch).length) {
-      return { type: "help" };
-    }
-    return { type: "update", matches: findAssistantTaskMatches(tasks, normalized), patch, summary };
-  }
-  return { type: "help" };
-}
-
 function taskToInput(task: Task): NewTaskInput {
   return {
     title: task.title,
@@ -1355,6 +1085,8 @@ export function App() {
   const [apiState, setApiState] = useState<"local" | "loading" | "online" | "offline">("local");
   const [apiMessage, setApiMessage] = useState("");
   const [activePage, setActivePage] = useState<PageKey>(() => getPageFromPath(window.location.pathname));
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [authMode, setAuthMode] = useState<"login" | "register">(() =>
     window.location.pathname === "/register" ? "register" : "login",
   );
@@ -2094,6 +1826,10 @@ export function App() {
       onCreateTask={() => setCreateOpen(true)}
       onLogout={logout}
       onNavigate={(pageKey) => navigateTo(pageKey as PageKey)}
+      onOpenProfile={() => setIsProfileOpen(true)}
+      onOpenSettings={() => {
+        setIsSettingsOpen(true);
+      }}
       onSearchChange={setGlobalSearch}
       onToggleTheme={() => setIsDark((value) => !value)}
       userName={session.name}
@@ -2134,14 +1870,24 @@ export function App() {
           task={deleteCandidate}
         />
       )}
-      <TaskAssistant
-        onCreateTask={createTask}
-        onDeleteTask={deleteTask}
-        onOpenTask={openTaskDetails}
-        onToggleComplete={toggleComplete}
-        onUpdateTask={updateTask}
-        tasks={tasks}
-      />
+      {isSettingsOpen && (
+        <SettingsModal
+          isDark={isDark}
+          onClose={() => setIsSettingsOpen(false)}
+          onSave={saveSettings}
+          onTest={testOpenAIKey}
+          onToggleTheme={() => setIsDark((value) => !value)}
+          settings={settings}
+        />
+      )}
+      {isProfileOpen && (
+        <ProfileModal
+          onClose={() => setIsProfileOpen(false)}
+          onSaveProfile={saveProfile}
+          profile={profile}
+        />
+      )}
+      <FloatingChat initialModelId={settings.modelName || "gpt-5.4-mini"} isBlocked={isSettingsOpen} />
       <ToastViewport items={toasts} onDismiss={dismissToast} />
     </Layout>
   );
@@ -2528,10 +2274,6 @@ function PageRenderer({
         token={token}
       />
     );
-  }
-
-  if (activePage === "settings") {
-    return <SettingsPage onSave={onSaveSettings} onSaveProfile={onSaveProfile} onTest={onTestOpenAIKey} profile={profile} settings={settings} />;
   }
 
   return <PlaceholderPage activePage={activePage} />;
@@ -4067,52 +3809,35 @@ function StatsPage({
   );
 }
 
-function SettingsPage({
+function SettingsModal({
+  isDark,
+  onClose,
   onSave,
-  onSaveProfile,
   onTest,
-  profile,
+  onToggleTheme,
   settings,
 }: {
+  isDark: boolean;
+  onClose: () => void;
   onSave: (settings: SettingsState) => Promise<string | void>;
-  onSaveProfile: (profile: ProfileState) => Promise<string | void>;
   onTest: (settings: SettingsState) => Promise<string>;
-  profile: ProfileState;
+  onToggleTheme: () => void;
   settings: SettingsState;
 }) {
+  const { closeWithAnimation, isClosing } = useAnimatedDismiss(onClose, OVERLAY_EXIT_MS);
+  useEscapeToClose(closeWithAnimation);
+
   const [draft, setDraft] = useState(settings);
-  const [profileDraft, setProfileDraft] = useState(profile);
   const [feedback, setFeedback] = useState("");
   const [feedbackTone, setFeedbackTone] = useState<"idle" | "success" | "failed">("idle");
   const [isSaving, setSaving] = useState(false);
-  const [isSavingProfile, setSavingProfile] = useState(false);
   const [isTesting, setTesting] = useState(false);
+  const [activeTab, setActiveTab] = useState<"theme" | "ai" | "debug">("theme");
   const apiBaseUrl = API_BASE_URL;
 
   useEffect(() => {
     setDraft(settings);
   }, [settings]);
-
-  useEffect(() => {
-    setProfileDraft(profile);
-  }, [profile]);
-
-  const saveProfile = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setSavingProfile(true);
-    setFeedback("");
-    try {
-      const message = await onSaveProfile(profileDraft);
-      const isFailure = (message || "").includes("不能") || (message || "").includes("无效") || (message || "").includes("不能为空");
-      setFeedback(message || "用户资料已保存。");
-      setFeedbackTone(isFailure ? "failed" : "success");
-    } catch (error) {
-      setFeedback(asErrorMessage(error));
-      setFeedbackTone("failed");
-    } finally {
-      setSavingProfile(false);
-    }
-  };
 
   const save = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -4147,71 +3872,235 @@ function SettingsPage({
   };
 
   return (
-    <main className="page-content">
-      <PageHeading title="设置" />
-      <section className="settings-layout">
-        <form className="content-card settings-form" onSubmit={saveProfile}>
-          <h2>个人资料</h2>
-          <label>
-            用户名
-            <input
-              value={profileDraft.username}
-              onChange={(event) => setProfileDraft({ ...profileDraft, username: event.target.value })}
-              placeholder="请输入用户名"
-            />
-          </label>
-          <label>
-            邮箱
-            <input
-              value={profileDraft.email}
-              onChange={(event) => setProfileDraft({ ...profileDraft, email: event.target.value })}
-              placeholder="you@qq.com"
-            />
-          </label>
-          <div className="settings-actions">
-            <button className="primary-button" type="submit" disabled={isSavingProfile}>
-              {isSavingProfile ? "保存中..." : "保存资料"}
-            </button>
-          </div>
-          <p>保存会调用 /users/me，用于验证后端用户资料更新能力。</p>
-        </form>
+    <div className={`modal-backdrop settings-modal-backdrop ${isClosing ? "closing" : ""}`} style={{ backdropFilter: "blur(12px)", backgroundColor: "rgba(0,0,0,0.4)" }}>
+      <div 
+        className={`create-modal ${isClosing ? "closing" : ""}`} 
+        style={{ 
+          maxWidth: "800px", 
+          width: "90%", 
+          padding: 0, 
+          overflow: "hidden",
+          backgroundColor: isDark ? "rgba(30, 30, 30, 0.75)" : "rgba(255, 255, 255, 0.8)",
+          backdropFilter: "blur(24px)",
+          WebkitBackdropFilter: "blur(24px)",
+          border: isDark ? "1px solid rgba(255, 255, 255, 0.1)" : "1px solid rgba(0, 0, 0, 0.1)",
+          boxShadow: "0 24px 48px rgba(0,0,0,0.3)"
+        }}
+      >
+        <div style={{ display: "flex", height: "65vh", minHeight: "450px" }}>
+          {/* Sidebar */}
+          <aside style={{ width: "240px", backgroundColor: isDark ? "rgba(0,0,0,0.2)" : "rgba(0,0,0,0.03)", borderRight: isDark ? "1px solid rgba(255,255,255,0.05)" : "1px solid rgba(0,0,0,0.05)", display: "flex", flexDirection: "column" }}>
+            <div style={{ padding: "24px 20px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <h2 style={{ fontSize: "18px", fontWeight: 600, margin: 0 }}>设置</h2>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", padding: "0 12px", gap: "4px" }}>
+              <button 
+                className={`ghost-button ${activeTab === "theme" ? "active" : ""}`} 
+                onClick={() => setActiveTab("theme")}
+                style={{ justifyContent: "flex-start", width: "100%", padding: "10px 12px", backgroundColor: activeTab === "theme" ? (isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)") : "transparent", color: activeTab === "theme" ? "var(--text)" : "var(--text-secondary)", border: "none" }}
+              >
+                <Settings size={18} style={{ marginRight: "12px" }} />
+                常规
+              </button>
+              <button 
+                className={`ghost-button ${activeTab === "ai" ? "active" : ""}`} 
+                onClick={() => setActiveTab("ai")}
+                style={{ justifyContent: "flex-start", width: "100%", padding: "10px 12px", backgroundColor: activeTab === "ai" ? (isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)") : "transparent", color: activeTab === "ai" ? "var(--text)" : "var(--text-secondary)", border: "none" }}
+              >
+                <Bot size={18} style={{ marginRight: "12px" }} />
+                AI 配置
+              </button>
+              <button 
+                className={`ghost-button ${activeTab === "debug" ? "active" : ""}`} 
+                onClick={() => setActiveTab("debug")}
+                style={{ justifyContent: "flex-start", width: "100%", padding: "10px 12px", backgroundColor: activeTab === "debug" ? (isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)") : "transparent", color: activeTab === "debug" ? "var(--text)" : "var(--text-secondary)", border: "none" }}
+              >
+                <FileText size={18} style={{ marginRight: "12px" }} />
+                联调信息
+              </button>
+            </div>
+          </aside>
 
-        <form className="content-card settings-form" onSubmit={save}>
-          <h2>AI 配置</h2>
-          <label>
-            OpenAI API Key
-            <input
-              value={draft.openaiApiKey}
-              onChange={(event) => setDraft({ ...draft, openaiApiKey: event.target.value })}
-              placeholder={settings.maskedKey || "sk-... 留空则使用后端已保存 Key"}
-              type="password"
-            />
-          </label>
-          <label>
-            模型名称
-            <input value={draft.modelName} onChange={(event) => setDraft({ ...draft, modelName: event.target.value })} />
-          </label>
-          <div className="settings-actions">
-            <button className="ghost-button" type="button" onClick={testConnection} disabled={isTesting}>
-              {isTesting ? "测试中..." : "测试连接"}
-            </button>
-            <button className="primary-button" type="submit" disabled={isSaving}>
-              {isSaving ? "保存中..." : "保存设置"}
-            </button>
-          </div>
-          {feedbackTone !== "idle" && <p className={`connection-result ${feedbackTone}`}>{feedback}</p>}
-        </form>
+          {/* Main Content */}
+          <main style={{ flex: 1, backgroundColor: "transparent", display: "flex", flexDirection: "column", position: "relative" }}>
+            <div style={{ position: "absolute", top: "16px", right: "16px", zIndex: 10 }}>
+              <button className="icon-button" type="button" onClick={() => closeWithAnimation()} aria-label="关闭设置" style={{ width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <X size={18} />
+              </button>
+            </div>
+            <div style={{ padding: "40px", overflowY: "auto", flex: 1 }}>
+              {activeTab === "theme" && (
+                <div className="settings-section">
+                  <h3 style={{ fontSize: "20px", marginBottom: "24px", fontWeight: 600 }}>常规</h3>
+                  <div className="settings-actions" style={{ justifyContent: "flex-start" }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "12px", width: "100%" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: "16px", borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
+                        <div>
+                          <span style={{ fontSize: "14px", fontWeight: 500, display: "block" }}>外观</span>
+                          <span style={{ fontSize: "13px", color: "var(--text-secondary)" }}>切换亮色或暗色模式</span>
+                        </div>
+                        <button className="ghost-button" type="button" onClick={onToggleTheme} style={{ border: "1px solid var(--border)", padding: "8px 16px" }}>
+                          {isDark ? <Sun size={16} style={{ marginRight: "8px" }} /> : <Moon size={16} style={{ marginRight: "8px" }} />}
+                          {isDark ? "亮色模式" : "暗色模式"}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
-        <aside className="content-card settings-info">
-          <h2>联调信息</h2>
-          <Field label="API Base URL">{apiBaseUrl}</Field>
-          <Field label="AI 模式">{settings.hasOpenaiApiKey || draft.openaiApiKey ? "已配置 Key" : "mock / 未配置 Key"}</Field>
-          <Field label="脱敏 Key">{settings.maskedKey || "未保存"}</Field>
-          <Field label="存储方式">后端 /settings，本地模式使用 localStorage</Field>
-          <p>保存会调用 /settings，测试会调用 /settings/test-openai-key。</p>
-        </aside>
-      </section>
-    </main>
+              {activeTab === "ai" && (
+                <form className="settings-section settings-form" onSubmit={save}>
+                  <h3 style={{ fontSize: "20px", marginBottom: "24px", fontWeight: 600 }}>AI 配置</h3>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+                    <label style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                      <span style={{ fontSize: "14px", fontWeight: 500 }}>OpenAI API Key</span>
+                      <input
+                        value={draft.openaiApiKey}
+                        onChange={(event) => setDraft({ ...draft, openaiApiKey: event.target.value })}
+                        placeholder={settings.maskedKey || "sk-... 留空则使用后端已保存 Key"}
+                        type="password"
+                      />
+                    </label>
+                    <label style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                      <span style={{ fontSize: "14px", fontWeight: 500 }}>模型名称</span>
+                      <input 
+                        value={draft.modelName} 
+                        onChange={(event) => setDraft({ ...draft, modelName: event.target.value })} 
+                        placeholder="例如: gpt-3.5-turbo (留空使用系统默认)"
+                      />
+                    </label>
+                    <div className="settings-actions" style={{ marginTop: "8px", justifyContent: "flex-start", gap: "12px" }}>
+                      <button className="primary-button" type="submit" disabled={isSaving}>
+                        {isSaving ? "保存中..." : "保存设置"}
+                      </button>
+                      <button className="ghost-button" type="button" onClick={testConnection} disabled={isTesting}>
+                        {isTesting ? "测试中..." : "测试连接"}
+                      </button>
+                    </div>
+                    {feedbackTone !== "idle" && <p className={`connection-result ${feedbackTone}`} style={{ margin: 0 }}>{feedback}</p>}
+                  </div>
+                </form>
+              )}
+
+              {activeTab === "debug" && (
+                <aside className="settings-section">
+                  <h3 style={{ fontSize: "20px", marginBottom: "24px", fontWeight: 600 }}>联调信息</h3>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+                    <label style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                      <span style={{ fontSize: "14px", fontWeight: 500 }}>API Base URL</span>
+                      <div style={{ padding: "10px 12px", borderRadius: "6px", border: "1px solid var(--border)", background: isDark ? "rgba(0,0,0,0.3)" : "rgba(255,255,255,0.5)", color: "var(--text)", width: "100%", maxWidth: "400px" }}>
+                        {apiBaseUrl}
+                      </div>
+                    </label>
+                    <label style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                      <span style={{ fontSize: "14px", fontWeight: 500 }}>AI 模式</span>
+                      <div style={{ padding: "10px 12px", borderRadius: "6px", border: "1px solid var(--border)", background: isDark ? "rgba(0,0,0,0.3)" : "rgba(255,255,255,0.5)", color: "var(--text)", width: "100%", maxWidth: "400px" }}>
+                        {settings.hasOpenaiApiKey || draft.openaiApiKey ? "已配置 Key" : "mock / 未配置 Key"}
+                      </div>
+                    </label>
+                    <label style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                      <span style={{ fontSize: "14px", fontWeight: 500 }}>脱敏 Key</span>
+                      <div style={{ padding: "10px 12px", borderRadius: "6px", border: "1px solid var(--border)", background: isDark ? "rgba(0,0,0,0.3)" : "rgba(255,255,255,0.5)", color: "var(--text)", width: "100%", maxWidth: "400px" }}>
+                        {settings.maskedKey || "未保存"}
+                      </div>
+                    </label>
+                    <label style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                      <span style={{ fontSize: "14px", fontWeight: 500 }}>存储方式</span>
+                      <div style={{ padding: "10px 12px", borderRadius: "6px", border: "1px solid var(--border)", background: isDark ? "rgba(0,0,0,0.3)" : "rgba(255,255,255,0.5)", color: "var(--text)", width: "100%", maxWidth: "400px" }}>
+                        后端 /settings，本地模式使用 localStorage
+                      </div>
+                    </label>
+                  </div>
+                  <p style={{ marginTop: "16px", fontSize: "13px", color: "var(--text-secondary)" }}>保存会调用 /settings，测试会调用 /settings/test-openai-key。</p>
+                </aside>
+              )}
+            </div>
+          </main>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ProfileModal({
+  onClose,
+  onSaveProfile,
+  profile,
+}: {
+  onClose: () => void;
+  onSaveProfile: (profile: ProfileState) => Promise<string | void>;
+  profile: ProfileState;
+}) {
+  const { closeWithAnimation, isClosing } = useAnimatedDismiss(onClose, OVERLAY_EXIT_MS);
+  useEscapeToClose(closeWithAnimation);
+
+  const [profileDraft, setProfileDraft] = useState(profile);
+  const [feedback, setFeedback] = useState("");
+  const [feedbackTone, setFeedbackTone] = useState<"idle" | "success" | "failed">("idle");
+  const [isSavingProfile, setSavingProfile] = useState(false);
+
+  useEffect(() => {
+    setProfileDraft(profile);
+  }, [profile]);
+
+  const saveProfile = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setSavingProfile(true);
+    setFeedback("");
+    try {
+      const message = await onSaveProfile(profileDraft);
+      const isFailure = (message || "").includes("不能") || (message || "").includes("无效") || (message || "").includes("不能为空");
+      setFeedback(message || "用户资料已保存。");
+      setFeedbackTone(isFailure ? "failed" : "success");
+    } catch (error) {
+      setFeedback(asErrorMessage(error));
+      setFeedbackTone("failed");
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
+  return (
+    <div className={`modal-backdrop ${isClosing ? "closing" : ""}`}>
+      <div className={`create-modal ${isClosing ? "closing" : ""}`} style={{ maxWidth: "500px", width: "90%" }}>
+        <div className="drawer-header">
+          <div>
+            <p className="eyebrow">Profile</p>
+            <h2>个人资料</h2>
+          </div>
+          <button className="icon-button" type="button" onClick={() => closeWithAnimation()} aria-label="关闭个人资料">
+            <X size={18} />
+          </button>
+        </div>
+        <div className="modal-content" style={{ padding: "0 24px 24px" }}>
+          <form className="content-card settings-form" onSubmit={saveProfile}>
+            <label>
+              用户名
+              <input
+                value={profileDraft.username}
+                onChange={(event) => setProfileDraft({ ...profileDraft, username: event.target.value })}
+                placeholder="请输入用户名"
+              />
+            </label>
+            <label>
+              邮箱
+              <input
+                value={profileDraft.email}
+                onChange={(event) => setProfileDraft({ ...profileDraft, email: event.target.value })}
+                placeholder="you@qq.com"
+              />
+            </label>
+            <div className="settings-actions">
+              <button className="primary-button" type="submit" disabled={isSavingProfile}>
+                {isSavingProfile ? "保存中..." : "保存资料"}
+              </button>
+            </div>
+            {feedbackTone !== "idle" && <p className={`connection-result ${feedbackTone}`}>{feedback}</p>}
+          </form>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -4595,310 +4484,6 @@ function ManualTaskForm({ categories, form, isApiMode, onChange, onSubmit, submi
   );
 }
 
-function TaskAssistant({
-  onCreateTask,
-  onDeleteTask,
-  onOpenTask,
-  onToggleComplete,
-  onUpdateTask,
-  tasks,
-}: {
-  onCreateTask: (input: NewTaskInput) => Promise<void> | void;
-  onDeleteTask: (taskId: number) => Promise<void> | void;
-  onOpenTask: (task: Task) => Promise<void> | void;
-  onToggleComplete: (taskId: number) => Promise<void> | void;
-  onUpdateTask: (taskId: number, input: NewTaskInput) => Promise<void> | void;
-  tasks: Task[];
-}) {
-  const [isOpen, setOpen] = useState(false);
-  const [input, setInput] = useState("");
-  const [isWorking, setWorking] = useState(false);
-  const messageIdRef = useRef(1);
-  const messagesEndRef = useRef<HTMLDivElement | null>(null);
-  const [messages, setMessages] = useState<AssistantMessage[]>([
-    {
-      id: 1,
-      role: "assistant",
-      text: "今日事，我来帮。可以直接说：创建任务、修改优先级、标记完成、删除任务。",
-    },
-  ]);
-
-  useEffect(() => {
-    if (isOpen) {
-      messagesEndRef.current?.scrollIntoView({ block: "end" });
-    }
-  }, [isOpen, messages]);
-
-  const nextMessageId = () => {
-    messageIdRef.current += 1;
-    return messageIdRef.current;
-  };
-
-  const appendMessage = (message: Omit<AssistantMessage, "id">) => {
-    setMessages((currentMessages) => [...currentMessages, { ...message, id: nextMessageId() }]);
-  };
-
-  const getTaskById = (taskId: number) => tasks.find((task) => task.id === taskId);
-
-  const executePendingAction = async (pendingAction: AssistantPendingAction) => {
-    const task = getTaskById(pendingAction.taskId);
-    if (!task) {
-      appendMessage({ role: "assistant", text: "没有找到这个任务，可能已经被更新或删除了。" });
-      return;
-    }
-
-    setWorking(true);
-    try {
-      if (pendingAction.type === "delete") {
-        await onDeleteTask(task.id);
-        appendMessage({ role: "assistant", text: `已删除「${task.title}」。` });
-      }
-      if (pendingAction.type === "update") {
-        await onUpdateTask(task.id, pendingAction.input);
-        appendMessage({ role: "assistant", text: `已更新「${pendingAction.input.title}」。` });
-      }
-      if (pendingAction.type === "toggle") {
-        await onToggleComplete(task.id);
-        appendMessage({ role: "assistant", text: `已${task.status === "已完成" ? "恢复" : "完成"}「${task.title}」。` });
-      }
-      if (pendingAction.type === "open") {
-        await onOpenTask(task);
-        appendMessage({ role: "assistant", text: `已打开「${task.title}」详情。` });
-      }
-    } catch (error) {
-      appendMessage({ role: "assistant", text: asErrorMessage(error) });
-    } finally {
-      setWorking(false);
-    }
-  };
-
-  const buildCandidateActions = (
-    matches: Task[],
-    getPendingAction: (task: Task) => AssistantPendingAction,
-    labelPrefix: string,
-    tone?: AssistantAction["tone"],
-  ): AssistantAction[] =>
-    matches.map((task) => ({
-      label: `${labelPrefix}「${task.title}」`,
-      pendingAction: getPendingAction(task),
-      tone,
-    }));
-
-  const handleIntent = async (text: string) => {
-    const intent = parseAssistantIntent(text, tasks);
-    setWorking(true);
-    try {
-      if (intent.type === "create") {
-        await onCreateTask(intent.input);
-        appendMessage({ role: "assistant", text: `已创建「${intent.input.title}」，优先级为${intent.input.priority}。` });
-        return;
-      }
-
-      if (intent.type === "delete") {
-        if (!intent.matches.length) {
-          appendMessage({ role: "assistant", text: "没有找到要删除的任务。可以带上更完整的任务标题。" });
-          return;
-        }
-        appendMessage({
-          actions: buildCandidateActions(intent.matches, (task) => ({ type: "delete", taskId: task.id }), "确认删除", "danger"),
-          role: "assistant",
-          taskCandidates: intent.matches,
-          text: intent.matches.length === 1 ? "删除后无法恢复，请确认。" : "找到多个可能的任务，请选择要删除的一个。",
-        });
-        return;
-      }
-
-      if (intent.type === "update") {
-        if (!intent.matches.length) {
-          appendMessage({ role: "assistant", text: "没有找到要修改的任务。可以这样说：把「任务标题」优先级改成低。" });
-          return;
-        }
-        const toPendingAction = (task: Task): AssistantPendingAction => ({
-          type: "update",
-          taskId: task.id,
-          input: createInputFromTaskPatch(task, intent.patch),
-        });
-        if (intent.matches.length === 1) {
-          await executePendingAction(toPendingAction(intent.matches[0]));
-          return;
-        }
-        appendMessage({
-          actions: buildCandidateActions(intent.matches, toPendingAction, "修改"),
-          role: "assistant",
-          taskCandidates: intent.matches,
-          text: `找到多个可能的任务，请选择要应用“${intent.summary}”的任务。`,
-        });
-        return;
-      }
-
-      if (intent.type === "toggle") {
-        if (!intent.matches.length) {
-          appendMessage({ role: "assistant", text: "没有找到要标记状态的任务。可以带上任务标题里的关键词。" });
-          return;
-        }
-        const toPendingAction = (task: Task): AssistantPendingAction => {
-          if (intent.targetStatus === "已完成" && task.status !== "已完成") {
-            return { type: "toggle", taskId: task.id };
-          }
-          if (intent.targetStatus === "待办" && task.status === "已完成") {
-            return { type: "toggle", taskId: task.id };
-          }
-          if (intent.targetStatus && task.status !== intent.targetStatus) {
-            return {
-              type: "update",
-              taskId: task.id,
-              input: createInputFromTaskPatch(task, { status: intent.targetStatus }),
-            };
-          }
-          return { type: "toggle", taskId: task.id };
-        };
-        if (intent.matches.length === 1) {
-          await executePendingAction(toPendingAction(intent.matches[0]));
-          return;
-        }
-        appendMessage({
-          actions: buildCandidateActions(intent.matches, toPendingAction, "更新状态"),
-          role: "assistant",
-          taskCandidates: intent.matches,
-          text: "找到多个可能的任务，请选择要更新状态的一个。",
-        });
-        return;
-      }
-
-      if (intent.type === "open") {
-        if (!intent.matches.length) {
-          appendMessage({ role: "assistant", text: "没有找到要查看的任务。可以输入任务标题中的关键词。" });
-          return;
-        }
-        if (intent.matches.length === 1) {
-          await executePendingAction({ type: "open", taskId: intent.matches[0].id });
-          return;
-        }
-        appendMessage({
-          actions: buildCandidateActions(intent.matches, (task) => ({ type: "open", taskId: task.id }), "查看"),
-          role: "assistant",
-          taskCandidates: intent.matches,
-          text: "找到多个可能的任务，请选择要查看的一个。",
-        });
-        return;
-      }
-
-      appendMessage({
-        role: "assistant",
-        text: "我可以帮你管理任务。试试：创建明天下午完成的测试任务；把整理接口文档优先级改成低；标记测试任务分类功能完成；删除整理后续灵感池。",
-      });
-    } catch (error) {
-      appendMessage({ role: "assistant", text: asErrorMessage(error) });
-    } finally {
-      setWorking(false);
-    }
-  };
-
-  const sendMessage = async () => {
-    const text = normalizeAssistantText(input);
-    if (!text || isWorking) {
-      return;
-    }
-    setInput("");
-    appendMessage({ role: "user", text });
-    await handleIntent(text);
-  };
-
-  const sendShortcut = (text: string) => {
-    setInput(text);
-  };
-
-  return (
-    <div className={`task-assistant ${isOpen ? "open" : ""}`}>
-      {isOpen ? (
-        <section className="assistant-panel" aria-label="AI 任务助手">
-          <header className="assistant-header">
-            <div className="assistant-avatar">
-              <Bot size={24} />
-            </div>
-            <div>
-              <strong>新建 AI 对话</strong>
-              <span>使用 AI 处理各种任务...</span>
-            </div>
-            <button type="button" onClick={() => setOpen(false)} aria-label="最小化助手">
-              <Minimize2 size={17} />
-            </button>
-          </header>
-          <div className="assistant-body">
-            {messages.map((message) => (
-              <article className={`assistant-message ${message.role}`} key={message.id}>
-                <p>{message.text}</p>
-                {message.taskCandidates?.length ? (
-                  <div className="assistant-candidates">
-                    {message.taskCandidates.map((task) => (
-                      <span key={task.id}>
-                        {task.title}
-                        <small>{formatDue(task)}</small>
-                      </span>
-                    ))}
-                  </div>
-                ) : null}
-                {message.actions?.length ? (
-                  <div className="assistant-message-actions">
-                    {message.actions.map((action) => (
-                      <button
-                        className={action.tone === "danger" ? "danger" : action.tone === "primary" ? "primary" : ""}
-                        disabled={isWorking}
-                        key={`${message.id}-${action.label}`}
-                        type="button"
-                        onClick={() => void executePendingAction(action.pendingAction)}
-                      >
-                        {action.label}
-                      </button>
-                    ))}
-                  </div>
-                ) : null}
-              </article>
-            ))}
-            <div ref={messagesEndRef} />
-          </div>
-          <div className="assistant-shortcuts">
-            <button type="button" onClick={() => sendShortcut("创建一个明天下午完成的高优先级测试任务")}>
-              <Plus size={14} />
-              创建
-            </button>
-            <button type="button" onClick={() => sendShortcut("把整理接口文档优先级改成低")}>
-              <SlidersHorizontal size={14} />
-              修改
-            </button>
-            <button type="button" onClick={() => sendShortcut("标记测试任务分类功能完成")}>
-              <CheckCircle2 size={14} />
-              完成
-            </button>
-          </div>
-          <form
-            className="assistant-composer"
-            onSubmit={(event) => {
-              event.preventDefault();
-              void sendMessage();
-            }}
-          >
-            <Plus size={18} />
-            <input
-              aria-label="AI 助手输入"
-              value={input}
-              onChange={(event) => setInput(event.target.value)}
-              placeholder="使用 AI 处理各种任务..."
-            />
-            <span>自动</span>
-            <button type="submit" disabled={isWorking || !input.trim()} aria-label="发送给 AI 助手">
-              <Send size={17} />
-            </button>
-          </form>
-        </section>
-      ) : (
-        <button className="assistant-launcher" type="button" onClick={() => setOpen(true)} aria-label="打开 AI 任务助手">
-          <Bot size={26} />
-        </button>
-      )}
-    </div>
-  );
-}
 
 function MobileBottomNav({
   activePage,
