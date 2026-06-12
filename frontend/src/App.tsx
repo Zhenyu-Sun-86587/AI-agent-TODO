@@ -17,13 +17,11 @@ import {
   Menu,
   Moon,
   MoreHorizontal,
-  Pencil,
   Plus,
   Search,
   Settings,
   Sparkles,
   Sun,
-  Trash2,
   UserRound,
   X,
 } from "lucide-react";
@@ -2839,12 +2837,9 @@ function TaskTable({ onDelete, onEditTask, onOpenTask, onToggleComplete, tasks }
         <table className="task-table">
           <thead>
             <tr>
-              <th>任务名称</th>
-              <th>状态</th>
-              <th>优先级</th>
-              <th>分类</th>
+              <th>任务</th>
               <th>截止时间</th>
-              <th>创建时间</th>
+              <th>状态</th>
               <th>操作</th>
             </tr>
           </thead>
@@ -2861,19 +2856,26 @@ function TaskTable({ onDelete, onEditTask, onOpenTask, onToggleComplete, tasks }
                 >
                 <td>
                   <div className="table-title">
-                    <strong className={task.status === "已完成" ? "task-title-done" : ""}>{task.title}</strong>
+                    <div className="table-title-line">
+                      <strong className={task.status === "已完成" ? "task-title-done" : ""}>{task.title}</strong>
+                      <span className="table-tag-row">
+                        <PriorityBadge priority={task.priority} />
+                        <span className="table-chip">{task.category}</span>
+                        {task.isAiCreated && <span className="ai-tiny-tag">AI</span>}
+                      </span>
+                    </div>
                     <span>{task.description}</span>
                   </div>
                 </td>
                 <td>
-                  <StatusBadge status={task.status} />
+                  <span className="table-due">
+                    <Clock3 size={13} />
+                    {formatDue(task)}
+                  </span>
                 </td>
                 <td>
-                  <PriorityBadge priority={task.priority} />
+                  <StatusBadge status={task.status} />
                 </td>
-                <td>{task.category}</td>
-                <td>{formatDue(task)}</td>
-                <td>{task.createdAt}</td>
                 <td>
                   <TaskRowActions
                     isMenuOpen={openMenuTaskId === task.id}
@@ -2976,18 +2978,7 @@ function TaskRowActions({
   return (
     <div className="row-actions">
       <button
-        type="button"
-        onClick={(event) => {
-          event.stopPropagation();
-          onMenuChange(null);
-          onOpenTask(task);
-        }}
-        aria-label="查看详情"
-        title="查看详情"
-      >
-        <FileText size={15} />
-      </button>
-      <button
+        className="row-complete-action"
         type="button"
         onClick={(event) => {
           event.stopPropagation();
@@ -2998,30 +2989,10 @@ function TaskRowActions({
         title={toggleTaskActionLabel(task.status)}
       >
         <Check size={15} />
+        <span>{task.status === "已完成" ? "恢复" : "完成"}</span>
       </button>
       <button
-        type="button"
-        onClick={(event) => {
-          event.stopPropagation();
-          onMenuChange(null);
-          onEditTask(task);
-        }}
-        aria-label="编辑任务"
-      >
-        <Pencil size={15} />
-      </button>
-      <button
-        type="button"
-        onClick={(event) => {
-          event.stopPropagation();
-          onMenuChange(null);
-          onDelete(task.id);
-        }}
-        aria-label="删除任务"
-      >
-        <Trash2 size={15} />
-      </button>
-      <button
+        className="row-more-action"
         type="button"
         onClick={(event) => {
           event.stopPropagation();
@@ -3164,15 +3135,20 @@ function TaskColumn({ columnIndex, onOpenTask, status, tasks }: TaskColumnProps)
               type="button"
               onClick={() => onOpenTask(task)}
             >
-              <div>
+              <div className="kanban-card-head">
                 <strong>{task.title}</strong>
-                <PriorityBadge priority={task.priority} />
+                <span className="kanban-tag-row">
+                  <PriorityBadge priority={task.priority} />
+                  <span className="table-chip">{task.category}</span>
+                </span>
               </div>
-              <p>{task.description}</p>
-              <div className="task-meta">
-                <span>{task.category}</span>
-                <span>{formatDue(task)}</span>
-                <span>AI: {task.aiCategory}</span>
+              {task.description && <p>{task.description}</p>}
+              <div className="task-meta kanban-card-meta">
+                <span>
+                  <Clock3 size={13} />
+                  {formatDue(task)}
+                </span>
+                {task.isAiCreated && <span className="ai-tiny-tag">AI</span>}
               </div>
             </button>
           ))

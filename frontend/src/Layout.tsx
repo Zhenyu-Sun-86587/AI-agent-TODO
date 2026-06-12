@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
-import { Bell, LayoutDashboard, LogOut, Moon, Plus, Search, Sparkles, Sun, User, Settings } from "lucide-react";
+import { Bell, LayoutDashboard, Moon, Plus, Search, Sparkles, Sun, Settings } from "lucide-react";
 
 export interface MinimalNavItem {
   key: string;
@@ -47,6 +47,7 @@ export default function Layout({
   const [openPanel, setOpenPanel] = useState<"notifications" | "mobileMore" | "user" | null>(null);
   const [isMobileMoreClosing, setMobileMoreClosing] = useState(false);
   const mobileMoreCloseTimer = useRef<number | null>(null);
+  const sidebarUserRef = useRef<HTMLDivElement | null>(null);
   const mobilePrimaryItems = navItems.filter((item) => item.key === "dashboard" || item.key === "all");
   const mobileSecondaryItems = navItems.filter((item) => item.key === "ai" || item.key === "stats");
   const mobileMoreItems = navItems.filter((item) => !["dashboard", "all", "ai", "stats"].includes(item.key));
@@ -59,6 +60,22 @@ export default function Layout({
     },
     [],
   );
+
+  useEffect(() => {
+    if (openPanel !== "user") {
+      return;
+    }
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (sidebarUserRef.current?.contains(event.target as Node)) {
+        return;
+      }
+      setOpenPanel(null);
+    };
+
+    window.addEventListener("pointerdown", handlePointerDown);
+    return () => window.removeEventListener("pointerdown", handlePointerDown);
+  }, [openPanel]);
 
   const closeMobileMore = () => {
     if (openPanel !== "mobileMore" || isMobileMoreClosing) {
@@ -110,36 +127,33 @@ export default function Layout({
           ))}
         </nav>
 
-        <div className="minimal-sidebar-bottom" style={{ marginTop: "auto", padding: "12px", borderTop: "1px solid rgba(255, 255, 255, 0.06)" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", position: "relative" }}>
+        <div className="minimal-sidebar-bottom">
+          <div className="minimal-sidebar-user" ref={sidebarUserRef}>
             <button
               className="user-profile-btn"
               type="button"
               onClick={() => setOpenPanel((panel) => (panel === "user" ? null : "user"))}
               aria-expanded={openPanel === "user"}
-              style={{ display: "flex", alignItems: "center", gap: "10px", background: "transparent", border: "none", color: "inherit", cursor: "pointer", padding: "8px", borderRadius: "8px", flex: 1, textAlign: "left", transition: "background-color 0.2s" }}
-              onMouseOver={(e) => (e.currentTarget.style.backgroundColor = "rgba(128, 128, 128, 0.1)")}
-              onMouseOut={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
             >
-              <div style={{ width: "32px", height: "32px", borderRadius: "50%", background: "#4f46e5", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: "bold", flexShrink: 0 }}>
+              <div className="sidebar-user-avatar">
                 {userName.charAt(0).toUpperCase()}
               </div>
-              <div style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
-                <span className="user-name-text" style={{ fontSize: "14px", fontWeight: 600, whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>{userName}</span>
-                <span style={{ fontSize: "12px", color: "#64748b" }}>{statusLabel}</span>
+              <div className="sidebar-user-copy">
+                <span className="user-name-text">{userName}</span>
+                <span>{statusLabel}</span>
               </div>
             </button>
             <button
-              className="minimal-icon"
+              className="minimal-icon sidebar-settings-btn"
               type="button"
               onClick={onOpenSettings}
-              style={{ width: "32px", height: "32px", display: "grid", placeItems: "center", marginLeft: "8px", flexShrink: 0 }}
+              aria-label="设置"
             >
               <Settings size={18} />
             </button>
             
             {openPanel === "user" && (
-              <div className="minimal-popover user" role="menu" style={{ bottom: "calc(100% + 8px)", top: "auto", left: 0, right: "auto", width: "100%", zIndex: 50 }}>
+              <div className="minimal-popover user sidebar-user-menu" role="menu">
                 <strong>{userName}</strong>
                 <button type="button" onClick={() => { setOpenPanel(null); onOpenProfile?.(); }} role="menuitem">
                   个人资料
