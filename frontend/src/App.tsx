@@ -15,15 +15,17 @@ import {
   ListTodo,
   LogOut,
   Menu,
+  Minimize2,
   Moon,
   MoreHorizontal,
   Pencil,
   Plus,
   Search,
+  Send,
   Settings,
   Sparkles,
   Sun,
-  Tags,
+  SlidersHorizontal,
   Trash2,
   UserRound,
   X,
@@ -40,7 +42,6 @@ type PageKey =
   | "board"
   | "calendar"
   | "stats"
-  | "tags"
   | "settings";
 type TaskStatus = "待办" | "进行中" | "已完成";
 type TaskPriority = "高" | "中" | "低";
@@ -255,6 +256,34 @@ interface TaskFieldSuggestion {
   source?: string;
 }
 
+interface AssistantMessage {
+  id: number;
+  role: "assistant" | "user";
+  text: string;
+  actions?: AssistantAction[];
+  taskCandidates?: Task[];
+}
+
+interface AssistantAction {
+  label: string;
+  tone?: "primary" | "danger";
+  pendingAction: AssistantPendingAction;
+}
+
+type AssistantPendingAction =
+  | { type: "delete"; taskId: number }
+  | { type: "update"; input: NewTaskInput; taskId: number }
+  | { type: "toggle"; taskId: number }
+  | { type: "open"; taskId: number };
+
+type AssistantIntentResult =
+  | { type: "create"; input: NewTaskInput }
+  | { type: "delete"; matches: Task[] }
+  | { type: "update"; matches: Task[]; patch: Partial<NewTaskInput>; summary: string }
+  | { type: "toggle"; matches: Task[]; targetStatus?: TaskStatus }
+  | { type: "open"; matches: Task[] }
+  | { type: "help" };
+
 class ApiError extends Error {
   status: number;
   code?: number;
@@ -317,7 +346,6 @@ const pagePaths: Record<PageKey, string> = {
   board: "/board",
   calendar: "/calendar",
   stats: "/stats",
-  tags: "/tags",
   settings: "/settings",
 };
 
@@ -753,7 +781,7 @@ const initialTasks: Task[] = [
     description: "记录暂时没有明确截止时间的产品想法和优化点。",
     status: "待办",
     priority: "低",
-    category: "标签管理",
+    category: "产品规划",
     dueDate: "",
     dueTime: "",
     createdAt: dateFromToday(0),
@@ -774,7 +802,6 @@ const navItems: Array<{ key: PageKey; label: string; icon: LucideIcon }> = [
   { key: "board", label: "任务看板", icon: LayoutDashboard },
   { key: "calendar", label: "日历", icon: CalendarDays },
   { key: "stats", label: "数据统计", icon: BarChart3 },
-  { key: "tags", label: "标签管理", icon: Tags },
   { key: "settings", label: "设置", icon: Settings },
 ];
 
@@ -1017,6 +1044,244 @@ function generateTaskFromPrompt(prompt: string): NewTaskInput {
     rawDueText: priority === "高" ? "近期优先" : "默认规划",
     sourceText: normalized,
   };
+}
+
+function normalizeAssistantText(text: string) {
+  return text.replace(/\s+/g, " ").trim();
+}
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function stripAssistantIntentWords(text: string) {
+  return normalizeAssistantText(text)
+    .replace(/^(请|帮我|麻烦)?\s*(创建|新建|添加|新增|加一个|删除|移除|修改|更新|把|将|设为|设置|标记|完成|恢复|打开|查看)\s*/i, "")
+    .replace(/(这个|任务|待办|todo|TODO)/g, " ")
+    .replace(/[，。,.；;：:]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function extractTextAfter(text: string, markers: string[]) {
+  for (const marker of markers) {
+    const index = text.indexOf(marker);
+    if (index >= 0) {
+      return text.slice(index + marker.length).trim();
+    }
+  }
+  return "";
+}
+
+function extractQuotedText(text: string) {
+  const match = text.match(/[“"']([^”"']+)[”"']/);
+  return match?.[1]?.trim() || "";
+}
+
+function findAssistantTaskMatches(tasks: Task[], query: string) {
+  const commandText = normalizeAssistantText(query).toLowerCase();
+  const exactTitleMatches = tasks.filter((task) => commandText.includes(task.title.toLowerCase()));
+  if (exactTitleMatches.length) {
+    return exactTitleMatches;
+  }
+  const normalizedQuery = stripAssistantIntentWords(query).toLowerCase();
+  const directQuoted = extractQuotedText(query).toLowerCase();
+  const searchText = directQuoted || normalizedQuery;
+  const tokens = searchText
+    .split(/[\s,，。:：;；]+/)
+    .map((token) => token.trim())
+    .filter((token) => token.length >= 2);
+
+  if (!searchText && !tokens.length) {
+    return [];
+  }
+
+  return tasks
+    .map((task) => {
+      const taskTitle = task.title.toLowerCase();
+      const haystack = [task.title, task.description, task.category, task.tags.join(" ")].join(" ").toLowerCase();
+      let score = 0;
+      if (commandText.includes(taskTitle)) {
+        score += 14;
+      }
+      if (directQuoted && task.title.toLowerCase().includes(directQuoted)) {
+        score += 12;
+      }
+      if (searchText && taskTitle.includes(searchText)) {
+        score += 10;
+      }
+      if (searchText && haystack.includes(searchText)) {
+        score += 4;
+      }
+      score += tokens.filter((token) => haystack.includes(token)).length * 2;
+      return { score, task };
+    })
+    .filter((item) => item.score > 0)
+    .sort((left, right) => right.score - left.score || left.task.id - right.task.id)
+    .slice(0, 5)
+    .map((item) => item.task);
+}
+
+function parseAssistantPriority(text: string): TaskPriority | null {
+  if (/高优先级|优先级.*高|紧急|重要/.test(text)) {
+    return "高";
+  }
+  if (/低优先级|优先级.*低|不急|低/.test(text)) {
+    return "低";
+  }
+  if (/中优先级|优先级.*中|普通|一般/.test(text)) {
+    return "中";
+  }
+  return null;
+}
+
+function parseAssistantStatus(text: string): TaskStatus | null {
+  if (/完成|已完成|done/i.test(text)) {
+    return "已完成";
+  }
+  if (/进行中|处理中/.test(text)) {
+    return "进行中";
+  }
+  if (/恢复|待办|todo|未完成/i.test(text)) {
+    return "待办";
+  }
+  return null;
+}
+
+function parseAssistantDueDate(text: string) {
+  if (/今天|今日/.test(text)) {
+    return dateFromToday(0);
+  }
+  if (/明天|明日/.test(text)) {
+    return dateFromToday(1);
+  }
+  if (/后天/.test(text)) {
+    return dateFromToday(2);
+  }
+  const dayMatch = text.match(/(\d{4}-\d{1,2}-\d{1,2})/);
+  if (dayMatch) {
+    const [year, month, day] = dayMatch[1].split("-").map((part) => part.padStart(2, "0"));
+    return `${year}-${month}-${day}`;
+  }
+  return "";
+}
+
+function parseAssistantDueTime(text: string) {
+  const timeMatch = text.match(/(\d{1,2})[:：点](\d{1,2})?/);
+  if (timeMatch) {
+    const hour = Math.min(23, Math.max(0, Number(timeMatch[1])));
+    const minute = Math.min(59, Math.max(0, Number(timeMatch[2] || "0")));
+    return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+  }
+  return pickGeneratedDueTime(text.toLowerCase());
+}
+
+function parseAssistantCategory(text: string) {
+  const explicit = text.match(/(?:分类|类别|归类)(?:为|成|到|:|：)?\s*([\u4e00-\u9fa5A-Za-z0-9_-]{2,20})/);
+  if (explicit?.[1]) {
+    return explicit[1].trim();
+  }
+  return "";
+}
+
+function parseAssistantTitlePatch(text: string) {
+  const quoted = extractQuotedText(text);
+  if (/标题|名称|改名|重命名/.test(text) && quoted) {
+    return quoted;
+  }
+  const match = text.match(/(?:标题|名称|改名|重命名)(?:改成|改为|设为|设置为|成|为)\s*([^，。,.；;]+)/);
+  return match?.[1]?.trim() || "";
+}
+
+function parseAssistantDescriptionPatch(text: string) {
+  const match = text.match(/(?:描述|说明|内容)(?:改成|改为|设为|设置为|成|为)\s*([^；;]+)/);
+  return match?.[1]?.trim() || "";
+}
+
+function buildAssistantUpdatePatch(text: string): { patch: Partial<NewTaskInput>; summary: string } {
+  const patch: Partial<NewTaskInput> = {};
+  const summary: string[] = [];
+  const priority = parseAssistantPriority(text);
+  const status = parseAssistantStatus(text);
+  const category = parseAssistantCategory(text);
+  const dueDate = parseAssistantDueDate(text);
+  const dueTime = /上午|下午|晚上|中午|早上|早晨|夜间|\d{1,2}[:：点]/.test(text) ? parseAssistantDueTime(text) : "";
+  const title = parseAssistantTitlePatch(text);
+  const description = parseAssistantDescriptionPatch(text);
+
+  if (priority) {
+    patch.priority = priority;
+    summary.push(`优先级改为${priority}`);
+  }
+  if (status) {
+    patch.status = status;
+    summary.push(`状态改为${status}`);
+  }
+  if (category) {
+    patch.category = category;
+    patch.aiCategory = category;
+    summary.push(`分类改为${category}`);
+  }
+  if (dueDate) {
+    patch.dueDate = dueDate;
+    summary.push(`截止日期改为${dueDate}`);
+  }
+  if (dueTime) {
+    patch.dueTime = dueTime;
+    summary.push(`截止时间改为${dueTime}`);
+  }
+  if (title) {
+    patch.title = title;
+    summary.push(`标题改为${title}`);
+  }
+  if (description) {
+    patch.description = description;
+    summary.push("描述已更新");
+  }
+
+  return { patch, summary: summary.join("，") };
+}
+
+function createInputFromTaskPatch(task: Task, patch: Partial<NewTaskInput>) {
+  return {
+    ...taskToInput(task),
+    ...patch,
+    tags: patch.category && !patch.tags ? Array.from(new Set([...task.tags, patch.category])).join(", ") : (patch.tags ?? task.tags.join(", ")),
+    aiReason: patch.aiReason || task.aiReason,
+    estimatedTime: patch.estimatedTime || task.estimatedTime,
+    aiCategory: patch.aiCategory || patch.category || task.aiCategory,
+  };
+}
+
+function parseAssistantIntent(text: string, tasks: Task[]): AssistantIntentResult {
+  const normalized = normalizeAssistantText(text);
+  if (!normalized) {
+    return { type: "help" };
+  }
+  if (/^(帮助|help|怎么用|你能做什么)$/i.test(normalized)) {
+    return { type: "help" };
+  }
+  if (/(创建|新建|添加|新增|加一个|帮我加)/.test(normalized)) {
+    const prompt = normalized.replace(/^(请|帮我|麻烦)?\s*(创建|新建|添加|新增|加一个|帮我加)\s*/, "");
+    return { type: "create", input: generateTaskFromPrompt(prompt || normalized) };
+  }
+  if (/(删除|移除)/.test(normalized)) {
+    return { type: "delete", matches: findAssistantTaskMatches(tasks, normalized) };
+  }
+  if (/(打开|查看|详情)/.test(normalized)) {
+    return { type: "open", matches: findAssistantTaskMatches(tasks, normalized) };
+  }
+  if (/(标记.*完成|完成|恢复)/.test(normalized)) {
+    return { type: "toggle", matches: findAssistantTaskMatches(tasks, normalized), targetStatus: parseAssistantStatus(normalized) || undefined };
+  }
+  if (/(修改|更新|改成|改为|设为|设置|把|将|优先级|分类|截止|标题|名称|描述)/.test(normalized)) {
+    const { patch, summary } = buildAssistantUpdatePatch(normalized);
+    if (!Object.keys(patch).length) {
+      return { type: "help" };
+    }
+    return { type: "update", matches: findAssistantTaskMatches(tasks, normalized), patch, summary };
+  }
+  return { type: "help" };
 }
 
 function taskToInput(task: Task): NewTaskInput {
@@ -1849,7 +2114,6 @@ export function App() {
           isApiMode={Boolean(activeToken)}
           onClose={() => setCreateOpen(false)}
           onCreate={createTask}
-          onParseTask={parseTaskWithAi}
         />
       )}
       {editingTask && (
@@ -1870,6 +2134,14 @@ export function App() {
           task={deleteCandidate}
         />
       )}
+      <TaskAssistant
+        onCreateTask={createTask}
+        onDeleteTask={deleteTask}
+        onOpenTask={openTaskDetails}
+        onToggleComplete={toggleComplete}
+        onUpdateTask={updateTask}
+        tasks={tasks}
+      />
       <ToastViewport items={toasts} onDismiss={dismissToast} />
     </Layout>
   );
@@ -2060,7 +2332,7 @@ function AuthPage({ apiMessage, mode, onDemo, onLogin, onModeChange, onRegister 
         <h1>把一段想法变成可执行的任务系统</h1>
         <p>默认连接 {API_BASE_URL}。如果后端未启动，可以使用演示账号进入本地模式。</p>
         <div className="auth-feature-list">
-          <span>AI 生成 TODO</span>
+          <span>AI 任务助手</span>
           <span>任务表格筛选</span>
           <span>日历和统计</span>
         </div>
@@ -2258,10 +2530,6 @@ function PageRenderer({
     );
   }
 
-  if (activePage === "tags") {
-    return <TagsPage tasks={tasks} />;
-  }
-
   if (activePage === "settings") {
     return <SettingsPage onSave={onSaveSettings} onSaveProfile={onSaveProfile} onTest={onTestOpenAIKey} profile={profile} settings={settings} />;
   }
@@ -2322,7 +2590,7 @@ function TodayTasksPage({
 
   return (
     <main className="page-content">
-      <PageHeading title="今日任务" description="聚焦今天截止的任务，快速检查优先级、完成状态和 AI 建议。" />
+      <PageHeading title="今日任务" />
       <section className="stats-grid">
         <StatsCard icon={CalendarDays} label="今日任务" value={todayTasks.length} tone="blue" />
         <StatsCard icon={CheckCircle2} label="已完成" value={done} tone="green" />
@@ -2678,7 +2946,7 @@ function AllTasksPage({
 
   return (
     <main className="page-content">
-      <PageHeading title="全部任务" description="参考 shadcn/ui Tasks Example 的表格与筛选交互。" />
+      <PageHeading title="全部任务" />
       <div className="content-card table-card">
         <FilterBar
           categories={categories}
@@ -3088,7 +3356,7 @@ function TaskBoard({ categories, isApiMode, onCreateTask, onOpenTask, tasks }: T
 
   return (
     <main className="page-content">
-      <PageHeading title="任务看板" description="按状态组织任务，适合规划开发流程。" />
+      <PageHeading title="任务看板" />
       <div className="board-toolbar">
         <label className="filter-search">
           <Search size={17} />
@@ -3193,7 +3461,7 @@ function AIPage({
 }) {
   return (
     <main className="page-content">
-      <PageHeading title="AI 推荐" description="AI 根据截止时间、优先级和复杂度给出的今日处理建议。" />
+      <PageHeading title="AI 推荐" />
       <AIAssistantCard onOpenTask={onOpenTask} tasks={recommendedTasks} />
       <AISuggestTool onSuggestTaskFields={onSuggestTaskFields} />
       <AILogsPanel isApiMode={isApiMode} onApiError={onApiError} taskVersion={taskVersion} token={token} />
@@ -3503,7 +3771,7 @@ function CalendarPage({
 
   return (
     <main className="page-content">
-      <PageHeading title="日历" description="用日历、24 小时轴和逾期视图检查任务时间安排。" />
+      <PageHeading title="日历" />
       <section className="calendar-controls" aria-label="日历视图">
         {[
           ["7", "近 7 天"],
@@ -3714,7 +3982,7 @@ function StatsPage({
 
   return (
     <main className="page-content">
-      <PageHeading title="数据统计" description="查看任务完成趋势、分类分布、优先级分布与 AI 创建占比。" />
+      <PageHeading title="数据统计" />
       {isRemoteLoading && <p className="table-state">正在同步统计范围...</p>}
       {remoteError && <p className="form-error">{remoteError}</p>}
       <section className="stats-grid stats-grid-wide">
@@ -3795,33 +4063,6 @@ function StatsPage({
           </div>
         </section>
       )}
-    </main>
-  );
-}
-
-function TagsPage({ tasks }: { tasks: Task[] }) {
-  const tagStats = Array.from(
-    tasks
-      .flatMap((task) => task.tags)
-      .reduce((map, tag) => map.set(tag, (map.get(tag) || 0) + 1), new Map<string, number>()),
-  ).sort((left, right) => right[1] - left[1]);
-
-  return (
-    <main className="page-content">
-      <PageHeading title="标签管理" description="查看当前任务标签分布，后续可扩展为标签重命名和合并。" />
-      <section className="content-card tag-cloud">
-        {tagStats.length ? (
-          tagStats.map(([tag, total]) => (
-            <button key={tag} type="button">
-              <Tags size={16} />
-              <span>{tag}</span>
-              <strong>{total}</strong>
-            </button>
-          ))
-        ) : (
-          <EmptyState title="暂无标签" description="创建任务并填写标签后，这里会展示标签统计。" />
-        )}
-      </section>
     </main>
   );
 }
@@ -3907,7 +4148,7 @@ function SettingsPage({
 
   return (
     <main className="page-content">
-      <PageHeading title="设置" description="配置 AI 模型、OpenAI Key 和前端联调信息。" />
+      <PageHeading title="设置" />
       <section className="settings-layout">
         <form className="content-card settings-form" onSubmit={saveProfile}>
           <h2>个人资料</h2>
@@ -3978,24 +4219,24 @@ function PlaceholderPage({ activePage }: { activePage: PageKey }) {
   const label = navItems.find((item) => item.key === activePage)?.label || "页面";
   return (
     <main className="page-content">
-      <PageHeading title={label} description="该模块已预留入口，后续可继续扩展。" />
+      <PageHeading title={label} />
       <section className="content-card empty-module">
         <FileText size={32} />
         <h2>{label}</h2>
-        <p>这里会承载项目的扩展能力，例如标签管理、个人设置和更多 AI 工作流。</p>
+        <p>这里会承载项目的扩展能力，例如个人设置和更多 AI 工作流。</p>
       </section>
     </main>
   );
 }
 
-function PageHeading({ description, title }: { description: string; title: string }) {
+function PageHeading({ action, description, title }: { action?: ReactNode; description?: string; title: string }) {
   return (
     <div className="page-heading">
       <div>
-        <p className="eyebrow">AI-agent-TODO</p>
         <h1>{title}</h1>
-        <p>{description}</p>
+        {description ? <p>{description}</p> : null}
       </div>
+      {action ? <div className="page-heading-action">{action}</div> : null}
     </div>
   );
 }
@@ -4105,7 +4346,6 @@ interface CreateTaskModalProps {
   isApiMode: boolean;
   onClose: () => void;
   onCreate: (input: NewTaskInput) => void;
-  onParseTask: (prompt: string) => Promise<NewTaskInput>;
 }
 
 interface EditTaskModalProps {
@@ -4196,40 +4436,17 @@ function EditTaskModal({ categories, isApiMode, onClose, onUpdate, task }: EditT
   );
 }
 
-type CreateMode = "manual" | "ai";
-
-function CreateTaskModal({ categories, isApiMode, onClose, onCreate, onParseTask }: CreateTaskModalProps) {
+function CreateTaskModal({ categories, isApiMode, onClose, onCreate }: CreateTaskModalProps) {
   const { closeWithAnimation, isClosing } = useAnimatedDismiss(onClose, OVERLAY_EXIT_MS);
   useEscapeToClose(closeWithAnimation);
 
-  const [mode, setMode] = useState<CreateMode>("ai");
   const [form, setForm] = useState<NewTaskInput>(() => createEmptyTask());
-  const [prompt, setPrompt] = useState("这周要完成前端首页、任务表格筛选、看板页面，还要准备项目演示。");
-  const [generatedTask, setGeneratedTask] = useState<NewTaskInput | null>(null);
-  const [generateError, setGenerateError] = useState("");
-  const [isGenerating, setGenerating] = useState(false);
 
   const submitManual = (input: NewTaskInput) => {
     if (!input.title.trim()) {
       return;
     }
     onCreate(input);
-  };
-
-  const generateTask = async () => {
-    if (!prompt.trim()) {
-      setGenerateError("请输入一段自然语言任务描述。");
-      return;
-    }
-    setGenerating(true);
-    setGenerateError("");
-    try {
-      setGeneratedTask(await onParseTask(prompt));
-    } catch (error) {
-      setGenerateError(asErrorMessage(error));
-    } finally {
-      setGenerating(false);
-    }
   };
 
   return (
@@ -4244,44 +4461,8 @@ function CreateTaskModal({ categories, isApiMode, onClose, onCreate, onParseTask
             <X size={18} />
           </button>
         </div>
-        <ModeSegment mode={mode} onChange={setMode} />
-        {mode === "manual" ? (
-          <ManualTaskForm categories={categories} form={form} isApiMode={isApiMode} onChange={setForm} onSubmit={submitManual} />
-        ) : (
-          <AITaskGenerator
-            error={generateError}
-            generatedTask={generatedTask}
-            isGenerating={isGenerating}
-            onGenerate={generateTask}
-            onPromptChange={(value) => {
-              if (generateError) {
-                setGenerateError("");
-              }
-              setPrompt(value);
-            }}
-            onSwitchToManual={(task) => {
-              setForm(task);
-              setMode("manual");
-            }}
-            onUseTask={submitManual}
-            prompt={prompt}
-          />
-        )}
+        <ManualTaskForm categories={categories} form={form} isApiMode={isApiMode} onChange={setForm} onSubmit={submitManual} />
       </div>
-    </div>
-  );
-}
-
-function ModeSegment({ mode, onChange }: { mode: CreateMode; onChange: (mode: CreateMode) => void }) {
-  return (
-    <div className="mode-segment" role="tablist" aria-label="新建任务方式">
-      <button className={mode === "ai" ? "active" : ""} type="button" onClick={() => onChange("ai")}>
-        <Sparkles size={16} />
-        AI 生成
-      </button>
-      <button className={mode === "manual" ? "active" : ""} type="button" onClick={() => onChange("manual")}>
-        自定义创建
-      </button>
     </div>
   );
 }
@@ -4414,117 +4595,308 @@ function ManualTaskForm({ categories, form, isApiMode, onChange, onSubmit, submi
   );
 }
 
-interface AITaskGeneratorProps {
-  error: string;
-  generatedTask: NewTaskInput | null;
-  isGenerating: boolean;
-  onGenerate: () => void;
-  onPromptChange: (prompt: string) => void;
-  onSwitchToManual: (task: NewTaskInput) => void;
-  onUseTask: (task: NewTaskInput) => void;
-  prompt: string;
-}
+function TaskAssistant({
+  onCreateTask,
+  onDeleteTask,
+  onOpenTask,
+  onToggleComplete,
+  onUpdateTask,
+  tasks,
+}: {
+  onCreateTask: (input: NewTaskInput) => Promise<void> | void;
+  onDeleteTask: (taskId: number) => Promise<void> | void;
+  onOpenTask: (task: Task) => Promise<void> | void;
+  onToggleComplete: (taskId: number) => Promise<void> | void;
+  onUpdateTask: (taskId: number, input: NewTaskInput) => Promise<void> | void;
+  tasks: Task[];
+}) {
+  const [isOpen, setOpen] = useState(false);
+  const [input, setInput] = useState("");
+  const [isWorking, setWorking] = useState(false);
+  const messageIdRef = useRef(1);
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const [messages, setMessages] = useState<AssistantMessage[]>([
+    {
+      id: 1,
+      role: "assistant",
+      text: "今日事，我来帮。可以直接说：创建任务、修改优先级、标记完成、删除任务。",
+    },
+  ]);
 
-function AITaskGenerator({
-  error,
-  generatedTask,
-  isGenerating,
-  onGenerate,
-  onPromptChange,
-  onSwitchToManual,
-  onUseTask,
-  prompt,
-}: AITaskGeneratorProps) {
+  useEffect(() => {
+    if (isOpen) {
+      messagesEndRef.current?.scrollIntoView({ block: "end" });
+    }
+  }, [isOpen, messages]);
+
+  const nextMessageId = () => {
+    messageIdRef.current += 1;
+    return messageIdRef.current;
+  };
+
+  const appendMessage = (message: Omit<AssistantMessage, "id">) => {
+    setMessages((currentMessages) => [...currentMessages, { ...message, id: nextMessageId() }]);
+  };
+
+  const getTaskById = (taskId: number) => tasks.find((task) => task.id === taskId);
+
+  const executePendingAction = async (pendingAction: AssistantPendingAction) => {
+    const task = getTaskById(pendingAction.taskId);
+    if (!task) {
+      appendMessage({ role: "assistant", text: "没有找到这个任务，可能已经被更新或删除了。" });
+      return;
+    }
+
+    setWorking(true);
+    try {
+      if (pendingAction.type === "delete") {
+        await onDeleteTask(task.id);
+        appendMessage({ role: "assistant", text: `已删除「${task.title}」。` });
+      }
+      if (pendingAction.type === "update") {
+        await onUpdateTask(task.id, pendingAction.input);
+        appendMessage({ role: "assistant", text: `已更新「${pendingAction.input.title}」。` });
+      }
+      if (pendingAction.type === "toggle") {
+        await onToggleComplete(task.id);
+        appendMessage({ role: "assistant", text: `已${task.status === "已完成" ? "恢复" : "完成"}「${task.title}」。` });
+      }
+      if (pendingAction.type === "open") {
+        await onOpenTask(task);
+        appendMessage({ role: "assistant", text: `已打开「${task.title}」详情。` });
+      }
+    } catch (error) {
+      appendMessage({ role: "assistant", text: asErrorMessage(error) });
+    } finally {
+      setWorking(false);
+    }
+  };
+
+  const buildCandidateActions = (
+    matches: Task[],
+    getPendingAction: (task: Task) => AssistantPendingAction,
+    labelPrefix: string,
+    tone?: AssistantAction["tone"],
+  ): AssistantAction[] =>
+    matches.map((task) => ({
+      label: `${labelPrefix}「${task.title}」`,
+      pendingAction: getPendingAction(task),
+      tone,
+    }));
+
+  const handleIntent = async (text: string) => {
+    const intent = parseAssistantIntent(text, tasks);
+    setWorking(true);
+    try {
+      if (intent.type === "create") {
+        await onCreateTask(intent.input);
+        appendMessage({ role: "assistant", text: `已创建「${intent.input.title}」，优先级为${intent.input.priority}。` });
+        return;
+      }
+
+      if (intent.type === "delete") {
+        if (!intent.matches.length) {
+          appendMessage({ role: "assistant", text: "没有找到要删除的任务。可以带上更完整的任务标题。" });
+          return;
+        }
+        appendMessage({
+          actions: buildCandidateActions(intent.matches, (task) => ({ type: "delete", taskId: task.id }), "确认删除", "danger"),
+          role: "assistant",
+          taskCandidates: intent.matches,
+          text: intent.matches.length === 1 ? "删除后无法恢复，请确认。" : "找到多个可能的任务，请选择要删除的一个。",
+        });
+        return;
+      }
+
+      if (intent.type === "update") {
+        if (!intent.matches.length) {
+          appendMessage({ role: "assistant", text: "没有找到要修改的任务。可以这样说：把「任务标题」优先级改成低。" });
+          return;
+        }
+        const toPendingAction = (task: Task): AssistantPendingAction => ({
+          type: "update",
+          taskId: task.id,
+          input: createInputFromTaskPatch(task, intent.patch),
+        });
+        if (intent.matches.length === 1) {
+          await executePendingAction(toPendingAction(intent.matches[0]));
+          return;
+        }
+        appendMessage({
+          actions: buildCandidateActions(intent.matches, toPendingAction, "修改"),
+          role: "assistant",
+          taskCandidates: intent.matches,
+          text: `找到多个可能的任务，请选择要应用“${intent.summary}”的任务。`,
+        });
+        return;
+      }
+
+      if (intent.type === "toggle") {
+        if (!intent.matches.length) {
+          appendMessage({ role: "assistant", text: "没有找到要标记状态的任务。可以带上任务标题里的关键词。" });
+          return;
+        }
+        const toPendingAction = (task: Task): AssistantPendingAction => {
+          if (intent.targetStatus === "已完成" && task.status !== "已完成") {
+            return { type: "toggle", taskId: task.id };
+          }
+          if (intent.targetStatus === "待办" && task.status === "已完成") {
+            return { type: "toggle", taskId: task.id };
+          }
+          if (intent.targetStatus && task.status !== intent.targetStatus) {
+            return {
+              type: "update",
+              taskId: task.id,
+              input: createInputFromTaskPatch(task, { status: intent.targetStatus }),
+            };
+          }
+          return { type: "toggle", taskId: task.id };
+        };
+        if (intent.matches.length === 1) {
+          await executePendingAction(toPendingAction(intent.matches[0]));
+          return;
+        }
+        appendMessage({
+          actions: buildCandidateActions(intent.matches, toPendingAction, "更新状态"),
+          role: "assistant",
+          taskCandidates: intent.matches,
+          text: "找到多个可能的任务，请选择要更新状态的一个。",
+        });
+        return;
+      }
+
+      if (intent.type === "open") {
+        if (!intent.matches.length) {
+          appendMessage({ role: "assistant", text: "没有找到要查看的任务。可以输入任务标题中的关键词。" });
+          return;
+        }
+        if (intent.matches.length === 1) {
+          await executePendingAction({ type: "open", taskId: intent.matches[0].id });
+          return;
+        }
+        appendMessage({
+          actions: buildCandidateActions(intent.matches, (task) => ({ type: "open", taskId: task.id }), "查看"),
+          role: "assistant",
+          taskCandidates: intent.matches,
+          text: "找到多个可能的任务，请选择要查看的一个。",
+        });
+        return;
+      }
+
+      appendMessage({
+        role: "assistant",
+        text: "我可以帮你管理任务。试试：创建明天下午完成的测试任务；把整理接口文档优先级改成低；标记测试任务分类功能完成；删除整理后续灵感池。",
+      });
+    } catch (error) {
+      appendMessage({ role: "assistant", text: asErrorMessage(error) });
+    } finally {
+      setWorking(false);
+    }
+  };
+
+  const sendMessage = async () => {
+    const text = normalizeAssistantText(input);
+    if (!text || isWorking) {
+      return;
+    }
+    setInput("");
+    appendMessage({ role: "user", text });
+    await handleIntent(text);
+  };
+
+  const sendShortcut = (text: string) => {
+    setInput(text);
+  };
+
   return (
-    <section className="ai-task-generator">
-      <label htmlFor="ai-task-prompt">告诉 AI 你想做什么</label>
-      <textarea
-        className="ai-natural-input"
-        id="ai-task-prompt"
-        value={prompt}
-        onChange={(event) => onPromptChange(event.target.value)}
-        placeholder="例如：这周要完成前端首页、任务表格筛选、看板页面，还要准备项目演示。"
-        rows={4}
-      />
-      <button className="primary-button full" type="button" onClick={onGenerate} disabled={isGenerating}>
-        <Sparkles size={17} />
-        {isGenerating ? (
-          <>
-            AI 解析中
-            <span className="thinking-dots" aria-hidden="true">
-              <i />
-              <i />
-              <i />
-            </span>
-          </>
-        ) : (
-          "AI 生成 TODO"
-        )}
-      </button>
-      {error && <p className="form-error">{error}</p>}
-      {generatedTask ? (
-        <GeneratedTaskPreview
-          task={generatedTask}
-          onEdit={() => onSwitchToManual(generatedTask)}
-          onRegenerate={onGenerate}
-          onUse={() => onUseTask(generatedTask)}
-        />
+    <div className={`task-assistant ${isOpen ? "open" : ""}`}>
+      {isOpen ? (
+        <section className="assistant-panel" aria-label="AI 任务助手">
+          <header className="assistant-header">
+            <div className="assistant-avatar">
+              <Bot size={24} />
+            </div>
+            <div>
+              <strong>新建 AI 对话</strong>
+              <span>使用 AI 处理各种任务...</span>
+            </div>
+            <button type="button" onClick={() => setOpen(false)} aria-label="最小化助手">
+              <Minimize2 size={17} />
+            </button>
+          </header>
+          <div className="assistant-body">
+            {messages.map((message) => (
+              <article className={`assistant-message ${message.role}`} key={message.id}>
+                <p>{message.text}</p>
+                {message.taskCandidates?.length ? (
+                  <div className="assistant-candidates">
+                    {message.taskCandidates.map((task) => (
+                      <span key={task.id}>
+                        {task.title}
+                        <small>{formatDue(task)}</small>
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+                {message.actions?.length ? (
+                  <div className="assistant-message-actions">
+                    {message.actions.map((action) => (
+                      <button
+                        className={action.tone === "danger" ? "danger" : action.tone === "primary" ? "primary" : ""}
+                        disabled={isWorking}
+                        key={`${message.id}-${action.label}`}
+                        type="button"
+                        onClick={() => void executePendingAction(action.pendingAction)}
+                      >
+                        {action.label}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </article>
+            ))}
+            <div ref={messagesEndRef} />
+          </div>
+          <div className="assistant-shortcuts">
+            <button type="button" onClick={() => sendShortcut("创建一个明天下午完成的高优先级测试任务")}>
+              <Plus size={14} />
+              创建
+            </button>
+            <button type="button" onClick={() => sendShortcut("把整理接口文档优先级改成低")}>
+              <SlidersHorizontal size={14} />
+              修改
+            </button>
+            <button type="button" onClick={() => sendShortcut("标记测试任务分类功能完成")}>
+              <CheckCircle2 size={14} />
+              完成
+            </button>
+          </div>
+          <form
+            className="assistant-composer"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void sendMessage();
+            }}
+          >
+            <Plus size={18} />
+            <input
+              aria-label="AI 助手输入"
+              value={input}
+              onChange={(event) => setInput(event.target.value)}
+              placeholder="使用 AI 处理各种任务..."
+            />
+            <span>自动</span>
+            <button type="submit" disabled={isWorking || !input.trim()} aria-label="发送给 AI 助手">
+              <Send size={17} />
+            </button>
+          </form>
+        </section>
       ) : (
-        <div className="ai-empty-preview">
-          <Sparkles size={20} />
-          <strong>输入一段自然语言，AI 会自动拆出任务字段。</strong>
-          <p>后端登录态会调用 /ai/parse-task；本地演示模式使用前端规则。</p>
-        </div>
+        <button className="assistant-launcher" type="button" onClick={() => setOpen(true)} aria-label="打开 AI 任务助手">
+          <Bot size={26} />
+        </button>
       )}
-    </section>
-  );
-}
-
-interface GeneratedTaskPreviewProps {
-  onEdit: () => void;
-  onRegenerate: () => void;
-  onUse: () => void;
-  task: NewTaskInput;
-}
-
-function GeneratedTaskPreview({ onEdit, onRegenerate, onUse, task }: GeneratedTaskPreviewProps) {
-  return (
-    <article className="generated-preview">
-      <div className="generated-preview-header">
-        <div>
-          <span>AI 任务预览</span>
-          <h3>{task.title}</h3>
-        </div>
-        <PriorityBadge priority={task.priority} />
-      </div>
-      <p>{task.description}</p>
-      <div className="preview-grid">
-        <Field label="状态">{task.status}</Field>
-        <Field label="分类">{task.category}</Field>
-        <Field label="截止时间">{formatDue(task)}</Field>
-        <Field label="预计耗时">{task.estimatedTime}</Field>
-        <Field label="标签">{task.tags}</Field>
-        <Field label="AI 分类">{task.aiCategory}</Field>
-        <Field label="AI 来源">{task.aiBackendMode === "frontend-fallback" ? "前端规则兜底" : "后端 AI"}</Field>
-        <Field label="置信度">{task.confidence ? `${Math.round(task.confidence * 100)}%` : "待确认"}</Field>
-        <Field label="原始时间">{task.rawDueText || "默认规划"}</Field>
-      </div>
-      <AIReasonBlock
-        reason={`推荐原因：${task.aiReason || "AI 已根据任务上下文生成建议。"}`}
-        source={task.aiBackendMode === "frontend-fallback" ? "前端规则兜底" : "后端 AI"}
-      />
-      <div className="preview-actions">
-        <button className="ghost-button" type="button" onClick={onRegenerate}>
-          重新生成
-        </button>
-        <button className="ghost-button" type="button" onClick={onEdit}>
-          切换到自定义编辑
-        </button>
-        <button className="primary-button" type="button" onClick={onUse}>
-          使用该任务
-        </button>
-      </div>
-    </article>
+    </div>
   );
 }
 

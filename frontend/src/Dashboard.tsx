@@ -36,20 +36,27 @@ export default function Dashboard({
 }: DashboardProps) {
   const visibleTasks = todayTasks.slice(0, 5);
   const completionRate = todayTasks.length ? Math.round((completedToday / todayTasks.length) * 100) : 0;
+  const openTodayTasks = todayTasks.length - completedToday;
 
   return (
     <main className="minimal-dashboard">
       <section className="minimal-hero">
         <div>
           <h1>早上好，今天也要高效完成任务！</h1>
-          <p>AI 已根据截止时间、优先级和依赖关系，为你整理好今日重点。</p>
+          <p>先处理今日截止与 AI 标记的重点任务，完成后再进入全部任务池。</p>
+          <div className="minimal-hero-meta" aria-label="今日任务状态">
+            <span>{openTodayTasks} 个待处理</span>
+            <span>{recommendedTasks.length} 条 AI 建议</span>
+            <span>{overdueCount} 个逾期</span>
+          </div>
         </div>
-        <div className="minimal-rate">
+        <div className="minimal-rate" aria-label={`今日完成率 ${completionRate}%`}>
           <span>今日完成率</span>
           <strong key={completionRate}>
             {completionRate}
             <small>%</small>
           </strong>
+          <i style={{ "--progress": `${completionRate}%` } as CSSProperties} />
         </div>
       </section>
 
