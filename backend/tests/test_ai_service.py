@@ -1,7 +1,9 @@
+import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.core.config import settings
+from app.core.errors import BusinessError
 from app.db.base import Base
 from app.models.user import User
 from app.schemas.ai import AiSuggestRequest, CreateTaskByAiRequest, ParseTaskRequest
@@ -101,3 +103,53 @@ def test_setting_service_encrypts_and_masks_openai_key():
     assert service.require_openai_api_key(user) == "sk-test-secret-1234"
     assert read_data["has_openai_api_key"] is True
     assert read_data["openai_api_key_masked"] == "sk-****1234"
+
+
+def test_parse_task_without_api_key_fails(monkeypatch):
+    """TC-AI-05: 未配 Key 且非 Mock 模式时，parse_task 返回 4001"""
+    monkeypatch.setattr(settings, "ai_mock_mode", False)
+    db = make_db()
+    user = make_user(db)
+
+    with pytest.raises(BusinessError) as exc_info:
+        AiService(db).parse_task(
+            user,
+            ParseTaskRequest(text="完成软件工程报告", timezone="Asia/Shanghai"),
+        )
+    assert exc_info.value.code == 4001
+
+
+def test_parse_task_with_empty_text_fails(client):
+    """TC-AI-06: 空文本 parse_task 返回 422"""
+    from conftest import auth_headers as _auth
+    headers = _auth(client)
+
+    response = client.post(
+        "/api/ai/parse-task",
+        headers=headers,
+        json={"text": "", "timezone": "Asia/Shanghai"},
+    )
+
+    assert response.status_code == 422
+    assert response.json()["code"] == 1001
+
+
+def test_create_task_by_ai_without_overrides_succeeds(monkeypatch):
+    """TC-AI-07: 不带 overrides 的 AI 创建任务正常"""
+    monkeypatch.setattr(settings, "ai_mock_mode", True)
+    db = make_db()
+    user = make_user(db)
+
+    result = AiService(db).create_task_by_ai(
+        user,
+        CreateTaskByAiRequest(
+            text="明天下午三点完成软件工程报告，很重要",
+            timezone="Asia/Shanghai",
+        ),
+    )
+
+    task = result["task"]
+    assert task.id is not None
+    assert task.is_ai_created is True
+    assert task.title
+    assert result["parsed_task"].priority == Priority.high

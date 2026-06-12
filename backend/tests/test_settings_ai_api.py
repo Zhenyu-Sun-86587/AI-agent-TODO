@@ -77,3 +77,46 @@ def test_ai_parse_suggest_create_and_logs_in_mock_mode(client, monkeypatch):
     response = client.get("/api/ai/logs", headers=headers, params={"status": "mocked"})
     assert response.status_code == 200
     assert response.json()["data"]["pagination"]["total"] == 3
+
+
+def test_update_model_name_only_does_not_clear_key(client):
+    """TC-SET-04: 只更新 model_name 不覆盖已保存的 Key"""
+    headers = auth_headers(client)
+
+    client.put(
+        "/api/settings",
+        headers=headers,
+        json={"openai_api_key": "sk-test-secret-1234", "model_name": "gpt-4o-mini"},
+    )
+
+    client.put(
+        "/api/settings",
+        headers=headers,
+        json={"model_name": "gpt-4-turbo"},
+    )
+
+    response = client.get("/api/settings", headers=headers)
+    data = response.json()["data"]
+    assert data["has_openai_api_key"] is True
+    assert data["openai_api_key_masked"] == "sk-****1234"
+    assert data["model_name"] == "gpt-4-turbo"
+
+
+def test_save_empty_string_as_api_key_clears_key(client):
+    """TC-SET-05: 保存空字符串 Key 时应清空已保存 Key"""
+    headers = auth_headers(client)
+
+    client.put(
+        "/api/settings",
+        headers=headers,
+        json={"openai_api_key": "sk-test-secret-1234"},
+    )
+
+    response = client.put(
+        "/api/settings",
+        headers=headers,
+        json={"openai_api_key": ""},
+    )
+    data = response.json()["data"]
+    assert data["has_openai_api_key"] is False
+    assert data["openai_api_key_masked"] is None

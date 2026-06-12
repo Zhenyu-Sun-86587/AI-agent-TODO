@@ -127,3 +127,147 @@ def test_tasks_are_isolated_by_user(client):
     response = client.get("/api/tasks", headers=bob_headers)
     assert response.status_code == 200
     assert response.json()["data"]["pagination"]["total"] == 0
+
+
+def test_create_task_with_minimal_fields_uses_defaults(client):
+    """TC-TASK-05: 仅标题创建任务，验证默认值"""
+    headers = auth_headers(client)
+
+    response = client.post(
+        "/api/tasks",
+        headers=headers,
+        json={"title": "最小字段测试任务"},
+    )
+
+    assert response.status_code == 201
+    task = response.json()["data"]
+    assert task["title"] == "最小字段测试任务"
+    assert task["priority"] == "medium"
+    assert task["status"] == "todo"
+    assert task["description"] is None
+    assert task["category"] is None
+    assert task["due_time"] is None
+    assert task["is_ai_created"] is False
+
+
+def test_create_task_with_empty_title_fails(client):
+    """TC-TASK-06: 空标题创建返回 422"""
+    headers = auth_headers(client)
+
+    response = client.post(
+        "/api/tasks",
+        headers=headers,
+        json={"title": ""},
+    )
+
+    assert response.status_code == 422
+    assert response.json()["code"] == 1001
+
+
+def test_update_nonexistent_task_fails(client):
+    """TC-TASK-07: 更新不存在的任务返回 404/3001"""
+    headers = auth_headers(client)
+
+    response = client.put(
+        "/api/tasks/99999",
+        headers=headers,
+        json={"title": "不会成功的更新"},
+    )
+
+    assert response.status_code == 404
+    assert response.json()["code"] == 3001
+
+
+def test_cannot_update_other_users_task(client):
+    """TC-TASK-08: 用户 A 无法更新用户 B 的任务"""
+    alice_headers = auth_headers(client, username="alice", email="alice@example.com")
+    task_id = client.post(
+        "/api/tasks",
+        headers=alice_headers,
+        json={"title": "Alice task"},
+    ).json()["data"]["id"]
+
+    bob_headers = auth_headers(client, username="bob", email="bob@example.com")
+    response = client.put(
+        f"/api/tasks/{task_id}",
+        headers=bob_headers,
+        json={"title": "Bob trying to edit"},
+    )
+
+    assert response.status_code == 404
+    assert response.json()["code"] == 3001
+
+
+def test_filter_tasks_by_due_time_range(client):
+    """TC-TASK-09: due_from/due_to 范围筛选任务"""
+    headers = auth_headers(client)
+    from datetime import datetime, timedelta, timezone
+
+    base = datetime.now(timezone.utc)
+    yesterday = (base - timedelta(days=1)).isoformat()
+    next_week = (base + timedelta(days=7)).isoformat()
+    next_month = (base + timedelta(days=30)).isoformat()
+
+    client.post(
+        "/api/tasks",
+        headers=headers,
+        json={"title": "上周截止", "due_time": yesterday},
+    )
+    client.post(
+        "/api/tasks",
+        headers=headers,
+        json={"title": "下周截止", "due_time": next_week},
+    )
+    client.post(
+        "/api/tasks",
+        headers=headers,
+        json={"title": "下月截止", "due_time": next_month},
+    )
+
+    # 筛选 between 今天 → 两周后
+    today = base.isoformat()
+    two_weeks = (base + timedelta(days=14)).isoformat()
+    response = client.get(
+        "/api/tasks",
+        headers=headers,
+        params={"due_from": today, "due_to": two_weeks},
+    )
+    items = response.json()["data"]["items"]
+    titles = {t["title"] for t in items}
+    assert "下周截止" in titles
+    assert "上周截止" not in titles
+    assert "下月截止" not in titles
+
+
+def test_pagination_boundaries(client):
+    """TC-TASK-10: 分页边界场景"""
+    headers = auth_headers(client)
+
+    for i in range(5):
+        client.post(
+            "/api/tasks",
+            headers=headers,
+            json={"title": f"分页测试任务 #{i+1}"},
+        )
+
+    # page=1, page_size=2 应返回 2 条 + total_pages=3
+    response = client.get(
+        "/api/tasks",
+        headers=headers,
+        params={"page": 1, "page_size": 2},
+    )
+    pag = response.json()["data"]["pagination"]
+    assert pag["page"] == 1
+    assert pag["page_size"] == 2
+    assert pag["total"] == 5
+    assert pag["total_pages"] == 3
+    assert len(response.json()["data"]["items"]) == 2
+
+    # page=3 应返回最后 1 条
+    response = client.get(
+        "/api/tasks",
+        headers=headers,
+        params={"page": 3, "page_size": 2},
+    )
+    assert response.json()["data"]["pagination"]["total_pages"] == 3
+    assert len(response.json()["data"]["items"]) == 1
