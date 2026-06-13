@@ -183,7 +183,11 @@ function createSmoothTicks(maxValue: number, segments = 5) {
   const normalized = roughStep / magnitude;
   const step = normalized <= 1 ? magnitude : normalized <= 2 ? 2 * magnitude : normalized <= 5 ? 5 * magnitude : 10 * magnitude;
   const top = Math.max(step, Math.ceil(safeMax / step) * step);
-  return Array.from({ length: segments + 1 }, (_, index) => top - index * step);
+  const ticks: number[] = [];
+  for (let tick = top; tick >= 0; tick -= step) {
+    ticks.push(tick);
+  }
+  return ticks[ticks.length - 1] === 0 ? ticks : [...ticks, 0];
 }
 
 type StatsRangeKey = "currentWeek" | "lastWeek" | "currentMonth" | "lastMonth";
@@ -306,23 +310,18 @@ function TrendLineChart({
   selectValue: StatsRangeKey;
   onSelectChange: (value: StatsRangeKey) => void;
 }) {
-  const width = 960;
-  const height = 282;
-  const padding = { top: 14, right: 18, bottom: 44, left: 38 };
-  const chartWidth = width - padding.left - padding.right;
-  const chartHeight = height - padding.top - padding.bottom;
+  const width = 1000;
+  const height = 220;
   const ticks = createSmoothTicks(Math.max(1, ...trend.map((item) => Math.max(item.created, item.done))));
   const maxValue = ticks[0] || 1;
-  const xStep = trend.length > 1 ? chartWidth / (trend.length - 1) : chartWidth;
-  const createdPoints = trend.map((item, index) => ({ x: padding.left + index * xStep, y: padding.top + (1 - item.created / maxValue) * chartHeight }));
-  const donePoints = trend.map((item, index) => ({ x: padding.left + index * xStep, y: padding.top + (1 - item.done / maxValue) * chartHeight }));
-  const baseline = padding.top + chartHeight;
+  const xStep = trend.length > 1 ? width / (trend.length - 1) : width;
+  const createdPoints = trend.map((item, index) => ({ x: index * xStep, y: (1 - item.created / maxValue) * height }));
+  const donePoints = trend.map((item, index) => ({ x: index * xStep, y: (1 - item.done / maxValue) * height }));
   return (
     <div className="trend-chart-shell">
       <div className="trend-chart-header">
         <div className="trend-chart-copy">
           <h2>{title}</h2>
-          <p>{subtitle}</p>
         </div>
         <label className="trend-range-select">
           <select value={selectValue} onChange={(event) => onSelectChange(event.target.value as StatsRangeKey)} aria-label="选择统计周期">
@@ -333,38 +332,42 @@ function TrendLineChart({
           </select>
         </label>
       </div>
-      <svg className="trend-chart-svg" viewBox={`0 0 ${width} ${height}`} role="img" aria-label={title}>
-        <defs>
-          <linearGradient id="trendCreatedFill" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stopColor="rgba(115, 154, 255, 0.42)" />
-            <stop offset="100%" stopColor="rgba(115, 154, 255, 0.02)" />
-          </linearGradient>
-          <linearGradient id="trendDoneFill" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stopColor="rgba(92, 211, 160, 0.32)" />
-            <stop offset="100%" stopColor="rgba(92, 211, 160, 0.02)" />
-          </linearGradient>
-        </defs>
-        {ticks.map((tick) => {
-          const y = padding.top + (1 - tick / maxValue) * chartHeight;
-          return (
-            <g key={tick}>
-              <line className="chart-grid-line" x1={padding.left} x2={width - padding.right} y1={y} y2={y} />
-              <text className="chart-axis-label" x={padding.left - 10} y={y + 4} textAnchor="end">{tick}</text>
+      <div className="trend-chart-body" role="img" aria-label={title}>
+        <div className="trend-y-axis" aria-hidden="true">
+          {ticks.map((tick) => (
+            <span key={tick} style={{ top: `${(1 - tick / maxValue) * 100}%` }}>{tick}</span>
+          ))}
+        </div>
+        <svg className="trend-chart-svg" viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" aria-hidden="true">
+          <defs>
+            <linearGradient id="trendCreatedFill" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%" stopColor="rgba(115, 154, 255, 0.42)" />
+              <stop offset="100%" stopColor="rgba(115, 154, 255, 0.02)" />
+            </linearGradient>
+            <linearGradient id="trendDoneFill" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%" stopColor="rgba(92, 211, 160, 0.32)" />
+              <stop offset="100%" stopColor="rgba(92, 211, 160, 0.02)" />
+            </linearGradient>
+          </defs>
+          {ticks.map((tick) => {
+            const y = (1 - tick / maxValue) * height;
+            return <line key={tick} className="chart-grid-line" x1={0} x2={width} y1={y} y2={y} />;
+          })}
+          <path d={createAreaPath(createdPoints, height)} fill="url(#trendCreatedFill)" />
+          <path d={createAreaPath(donePoints, height)} fill="url(#trendDoneFill)" />
+          <path className="chart-line line-created" d={createLinePath(createdPoints)} />
+          <path className="chart-line line-done" d={createLinePath(donePoints)} />
+          {createdPoints.map((point, index) => (
+            <g key={trend[index].label}>
+              <circle className="chart-point point-created" cx={point.x} cy={point.y} r="4.5" />
+              <circle className="chart-point point-done" cx={donePoints[index].x} cy={donePoints[index].y} r="4.5" />
             </g>
-          );
-        })}
-        <path d={createAreaPath(createdPoints, baseline)} fill="url(#trendCreatedFill)" />
-        <path d={createAreaPath(donePoints, baseline)} fill="url(#trendDoneFill)" />
-        <path className="chart-line line-created" d={createLinePath(createdPoints)} />
-        <path className="chart-line line-done" d={createLinePath(donePoints)} />
-        {createdPoints.map((point, index) => (
-          <g key={trend[index].label}>
-            <circle className="chart-point point-created" cx={point.x} cy={point.y} r="4.5" />
-            <circle className="chart-point point-done" cx={donePoints[index].x} cy={donePoints[index].y} r="4.5" />
-            <text className="chart-axis-label" x={point.x} y={height - 22} textAnchor="middle">{trend[index].label}</text>
-          </g>
-        ))}
-      </svg>
+          ))}
+        </svg>
+        <div className="trend-x-axis" aria-hidden="true">
+          {trend.map((item) => <span key={item.label}>{item.label}</span>)}
+        </div>
+      </div>
       <div className="chart-legend">
         <span><i className="legend-dot created" />新增任务</span>
         <span><i className="legend-dot done" />完成任务</span>
@@ -377,15 +380,19 @@ function DistributionBarChart({
   title,
   subtitle,
   items,
+  variant = "default",
 }: {
   title: string;
   subtitle: string;
   items: Array<{ label: string; value: number; accentClass?: string }>;
+  variant?: "default" | "category";
 }) {
   const maxValue = Math.max(1, ...items.map((item) => item.value));
   const ticks = createSmoothTicks(maxValue, 4);
+  const axisTicks = ticks.slice().reverse();
+  const axisMax = Math.max(1, axisTicks[axisTicks.length - 1] ?? maxValue);
   return (
-    <div className="content-card distribution-card">
+    <div className={`content-card distribution-card distribution-card-${variant}`}>
       <div className="section-title stats-section-title">
         <div>
           <h2>{title}</h2>
@@ -393,24 +400,26 @@ function DistributionBarChart({
         </div>
       </div>
       <div className="distribution-chart">
-        <div className="distribution-grid">
-          {ticks.slice(1).map((tick) => (
-            <span key={tick} className="distribution-grid-line" style={{ left: `${(tick / ticks[0]) * 100}%` }} />
+        <div className="distribution-bars">
+          <div className="distribution-grid">
+            {axisTicks.slice(1).map((tick) => (
+              <span key={tick} className="distribution-grid-line" style={{ left: `${(tick / axisMax) * 100}%` }} />
+            ))}
+          </div>
+          {items.map((item) => (
+            <div className="distribution-row" key={item.label}>
+              <span className="distribution-label">{item.label}</span>
+              <div className="distribution-bar-shell">
+                <i className={`distribution-bar ${item.accentClass || ""}`} style={{ width: `${Math.max((item.value / axisMax) * 100, item.value > 0 ? 10 : 0)}%` }} />
+              </div>
+              <strong className="distribution-value">{item.value}</strong>
+            </div>
           ))}
         </div>
-        {items.map((item) => (
-          <div className="distribution-row" key={item.label}>
-            <span className="distribution-label">{item.label}</span>
-            <div className="distribution-bar-shell">
-              <i className={`distribution-bar ${item.accentClass || ""}`} style={{ width: `${Math.max((item.value / maxValue) * 100, item.value > 0 ? 10 : 0)}%` }} />
-            </div>
-            <strong className="distribution-value">{item.value}</strong>
-          </div>
-        ))}
         <div className="distribution-axis">
           <span />
           <div className="distribution-axis-track">
-            {ticks.slice().reverse().map((tick) => <span key={tick}>{tick}</span>)}
+            {axisTicks.map((tick) => <span key={tick}>{tick}</span>)}
           </div>
           <span />
         </div>
@@ -611,7 +620,7 @@ function StatsPage({
   }, [isApiMode, onApiError, range, rangeConfig.apiDays, rangeConfig.endDate, rangeConfig.startDate, taskVersion, token]);
 
   return (
-    <main className="page-content">
+    <main className="page-content stats-page-content">
       {isRemoteLoading && <p className="table-state">正在同步统计范围...</p>}
       {remoteError && <p className="form-error">{remoteError}</p>}
       <section className="stats-grid stats-grid-wide">
@@ -627,7 +636,7 @@ function StatsPage({
         <section className="stats-panels">
           <div className="content-card chart-card"><TrendLineChart title={rangeConfig.title} subtitle={rangeConfig.subtitle} trend={visibleTrend} selectValue={range} onSelectChange={setRange} /></div>
           <div className="stats-distribution-row">
-            <DistributionBarChart title="分类分布" subtitle="不同任务类型的数量占比" items={visibleCategoryStats.map((item, index) => ({ label: item.category, value: item.total, accentClass: `bar-cat-${index % 5}` }))} />
+            <DistributionBarChart title="分类分布" subtitle="不同任务类型的数量占比" variant="category" items={visibleCategoryStats.slice(0, 4).map((item, index) => ({ label: item.category, value: item.total, accentClass: `bar-cat-${index % 5}` }))} />
             <DistributionBarChart title="优先级分布" subtitle="高、中、低优先级任务数量" items={visiblePriorityStats.map((item) => ({ label: priorityLabel(item.priority), value: item.total, accentClass: `bar-${item.priority}` }))} />
           </div>
         </section>

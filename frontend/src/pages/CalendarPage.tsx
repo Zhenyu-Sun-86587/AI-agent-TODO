@@ -4,11 +4,12 @@ import { fetchTasksPage } from "../api/tasks";
 import type { CalendarView } from "../app/types/common";
 import { EmptyState, formatDue, PriorityBadge } from "../features/tasks/components/TaskDisplay";
 import type { Task } from "../features/tasks/types";
-import { dateFromToday, formatLocalDate, getMonthEnd, getMonthStart } from "../lib/date";
+import { dateFromToday, formatLocalDate, getMonthEnd, getMonthStart, getWeekStart } from "../lib/date";
 import PageHeading from "./PageHeading";
 
 const weekLabels = ["日", "一", "二", "三", "四", "五", "六"];
 const calendarTaskRowLimit = 4;
+const priorityRank = { 高: 0, 中: 1, 低: 2 };
 
 function isToday(date: string) {
   return Boolean(date) && date === dateFromToday(0);
@@ -16,6 +17,10 @@ function isToday(date: string) {
 
 function isOverdue(task: Task) {
   return task.status !== "已完成" && Boolean(task.dueDate) && task.dueDate < dateFromToday(0);
+}
+
+function isDateInRange(date: string, start: string, end: string) {
+  return Boolean(date) && date >= start && date <= end;
 }
 
 function parseHour(time: string) {
@@ -51,12 +56,28 @@ function buildCalendarDays(baseDate: Date) {
   }));
 }
 
-function getDateRangeForView(view: CalendarView, days: Array<{ date: string }>) {
+function buildWeekDays(baseDate: Date) {
+  return buildDateKeys(getWeekStart(baseDate), 7).map((date) => {
+    const value = new Date(`${date}T00:00:00`);
+    return {
+      date,
+      dayNumber: value.getDate(),
+      isToday: isToday(date),
+      monthNumber: value.getMonth() + 1,
+      weekday: weekLabels[value.getDay()],
+    };
+  });
+}
+
+function getDateRangeForView(view: CalendarView, monthDays: Array<{ date: string }>, weekDays: Array<{ date: string }>) {
   if (view === "24h") {
     return { start: dateFromToday(0), end: dateFromToday(0) };
   }
-  if (view === "week" || view === "month") {
-    return { start: days[0]?.date || dateFromToday(0), end: days[days.length - 1]?.date || dateFromToday(0) };
+  if (view === "week") {
+    return { start: weekDays[0]?.date || dateFromToday(0), end: weekDays[weekDays.length - 1]?.date || dateFromToday(0) };
+  }
+  if (view === "month") {
+    return { start: monthDays[0]?.date || dateFromToday(0), end: monthDays[monthDays.length - 1]?.date || dateFromToday(0) };
   }
   return { start: dateFromToday(0), end: dateFromToday(0) };
 }
@@ -104,6 +125,58 @@ function buildTaskBarsForWeek(weekDays: ReturnType<typeof buildCalendarDays>, ta
     });
 }
 
+function buildWeekTasksByDate(weekDays: ReturnType<typeof buildWeekDays>, tasks: Task[]) {
+  const tasksByDate = new Map(weekDays.map((day) => [day.date, [] as Task[]]));
+
+  tasks
+    .filter((task) => tasksByDate.has(task.dueDate))
+    .sort((left, right) => {
+      const leftTime = left.dueTime || "99:99";
+      const rightTime = right.dueTime || "99:99";
+      return `${left.dueDate} ${leftTime} ${left.title}`.localeCompare(`${right.dueDate} ${rightTime} ${right.title}`);
+    })
+    .forEach((task) => {
+      tasksByDate.get(task.dueDate)?.push(task);
+    });
+
+  return tasksByDate;
+}
+
+function sortByPriorityThenDue(left: Task, right: Task) {
+  const priorityDiff = priorityRank[left.priority] - priorityRank[right.priority];
+  if (priorityDiff !== 0) {
+    return priorityDiff;
+  }
+  return `${left.dueDate} ${left.title}`.localeCompare(`${right.dueDate} ${right.title}`);
+}
+
+function formatWeekRangeTitle(weekDays: ReturnType<typeof buildWeekDays>) {
+  const firstDay = weekDays[0];
+  const lastDay = weekDays[weekDays.length - 1];
+  if (!firstDay || !lastDay) {
+    return "本周";
+  }
+
+  const first = new Date(`${firstDay.date}T00:00:00`);
+  const last = new Date(`${lastDay.date}T00:00:00`);
+  const firstMonth = String(first.getMonth() + 1).padStart(2, "0");
+  const firstDate = String(first.getDate()).padStart(2, "0");
+  const lastMonth = String(last.getMonth() + 1).padStart(2, "0");
+  const lastDate = String(last.getDate()).padStart(2, "0");
+
+  if (first.getFullYear() === last.getFullYear() && first.getMonth() === last.getMonth()) {
+    return `${first.getFullYear()}年${firstMonth}月${firstDate}日 - ${lastDate}日`;
+  }
+  if (first.getFullYear() === last.getFullYear()) {
+    return `${first.getFullYear()}年${firstMonth}月${firstDate}日 - ${lastMonth}月${lastDate}日`;
+  }
+  return `${first.getFullYear()}年${firstMonth}月${firstDate}日 - ${last.getFullYear()}年${lastMonth}月${lastDate}日`;
+}
+
+function formatDateTitle(date: Date) {
+  return `${date.getFullYear()}年${String(date.getMonth() + 1).padStart(2, "0")}月${String(date.getDate()).padStart(2, "0")}日`;
+}
+
 export default function CalendarPage({
   isApiMode,
   onApiError,
@@ -126,18 +199,49 @@ export default function CalendarPage({
   const [isRemoteLoading, setRemoteLoading] = useState(false);
   const timelineRef = useRef<HTMLDivElement | null>(null);
   const days = useMemo(() => buildCalendarDays(baseDate), [baseDate]);
-  const dateRange = useMemo(() => getDateRangeForView(view, days), [days, view]);
+  const weekDays = useMemo(() => buildWeekDays(baseDate), [baseDate]);
+  const dateRange = useMemo(() => getDateRangeForView(view, days, weekDays), [days, view, weekDays]);
   const calendarWeeks = useMemo(() => chunkCalendarWeeks(days), [days]);
   const calendarTasks = isApiMode ? remoteTasks : tasks;
+  const weekTasksByDate = useMemo(() => buildWeekTasksByDate(weekDays, calendarTasks), [calendarTasks, weekDays]);
   const todayTimedTasks = calendarTasks.filter((task) => isToday(task.dueDate) && Boolean(task.dueTime));
-  const todayUntimedTasks = calendarTasks.filter((task) => isToday(task.dueDate) && !task.dueTime);
-  const unscheduledTasks = tasks.filter((task) => !task.dueDate);
   const overdueTasks = calendarTasks.filter(isOverdue).sort((left, right) => left.dueDate.localeCompare(right.dueDate));
+  const pendingScheduleTasks = calendarTasks
+    .filter((task) => {
+      if (!task.dueDate || task.dueTime || task.status === "已完成") {
+        return false;
+      }
+      if (view === "overdue") {
+        return isOverdue(task);
+      }
+      return isDateInRange(task.dueDate, dateRange.start, dateRange.end);
+    })
+    .sort(sortByPriorityThenDue);
   const currentHour = new Date().getHours();
-  const calendarTitle = `${baseDate.getFullYear()}年${String(baseDate.getMonth() + 1).padStart(2, "0")}月`;
+  const calendarTitle = view === "week"
+    ? formatWeekRangeTitle(weekDays)
+    : view === "24h"
+      ? formatDateTitle(baseDate)
+      : `${baseDate.getFullYear()}年${String(baseDate.getMonth() + 1).padStart(2, "0")}月`;
 
   function moveMonth(offset: number) {
     setBaseDate((current) => new Date(current.getFullYear(), current.getMonth() + offset, 1));
+  }
+
+  function moveWeek(offset: number) {
+    setBaseDate((current) => {
+      const next = new Date(current);
+      next.setDate(current.getDate() + offset * 7);
+      return next;
+    });
+  }
+
+  function moveDay(offset: number) {
+    setBaseDate((current) => {
+      const next = new Date(current);
+      next.setDate(current.getDate() + offset);
+      return next;
+    });
   }
 
   function jumpToToday() {
@@ -204,10 +308,24 @@ export default function CalendarPage({
         <div className="calendar-main-panel">
           <div className="calendar-toolbar">
             <PageHeading title="日历视图" />
-            <div className="calendar-month-actions" aria-label="月份切换">
+            <div className="calendar-month-actions" aria-label={view === "week" ? "周切换" : view === "24h" ? "日期切换" : "月份切换"}>
               <button type="button" onClick={jumpToToday}>今天</button>
-              <button type="button" onClick={() => moveMonth(-1)}>上个月</button>
-              <button type="button" onClick={() => moveMonth(1)}>下个月</button>
+              {view === "week" ? (
+                <>
+                  <button type="button" onClick={() => moveWeek(-1)}>上一周</button>
+                  <button type="button" onClick={() => moveWeek(1)}>下一周</button>
+                </>
+              ) : view === "24h" ? (
+                <>
+                  <button type="button" onClick={() => moveDay(-1)}>上一天</button>
+                  <button type="button" onClick={() => moveDay(1)}>下一天</button>
+                </>
+              ) : (
+                <>
+                  <button type="button" onClick={() => moveMonth(-1)}>上个月</button>
+                  <button type="button" onClick={() => moveMonth(1)}>下个月</button>
+                </>
+              )}
             </div>
           </div>
           <div className="calendar-subtoolbar">
@@ -229,7 +347,7 @@ export default function CalendarPage({
           {remoteError && <p className="form-error">{remoteError}</p>}
 
           {view === "24h" ? (
-            <section className="timeline-layout">
+            <section className="calendar-view-slot timeline-layout">
               <div className="today-timeline" ref={timelineRef}>
                 {Array.from({ length: 24 }, (_, hour) => {
                   const hourTasks = todayTimedTasks.filter((task) => parseHour(task.dueTime) === hour);
@@ -254,7 +372,7 @@ export default function CalendarPage({
               </div>
             </section>
           ) : view === "overdue" ? (
-            <section className="content-card overdue-list">
+            <section className="calendar-view-slot content-card overdue-list">
               {overdueTasks.length ? (
                 overdueTasks.map((task) => (
                   <button key={task.id} type="button" onClick={() => onOpenTask(task)}>
@@ -269,8 +387,45 @@ export default function CalendarPage({
                 <EmptyState title="没有逾期任务" description="当前所有未完成任务都还在截止时间内。" />
               )}
             </section>
+          ) : view === "week" ? (
+            <section className="calendar-view-slot calendar-week-agenda" aria-label="本周任务">
+              <div className="calendar-week-list">
+                {weekDays.map((day) => {
+                  const dayTasks = weekTasksByDate.get(day.date) ?? [];
+                  return (
+                    <article className={`calendar-week-day ${day.isToday ? "today" : ""}`} key={day.date}>
+                      <header className="calendar-week-day-header">
+                        <div>
+                          <span>周{day.weekday}</span>
+                          <strong>{day.monthNumber}月{day.dayNumber}日</strong>
+                        </div>
+                        <small>{dayTasks.length} 项</small>
+                      </header>
+                      <div className="calendar-week-task-list">
+                        {dayTasks.length ? (
+                          dayTasks.map((task) => (
+                            <button
+                              className={`calendar-week-task calendar-week-task-${getTaskTone(task)}`}
+                              key={task.id}
+                              title={formatDue(task)}
+                              type="button"
+                              onClick={() => onOpenTask(task)}
+                            >
+                              <span className="calendar-week-task-time">{task.dueTime || "未设时段"}</span>
+                              <strong>{task.title}</strong>
+                            </button>
+                          ))
+                        ) : (
+                          <p className="calendar-week-empty">暂无截止任务</p>
+                        )}
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            </section>
           ) : (
-            <div className="calendar-wrapper">
+            <div className="calendar-view-slot calendar-wrapper">
               <div className="calendar-header-row" aria-hidden="true">
                 {weekLabels.map((label) => (
                   <span className="calendar-header-cell" key={label}>{label}</span>
@@ -316,36 +471,21 @@ export default function CalendarPage({
           )}
         </div>
         <aside className="calendar-pending-panel">
-          <h2>{view === "24h" ? "今日未设时段 / 无截止日期任务" : "待排程任务 / 无截止日期任务"}</h2>
+          <h2>待排程任务</h2>
           <div className="calendar-pending-list">
-            {view === "24h" ? (
-              <>
-                {todayUntimedTasks.length ? (
-                  todayUntimedTasks.map((task) => (
-                    <button key={task.id} type="button" onClick={() => onOpenTask(task)}>
-                      {task.title}
-                    </button>
-                  ))
-                ) : (
-                  <EmptyState title="没有未设时段任务" description="带具体时间的今日任务会被放进左侧时间轴。" />
-                )}
-                {unscheduledTasks.length ? (
-                  unscheduledTasks.map((task) => (
-                    <button key={task.id} type="button" onClick={() => onOpenTask(task)}>
-                      {task.title}
-                    </button>
-                  ))
-                ) : null}
-              </>
-            ) : unscheduledTasks.length ? (
-              unscheduledTasks.map((task) => (
+            {pendingScheduleTasks.length ? (
+              pendingScheduleTasks.map((task) => (
                 <button key={task.id} type="button" onClick={() => onOpenTask(task)}>
-                  {task.title}
+                  <span>
+                    <strong>{task.title}</strong>
+                    <small>{task.dueDate}</small>
+                  </span>
+                  <PriorityBadge priority={task.priority} />
                 </button>
               ))
             ) : (
-              <EmptyState title="没有待排程任务" description="无截止日期任务会显示在这里。" />
-              )}
+              <EmptyState title="没有未设时段任务" description="带具体时间的今日任务会被放进左侧时间轴。" />
+            )}
           </div>
         </aside>
       </section>

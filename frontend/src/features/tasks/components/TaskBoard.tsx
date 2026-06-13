@@ -3,6 +3,7 @@ import { MoreHorizontal, Plus, Search } from "lucide-react";
 import type { Task, TaskPriority, TaskStatus } from "../types";
 import { EmptyState } from "./TaskDisplay";
 import { KanbanTaskCard } from "./TaskCard";
+import { SelectField } from "./TaskFilters";
 
 const statusOptions: TaskStatus[] = ["待办", "进行中", "已完成"];
 const apiStatusOptions: TaskStatus[] = ["待办", "已完成"];
@@ -24,8 +25,8 @@ export function TaskBoard({ categories, isApiMode, onCreateTask, onOpenTask, tas
     <main className="page-content">
       <div className="board-toolbar">
         <label className="filter-search"><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索任务" /></label>
-        <select value={priority} onChange={(event) => setPriority(event.target.value as TaskPriority | "全部")}><option value="全部">全部优先级</option>{priorityOptions.map((item) => <option key={item} value={item}>{item}</option>)}</select>
-        <select value={category} onChange={(event) => setCategory(event.target.value)}><option value="全部">全部分类</option>{categories.map((item) => <option key={item} value={item}>{item}</option>)}</select>
+        <SelectField value={priority} onChange={(value) => setPriority(value as TaskPriority | "全部")}><option value="全部">全部优先级</option>{priorityOptions.map((item) => <option key={item} value={item}>{item}</option>)}</SelectField>
+        <SelectField value={category} onChange={setCategory}><option value="全部">全部分类</option>{categories.map((item) => <option key={item} value={item}>{item}</option>)}</SelectField>
         <button className="primary-button" type="button" onClick={onCreateTask}><Plus size={17} />新建任务</button>
       </div>
       <div className="kanban-board">

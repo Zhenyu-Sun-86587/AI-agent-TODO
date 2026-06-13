@@ -4,7 +4,7 @@ import type { TaskPriority, TaskStatus } from "../types";
 
 const priorityOptions: TaskPriority[] = ["高", "中", "低"];
 
-function SelectField({
+export function SelectField({
   children,
   value,
   onChange,
