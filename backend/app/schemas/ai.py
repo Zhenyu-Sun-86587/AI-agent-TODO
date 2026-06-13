@@ -44,6 +44,21 @@ class AiSuggestResponse(BaseModel):
     reason: Optional[str] = None
 
 
+class AiChatMessage(BaseModel):
+    role: str = Field(pattern="^(user|assistant|system)$")
+    content: str = Field(min_length=1, max_length=4000)
+
+
+class AiChatRequest(BaseModel):
+    model_name: Optional[str] = Field(default=None, max_length=100)
+    messages: list[AiChatMessage] = Field(min_length=1, max_length=30)
+
+
+class AiChatResponse(BaseModel):
+    content: str
+    model_name: str
+
+
 class AiLogRead(BaseModel):
     id: int
     input_text: str

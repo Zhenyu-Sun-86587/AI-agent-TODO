@@ -1,5 +1,5 @@
 from functools import lru_cache
-from typing import List
+from typing import List, Optional
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -20,7 +20,13 @@ class Settings(BaseSettings):
 
     api_key_encryption_secret: str = "please-change-this-secret"
 
+    openai_api_key: Optional[str] = None
     openai_default_model: str = "gpt-4o-mini"
+    openai_base_url: str = "https://api.openai.com/v1"
+    deepseek_base_url: str = "https://api.deepseek.com"
+    deepseek_resolve_with_doh: bool = True
+    deepseek_doh_url: str = "https://cloudflare-dns.com/dns-query"
+    deepseek_force_resolve_ip: Optional[str] = None
     ai_mock_mode: bool = False
 
     model_config = SettingsConfigDict(

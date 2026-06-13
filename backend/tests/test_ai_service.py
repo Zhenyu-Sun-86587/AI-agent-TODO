@@ -4,7 +4,7 @@ from sqlalchemy.orm import sessionmaker
 from app.core.config import settings
 from app.db.base import Base
 from app.models.user import User
-from app.schemas.ai import AiSuggestRequest, CreateTaskByAiRequest, ParseTaskRequest
+from app.schemas.ai import AiChatMessage, AiSuggestRequest, CreateTaskByAiRequest, ParseTaskRequest
 from app.schemas.task import Priority
 from app.services.ai_service import AiService
 from app.services.setting_service import SettingService
@@ -101,3 +101,44 @@ def test_setting_service_encrypts_and_masks_openai_key():
     assert service.require_openai_api_key(user) == "sk-test-secret-1234"
     assert read_data["has_openai_api_key"] is True
     assert read_data["openai_api_key_masked"] == "sk-****1234"
+
+
+def test_ai_service_uses_deepseek_base_url_for_deepseek_models():
+    db = make_db()
+    service = AiService(db)
+
+    assert str(service._base_url_for_model("deepseek-v4-pro")) == settings.deepseek_base_url
+    assert str(service._base_url_for_model("gpt-4o-mini")) == settings.openai_base_url
+
+
+def test_setting_service_uses_env_api_key_fallback(monkeypatch):
+    monkeypatch.setattr(settings, "openai_api_key", "sk-env-secret-5678")
+    db = make_db()
+    user = make_user(db)
+    service = SettingService(db)
+
+    read_data = service.to_read(service.get_or_create(user))
+
+    assert service.require_openai_api_key(user) == "sk-env-secret-5678"
+    assert read_data["has_openai_api_key"] is True
+    assert read_data["openai_api_key_masked"] == "sk-****5678"
+
+
+def test_chat_uses_requested_model_and_returns_content(monkeypatch):
+    monkeypatch.setattr(settings, "openai_api_key", "sk-env-secret-5678")
+    db = make_db()
+    user = make_user(db)
+    service = AiService(db)
+
+    def fake_call_chat_model(api_key, model_name, messages):
+        assert api_key == "sk-env-secret-5678"
+        assert model_name == "deepseek-v4-pro"
+        assert messages[0].content == "test"
+        return "pong"
+
+    monkeypatch.setattr(service, "_call_chat_model", fake_call_chat_model)
+
+    response = service.chat(user, [AiChatMessage(role="user", content="test")], "deepseek-v4-pro")
+
+    assert response.content == "pong"
+    assert response.model_name == "deepseek-v4-pro"

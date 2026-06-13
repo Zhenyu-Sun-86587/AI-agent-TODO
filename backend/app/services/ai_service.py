@@ -1,12 +1,16 @@
 import json
 import re
+import socket
 import time
+import urllib.parse
+import urllib.request
+from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Callable, Optional, TypeVar
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from openai import OpenAI, OpenAIError, AuthenticationError, PermissionDeniedError
+from openai import APIConnectionError, OpenAI, OpenAIError, AuthenticationError, PermissionDeniedError
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
@@ -14,13 +18,33 @@ from app.core.config import settings
 from app.core.errors import BusinessError, ErrorCode
 from app.models.ai_call_log import AiCallLog
 from app.models.user import User
-from app.schemas.ai import AiParsedTask, AiSuggestResponse, CreateTaskByAiRequest, ParseTaskRequest
+from app.schemas.ai import AiChatMessage, AiChatResponse, AiParsedTask, AiSuggestResponse, CreateTaskByAiRequest, ParseTaskRequest
 from app.schemas.task import AiStatus, Priority, TaskCreate
 from app.services.setting_service import SettingService
 from app.services.task_service import TaskService
 from app.utils.datetime import utc_now
 
 PROMPT_PATH = Path(__file__).resolve().parents[1] / "prompts" / "parse_task.md"
+DEEPSEEK_MODEL_PREFIX = "deepseek-"
+DEEPSEEK_DNS_CACHE_TTL_SECONDS = 300
+_DEEPSEEK_DNS_CACHE: tuple[str, float] | None = None
+T = TypeVar("T")
+
+
+@contextmanager
+def _override_hostname_resolution(hostname: str, ip_address: str):
+    original_getaddrinfo = socket.getaddrinfo
+
+    def patched_getaddrinfo(host, port, family=0, type=0, proto=0, flags=0):
+        if host == hostname:
+            return original_getaddrinfo(ip_address, port, family, type, proto, flags)
+        return original_getaddrinfo(host, port, family, type, proto, flags)
+
+    socket.getaddrinfo = patched_getaddrinfo
+    try:
+        yield
+    finally:
+        socket.getaddrinfo = original_getaddrinfo
 
 
 class AiService:
@@ -154,6 +178,48 @@ class AiService:
         )
         return items, total
 
+    def chat(self, user: User, messages: list[AiChatMessage], model_name: Optional[str] = None) -> AiChatResponse:
+        resolved_model_name = model_name or self.setting_service.get_model_name(user)
+        api_key = self.setting_service.require_openai_api_key(user)
+        try:
+            content = self._call_chat_model(api_key, resolved_model_name, messages)
+        except (AuthenticationError, PermissionDeniedError) as exc:
+            raise BusinessError(
+                ErrorCode.OPENAI_KEY_INVALID,
+                "OpenAI API Key 无效或无权限访问该模型",
+                status_code=401,
+                data={"valid": False},
+            ) from exc
+        except APIConnectionError as exc:
+            raise BusinessError(
+                ErrorCode.AI_PARSE_FAILED,
+                "AI 服务连接失败，请检查网络或稍后重试",
+                status_code=502,
+            ) from exc
+        except (OpenAIError, ValueError) as exc:
+            raise BusinessError(
+                ErrorCode.AI_PARSE_FAILED,
+                "AI 聊天请求失败，请稍后重试",
+                status_code=502,
+            ) from exc
+
+        return AiChatResponse(content=content, model_name=resolved_model_name)
+
+    def _call_chat_model(self, api_key: str, model_name: str, messages: list[AiChatMessage]) -> str:
+        client = self._client_for_model(api_key, model_name)
+        response = self._run_with_model_dns(
+            model_name,
+            lambda: client.chat.completions.create(
+                model=model_name,
+                messages=[message.model_dump() for message in messages],
+                temperature=0.7,
+            ),
+        )
+        content = response.choices[0].message.content
+        if not content:
+            raise ValueError("AI provider returned empty content")
+        return content
+
     def _call_parse_model(self, api_key: str, model_name: str, payload: ParseTaskRequest) -> str:
         prompt = (
             PROMPT_PATH.read_text(encoding="utf-8")
@@ -161,19 +227,22 @@ class AiService:
             .replace("{now}", self._now_for_timezone(payload.timezone).isoformat())
             .replace("{text}", payload.text)
         )
-        client = OpenAI(api_key=api_key)
-        response = client.chat.completions.create(
-            model=model_name,
-            messages=[
-                {"role": "system", "content": "你是严谨的任务解析 Agent，只输出合法 JSON。"},
-                {"role": "user", "content": prompt},
-            ],
-            temperature=0.1,
-            response_format={"type": "json_object"},
+        client = self._client_for_model(api_key, model_name)
+        response = self._run_with_model_dns(
+            model_name,
+            lambda: client.chat.completions.create(
+                model=model_name,
+                messages=[
+                    {"role": "system", "content": "你是严谨的任务解析 Agent，只输出合法 JSON。"},
+                    {"role": "user", "content": prompt},
+                ],
+                temperature=0.1,
+                response_format={"type": "json_object"},
+            ),
         )
         content = response.choices[0].message.content
         if not content:
-            raise ValueError("OpenAI returned empty content")
+            raise ValueError("AI provider returned empty content")
         return content
 
     def _call_suggest_model(
@@ -183,25 +252,28 @@ class AiService:
         title: str,
         description: Optional[str],
     ) -> str:
-        client = OpenAI(api_key=api_key)
-        response = client.chat.completions.create(
-            model=model_name,
-            messages=[
-                {
-                    "role": "system",
-                    "content": (
-                        "你是任务管理助手。请只返回 JSON，字段为 priority、category、reason；"
-                        "priority 只能是 low、medium、high。"
-                    ),
-                },
-                {"role": "user", "content": f"标题：{title}\n描述：{description or ''}"},
-            ],
-            temperature=0.1,
-            response_format={"type": "json_object"},
+        client = self._client_for_model(api_key, model_name)
+        response = self._run_with_model_dns(
+            model_name,
+            lambda: client.chat.completions.create(
+                model=model_name,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "你是任务管理助手。请只返回 JSON，字段为 priority、category、reason；"
+                            "priority 只能是 low、medium、high。"
+                        ),
+                    },
+                    {"role": "user", "content": f"标题：{title}\n描述：{description or ''}"},
+                ],
+                temperature=0.1,
+                response_format={"type": "json_object"},
+            ),
         )
         content = response.choices[0].message.content
         if not content:
-            raise ValueError("OpenAI returned empty content")
+            raise ValueError("AI provider returned empty content")
         return content
 
     def _validate_parsed_task(self, content: str, raw_text: str) -> AiParsedTask:
@@ -349,14 +421,67 @@ class AiService:
         self.db.add(log)
         self.db.commit()
 
+    def _client_for_model(self, api_key: str, model_name: str) -> OpenAI:
+        return OpenAI(api_key=api_key, base_url=self._base_url_for_model(model_name))
+
+    def _base_url_for_model(self, model_name: str) -> str:
+        if model_name.lower().startswith(DEEPSEEK_MODEL_PREFIX):
+            return settings.deepseek_base_url
+        return settings.openai_base_url
+
+    def _run_with_model_dns(self, model_name: str, callback: Callable[[], T]) -> T:
+        if not model_name.lower().startswith(DEEPSEEK_MODEL_PREFIX):
+            return callback()
+
+        hostname = urllib.parse.urlparse(settings.deepseek_base_url).hostname
+        if not hostname or not settings.deepseek_resolve_with_doh:
+            return callback()
+
+        ip_address = self._resolve_deepseek_ip(hostname)
+        if not ip_address:
+            return callback()
+
+        with _override_hostname_resolution(hostname, ip_address):
+            return callback()
+
+    def _resolve_deepseek_ip(self, hostname: str) -> Optional[str]:
+        if settings.deepseek_force_resolve_ip:
+            return settings.deepseek_force_resolve_ip
+
+        global _DEEPSEEK_DNS_CACHE
+        now = time.monotonic()
+        if _DEEPSEEK_DNS_CACHE and now - _DEEPSEEK_DNS_CACHE[1] < DEEPSEEK_DNS_CACHE_TTL_SECONDS:
+            return _DEEPSEEK_DNS_CACHE[0]
+
+        query = urllib.parse.urlencode({"name": hostname, "type": "A"})
+        request = urllib.request.Request(
+            f"{settings.deepseek_doh_url}?{query}",
+            headers={"Accept": "application/dns-json"},
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=3) as response:
+                data = json.loads(response.read().decode("utf-8"))
+        except Exception:
+            return None
+
+        for answer in data.get("Answer", []):
+            if answer.get("type") == 1 and isinstance(answer.get("data"), str):
+                ip_address = answer["data"]
+                _DEEPSEEK_DNS_CACHE = (ip_address, now)
+                return ip_address
+        return None
+
     def test_openai_key(self, api_key: str, model_name: str) -> dict:
         started_at = time.perf_counter()
         try:
-            client = OpenAI(api_key=api_key)
-            client.chat.completions.create(
-                model=model_name,
-                messages=[{"role": "user", "content": "ping"}],
-                max_tokens=1,
+            client = self._client_for_model(api_key, model_name)
+            self._run_with_model_dns(
+                model_name,
+                lambda: client.chat.completions.create(
+                    model=model_name,
+                    messages=[{"role": "user", "content": "ping"}],
+                    max_tokens=1,
+                ),
             )
         except (AuthenticationError, PermissionDeniedError) as exc:
             raise BusinessError(
