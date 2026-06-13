@@ -3181,7 +3181,7 @@ p {
 }
 
 .stats-page-content {
-  height: clamp(520px, calc(100vh - 207px), 760px);
+  height: clamp(500px, calc(100vh - 207px), 638px);
   gap: 14px;
   grid-template-rows: auto minmax(0, 1fr);
 }
