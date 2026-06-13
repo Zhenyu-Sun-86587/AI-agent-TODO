@@ -1,0 +1,70 @@
+import { useEffect, useState, type FormEvent } from "react";
+import { X } from "lucide-react";
+import { asErrorMessage } from "../../api/errors";
+import { ProfileSettings } from "../../features/settings/components/ProfileSettings";
+import type { ProfileState } from "../../features/settings/types";
+import { useAnimatedDismiss, useEscapeToClose } from "../../hooks/useDismissAnimation";
+
+interface ProfileModalProps {
+  onClose: () => void;
+  onSaveProfile: (profile: ProfileState) => Promise<string | void>;
+  overlayExitMs?: number;
+  profile: ProfileState;
+}
+
+export default function ProfileModal({ onClose, onSaveProfile, overlayExitMs = 180, profile }: ProfileModalProps) {
+  const { closeWithAnimation, isClosing } = useAnimatedDismiss(onClose, overlayExitMs);
+  useEscapeToClose(closeWithAnimation);
+
+  const [profileDraft, setProfileDraft] = useState(profile);
+  const [feedback, setFeedback] = useState("");
+  const [feedbackTone, setFeedbackTone] = useState<"idle" | "success" | "failed">("idle");
+  const [isSavingProfile, setSavingProfile] = useState(false);
+
+  useEffect(() => {
+    setProfileDraft(profile);
+  }, [profile]);
+
+  const saveProfile = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setSavingProfile(true);
+    setFeedback("");
+    try {
+      const message = await onSaveProfile(profileDraft);
+      const isFailure = (message || "").includes("不能") || (message || "").includes("无效") || (message || "").includes("不能为空");
+      setFeedback(message || "用户资料已保存。");
+      setFeedbackTone(isFailure ? "failed" : "success");
+    } catch (error) {
+      setFeedback(asErrorMessage(error));
+      setFeedbackTone("failed");
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
+  return (
+    <div className={`modal-backdrop ${isClosing ? "closing" : ""}`}>
+      <div className={`create-modal ${isClosing ? "closing" : ""}`} style={{ maxWidth: "500px", width: "90%" }}>
+        <div className="drawer-header">
+          <div>
+            <p className="eyebrow">Profile</p>
+            <h2>个人资料</h2>
+          </div>
+          <button className="icon-button" type="button" onClick={() => closeWithAnimation()} aria-label="关闭个人资料">
+            <X size={18} />
+          </button>
+        </div>
+        <div className="modal-content" style={{ padding: "0 24px 24px" }}>
+          <ProfileSettings
+            feedback={feedback}
+            feedbackTone={feedbackTone}
+            isSavingProfile={isSavingProfile}
+            onChange={setProfileDraft}
+            onSubmit={saveProfile}
+            profileDraft={profileDraft}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -1,5 +1,7 @@
 import type { CSSProperties, ReactNode } from "react";
-import { AlertCircle, Calendar, Check, CheckCircle2, Clock3, FileText, Sparkles } from "lucide-react";
+import { Check, CheckCircle2, Clock3, Sparkles } from "lucide-react";
+import { OverviewCards } from "./features/dashboard/components/OverviewCards";
+import { RecommendedTasks } from "./features/dashboard/components/RecommendedTasks";
 
 export interface DashboardTask {
   id: number;
@@ -39,73 +41,18 @@ export default function Dashboard({
   const openTodayTasks = todayTasks.length - completedToday;
 
   return (
-    <main className="minimal-dashboard">
-      <section className="minimal-hero">
-        <div>
-          <h1>早上好，今天也要高效完成任务！</h1>
-          <p>先处理今日截止与 AI 标记的重点任务，完成后再进入全部任务池。</p>
-          <div className="minimal-hero-meta" aria-label="今日任务状态">
-            <span>{openTodayTasks} 个待处理</span>
-            <span>{recommendedTasks.length} 条 AI 建议</span>
-            <span>{overdueCount} 个逾期</span>
-          </div>
+    <main className="minimal-dashboard focus-space">
+      <section className="focus-hero">
+        <div className="focus-greeting">
+          <Sparkles className="hero-sparkle" size={28} />
+          <h1>早安，保持专注。</h1>
+          <p>AI 已为您梳理今日优先级。{openTodayTasks > 0 ? `还有 ${openTodayTasks} 项任务待处理。` : "今日任务已清空。"}</p>
         </div>
-        <div className="minimal-rate" aria-label={`今日完成率 ${completionRate}%`}>
-          <span>今日完成率</span>
-          <strong key={completionRate}>
-            {completionRate}
-            <small>%</small>
-          </strong>
-          <i style={{ "--progress": `${completionRate}%` } as CSSProperties} />
-        </div>
-      </section>
-
-      <section className="minimal-stats" aria-label="今日概览">
-        <StatCard icon={<Calendar size={20} />} index={0} label="今日任务" tone="blue" value={todayTasks.length} />
-        <StatCard icon={<CheckCircle2 size={20} />} index={1} label="已完成" tone="green" value={completedToday} />
-        <StatCard icon={<AlertCircle size={20} />} index={2} label="逾期任务" tone="red" value={overdueCount} />
-        <StatCard icon={<Sparkles size={20} />} index={3} label="AI 推荐优先" tone="purple" value={aiPriorityCount} />
+        <OverviewCards completionRate={completionRate} recommendedCount={recommendedTasks.length} />
       </section>
 
       <section className="minimal-grid">
-        <article className="minimal-panel minimal-ai-panel">
-          <div className="minimal-panel-title">
-            <Sparkles size={20} />
-            <h2>AI 智能建议</h2>
-          </div>
-          {recommendedTasks.length ? (
-            <div className="minimal-recommend-list">
-              {recommendedTasks.map((task, index) => (
-                <button
-                  className="minimal-recommend-item"
-                  key={task.id}
-                  style={{ "--stagger-index": index } as CSSProperties}
-                  type="button"
-                  onClick={() => onOpenTask(task)}
-                >
-                  <div>
-                    <div className="minimal-ai-title-line">
-                      <strong>{task.title}</strong>
-                      <span className="ai-tiny-tag">AI 推荐</span>
-                    </div>
-                    <p>智能分析：{task.aiReason}</p>
-                  </div>
-                  <span className="minimal-recommend-priority">{task.priority}</span>
-                  <small>
-                    <Clock3 size={12} />
-                    {formatDue(task)}
-                  </small>
-                </button>
-              ))}
-            </div>
-          ) : (
-            <EmptyState
-              icon={<FileText size={24} />}
-              title="暂无 AI 推荐"
-              description="所有任务都已完成，或者还没有可分析的待办任务。"
-            />
-          )}
-        </article>
+        <RecommendedTasks onOpenTask={onOpenTask} tasks={recommendedTasks} />
 
         <article className="minimal-panel">
           <div className="minimal-panel-title split">
@@ -166,30 +113,6 @@ function formatDue(task: Pick<DashboardTask, "dueDate" | "dueTime">) {
     return "未设置";
   }
   return task.dueTime ? `${task.dueDate} ${task.dueTime}` : task.dueDate;
-}
-
-function StatCard({
-  icon,
-  index,
-  label,
-  tone,
-  value,
-}: {
-  icon: ReactNode;
-  index: number;
-  label: string;
-  tone: "blue" | "green" | "red" | "purple";
-  value: number;
-}) {
-  return (
-    <article className="minimal-stat" style={{ "--stagger-index": index } as CSSProperties}>
-      <span className={`minimal-stat-icon ${tone}`}>{icon}</span>
-      <div>
-        <p>{label}</p>
-        <strong key={value}>{value}</strong>
-      </div>
-    </article>
-  );
 }
 
 function EmptyState({

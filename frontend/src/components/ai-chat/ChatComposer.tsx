@@ -92,18 +92,24 @@ function ModelSelector({ selectedModelId, onModelChange }: { selectedModelId: st
 }
 
 export default function ChatComposer({
+  attachments,
   disabled,
+  input,
+  onAttachmentsChange,
+  onInputChange,
   onModelChange,
   onSend,
   selectedModelId,
 }: {
+  attachments: ChatAttachment[];
   disabled: boolean;
+  input: string;
+  onAttachmentsChange: (attachments: ChatAttachment[]) => void;
+  onInputChange: (value: string) => void;
   onModelChange: (modelId: string) => void;
   onSend: (input: string, attachments: ChatAttachment[]) => Promise<void> | void;
   selectedModelId: string;
 }) {
-  const [input, setInput] = useState("");
-  const [attachments, setAttachments] = useState<ChatAttachment[]>([]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const canSend = Boolean(input.trim()) || attachments.length > 0;
@@ -117,13 +123,13 @@ export default function ChatComposer({
     if (textareaRef.current) {
       textareaRef.current.value = "";
     }
-    setInput("");
-    setAttachments([]);
+    onInputChange("");
+    onAttachmentsChange([]);
     window.requestAnimationFrame(() => {
       if (textareaRef.current) {
         textareaRef.current.value = "";
       }
-      setInput("");
+      onInputChange("");
     });
     void onSend(nextInput, nextAttachments);
   };
@@ -150,7 +156,7 @@ export default function ChatComposer({
               {attachment.name}
               <button
                 type="button"
-                onClick={() => setAttachments((current) => current.filter((item) => item.id !== attachment.id))}
+                onClick={() => onAttachmentsChange(attachments.filter((item) => item.id !== attachment.id))}
                 aria-label={`移除 ${attachment.name}`}
               >
                 <X size={13} />
@@ -163,7 +169,7 @@ export default function ChatComposer({
         aria-label="AI 聊天输入"
         ref={textareaRef}
         value={input}
-        onChange={(event) => setInput(event.target.value)}
+        onChange={(event) => onInputChange(event.target.value)}
         onKeyDown={handleKeyDown}
         placeholder="向 AI 发送消息..."
         rows={3}
@@ -176,7 +182,7 @@ export default function ChatComposer({
           type="file"
           onChange={(event) => {
             const files = Array.from(event.target.files || []);
-            setAttachments((current) => [...current, ...files.map(toAttachment)]);
+            onAttachmentsChange([...attachments, ...files.map(toAttachment)]);
             event.target.value = "";
           }}
         />
