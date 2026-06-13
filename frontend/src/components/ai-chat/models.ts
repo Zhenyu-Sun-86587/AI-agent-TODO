@@ -1,6 +1,6 @@
 import type { ChatModel, ModelProvider } from "./types";
 
-export const DEFAULT_CHAT_MODEL_ID = "gpt-5.4-mini";
+export const DEFAULT_CHAT_MODEL_ID = "deepseek-v4-pro";
 
 export const CHAT_MODELS: ChatModel[] = [
   {

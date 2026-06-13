@@ -77,6 +77,11 @@ export interface ApiAiSuggestResponse {
   reason: string | null;
 }
 
+export interface ApiAiChatResponse {
+  content: string;
+  model_name: string;
+}
+
 export interface ApiStatsOverview {
   total_tasks: number;
   done_tasks: number;

@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { sendChatMessage } from "../../../components/ai-chat/aiClient";
 import { DEFAULT_CHAT_MODEL_ID, getChatModel, isKnownChatModel } from "../../../components/ai-chat/models";
-import type { ChatAttachment, ChatMessage, Conversation } from "../../../components/ai-chat/types";
+import type { ChatActionHandler, ChatAttachment, ChatMessage, ChatSendOptions, Conversation } from "../../../components/ai-chat/types";
 import { DEFAULT_CONVERSATION_TITLE } from "../constants";
+import { parseChatAction } from "../services/chatActions";
 import {
   createEmptyConversation,
   createId,
@@ -21,6 +22,9 @@ export function sortConversations(conversations: Conversation[]) {
 
 function getInitialModelId(initialModelId: string | undefined) {
   const storedModelId = readSelectedModelId();
+  if (isKnownChatModel(initialModelId) && storedModelId !== initialModelId) {
+    return initialModelId || DEFAULT_CHAT_MODEL_ID;
+  }
   if (isKnownChatModel(storedModelId)) {
     return storedModelId;
   }
@@ -42,7 +46,7 @@ function isFreshEmptyConversation(conversation: Conversation | undefined) {
   return Boolean(conversation && conversation.messages.length === 0 && conversation.title === DEFAULT_CONVERSATION_TITLE);
 }
 
-export function useChatConversations(initialModelId: string | undefined) {
+export function useChatConversations(initialModelId: string | undefined, token?: string, onAction?: ChatActionHandler) {
   const [isSending, setSending] = useState(false);
   const [conversations, setConversations] = useState<Conversation[]>(() => readConversations());
   const [activeConversationId, setActiveConversationId] = useState(() => getInitialActiveConversationId(readConversations()));
@@ -124,7 +128,7 @@ export function useChatConversations(initialModelId: string | undefined) {
     setConversationToDelete(null);
   };
 
-  const sendMessage = async (input: string, attachments: ChatAttachment[]) => {
+  const sendMessage = async (input: string, attachments: ChatAttachment[], options: ChatSendOptions = { followUpMode: false }) => {
     if (!activeConversation || isSending) {
       return;
     }
@@ -151,12 +155,37 @@ export function useChatConversations(initialModelId: string | undefined) {
 
     setSending(true);
     try {
+      const action = parseChatAction(input);
+      if (action && onAction) {
+        const actionResponse = await onAction(action, { followUpMode: options.followUpMode });
+        if (actionResponse) {
+          const createdAt = new Date().toISOString();
+          updateConversation(conversationId, (conversation) => ({
+            ...conversation,
+            messages: [
+              ...conversation.messages,
+              {
+                id: createId("action-message"),
+                role: "assistant",
+                content: actionResponse.content,
+                modelId: "task-action",
+                createdAt,
+                status: "sent",
+              },
+            ],
+            updatedAt: createdAt,
+          }));
+          return;
+        }
+      }
+
       const response = await sendChatMessage({
         conversationId,
         model: selectedModel,
         messages: nextMessages,
         input,
         attachments,
+        token,
       });
       updateConversation(conversationId, (conversation) => ({
         ...conversation,

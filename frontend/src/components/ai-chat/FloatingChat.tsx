@@ -7,13 +7,24 @@ import "./FloatingChat.css";
 import { useChatConversations } from "../../features/ai-chat/hooks/useChatConversations";
 import { useChatPanelResize } from "../../features/ai-chat/hooks/useChatPanelResize";
 import { DEFAULT_CONVERSATION_TITLE } from "../../features/ai-chat/constants";
-import type { ChatAttachment } from "./types";
+import type { ChatActionHandler, ChatAttachment } from "./types";
 
-export default function FloatingChat({ initialModelId, isBlocked = false }: { initialModelId?: string; isBlocked?: boolean }) {
+export default function FloatingChat({
+  initialModelId,
+  isBlocked = false,
+  onAction,
+  token = "",
+}: {
+  initialModelId?: string;
+  isBlocked?: boolean;
+  onAction?: ChatActionHandler;
+  token?: string;
+}) {
   const [isOpen, setOpen] = useState(false);
   const [isConversationMenuOpen, setConversationMenuOpen] = useState(false);
   const [composerInput, setComposerInput] = useState("");
   const [composerAttachments, setComposerAttachments] = useState<ChatAttachment[]>([]);
+  const [isFollowUpMode, setFollowUpMode] = useState(false);
   const conversationMenuRef = useRef<HTMLDivElement | null>(null);
   const conversationTitleButtonRef = useRef<HTMLButtonElement | null>(null);
   const { handleResizeStart, panelSize } = useChatPanelResize();
@@ -30,7 +41,7 @@ export default function FloatingChat({ initialModelId, isBlocked = false }: { in
     sendMessage,
     setSelectedModelId,
     sortedConversations,
-  } = useChatConversations(initialModelId);
+  } = useChatConversations(initialModelId, token, onAction);
 
   useEffect(() => {
     if (!isBlocked) {
@@ -146,7 +157,9 @@ export default function FloatingChat({ initialModelId, isBlocked = false }: { in
             attachments={composerAttachments}
             disabled={isSending}
             input={composerInput}
+            isFollowUpMode={isFollowUpMode}
             onAttachmentsChange={setComposerAttachments}
+            onFollowUpModeChange={setFollowUpMode}
             onInputChange={setComposerInput}
             onModelChange={setSelectedModelId}
             onSend={sendMessage}

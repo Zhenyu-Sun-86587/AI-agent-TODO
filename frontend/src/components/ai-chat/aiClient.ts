@@ -1,3 +1,4 @@
+import { sendAiChat } from "../../api/ai";
 import type { ChatAttachment, ChatMessage, ChatModel } from "./types";
 import { createId } from "./storage";
 
@@ -7,6 +8,7 @@ export type SendChatRequest = {
   messages: ChatMessage[];
   input: string;
   attachments: ChatAttachment[];
+  token?: string;
 };
 
 export type SendChatResponse = {
@@ -14,23 +16,30 @@ export type SendChatResponse = {
 };
 
 export async function sendChatMessage(request: SendChatRequest): Promise<SendChatResponse> {
-  // 后续真实接入点：
-  // request.model.provider === "openai" -> 后端 OpenAI 代理
-  // request.model.provider === "deepseek" -> 后端 DeepSeek 代理
-  // 文件当前只传 metadata，真实上传应由后端签名/代理处理，API Key 不应放在前端。
-  await new Promise((resolve) => window.setTimeout(resolve, 320));
+  if (!request.token) {
+    throw new Error("请先登录后端账号，再使用真实 AI 聊天。");
+  }
+  if (request.attachments.length) {
+    throw new Error("当前真实 AI 聊天暂不支持附件，请先移除附件后发送。");
+  }
 
-  const attachmentText = request.attachments.length
-    ? `\n\n已收到 ${request.attachments.length} 个附件 metadata：${request.attachments.map((attachment) => attachment.name).join("、")}。`
-    : "";
-  const inputSummary = request.input.trim() || "附件";
+  const data = await sendAiChat(
+    request.token,
+    request.model.id,
+    request.messages
+      .filter((message) => message.content.trim())
+      .map((message) => ({
+        role: message.role,
+        content: message.content.trim(),
+      })),
+  );
 
   return {
     message: {
       id: createId("ai-message"),
       role: "assistant",
-      content: `收到：${inputSummary}\n\n当前使用 ${request.model.label}。这轮先返回 mock 回复，真实接口会在 aiClient.ts 的 sendChatMessage(request) 中接入。${attachmentText}`,
-      modelId: request.model.id,
+      content: data.content,
+      modelId: data.model_name,
       createdAt: new Date().toISOString(),
       status: "sent",
     },

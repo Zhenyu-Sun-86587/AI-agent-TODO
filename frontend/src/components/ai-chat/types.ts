@@ -33,3 +33,60 @@ export type ChatModel = {
   supportsFiles?: boolean;
   supportsReasoning?: boolean;
 };
+
+export type ChatTaskActionResult = {
+  category?: string;
+  dueDate?: string;
+  dueTime?: string;
+  priority?: string;
+  title: string;
+};
+
+export type ChatActionResult = {
+  content: string;
+  task?: ChatTaskActionResult;
+};
+
+export type ChatActionContext = {
+  followUpMode: boolean;
+};
+
+export type ChatTaskAction =
+  | {
+      kind: "create-task";
+      text: string;
+    }
+  | {
+      kind: "help";
+    }
+  | {
+      category?: string;
+      kind: "list-tasks";
+      priority?: string;
+      query?: string;
+      status?: string;
+    }
+  | {
+      kind: "show-task";
+      target: string;
+    }
+  | {
+      changesText: string;
+      kind: "update-task";
+      target: string;
+    }
+  | {
+      kind: "delete-task";
+      target: string;
+    }
+  | {
+      kind: "set-task-status";
+      status: "待办" | "已完成";
+      target: string;
+    };
+
+export type ChatActionHandler = (action: ChatTaskAction, context: ChatActionContext) => Promise<ChatActionResult | null>;
+
+export type ChatSendOptions = {
+  followUpMode: boolean;
+};

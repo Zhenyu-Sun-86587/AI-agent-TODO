@@ -4,6 +4,7 @@ import { CalendarDays, Home, ListTodo, Sparkles } from "lucide-react";
 import { getPageFromPath, isKnownPagePath, pagePaths, pushAppPath } from "./app/router/routes";
 import type { PageKey } from "./app/types/common";
 import FloatingChat from "./components/ai-chat/FloatingChat";
+import type { ChatActionHandler } from "./components/ai-chat/types";
 import Layout from "./Layout";
 import ToastViewport, { type ToastMessage, type ToastTone } from "./components/Toast";
 import ProfileModal from "./components/settings/ProfileModal";
@@ -34,6 +35,7 @@ export function App() {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const toastIdRef = useRef(0);
   const resetTaskSelectionRef = useRef<() => void>(() => undefined);
+  const setProfileRef = useRef<(profile: ProfileState) => void>(() => undefined);
 
   const dismissToast = useCallback((id: number) => {
     setToasts((currentToasts) => currentToasts.filter((toast) => toast.id !== id));
@@ -50,6 +52,15 @@ export function App() {
     pushAppPath(pageKey);
   }, []);
 
+  const handleAuthenticated = useCallback((nextSession: { name: string; email: string }) => {
+    setProfileRef.current({ username: nextSession.name, email: nextSession.email });
+    navigateTo("dashboard");
+  }, [navigateTo]);
+
+  const handleSessionCleared = useCallback(() => {
+    resetTaskSelectionRef.current();
+  }, []);
+
   const {
     activeToken,
     authMode,
@@ -62,11 +73,8 @@ export function App() {
     setSession,
     useDemoSession,
   } = useAuth({
-    onAuthenticated: (nextSession) => {
-      setProfile({ username: nextSession.name, email: nextSession.email });
-      navigateTo("dashboard");
-    },
-    onSessionCleared: () => resetTaskSelectionRef.current(),
+    onAuthenticated: handleAuthenticated,
+    onSessionCleared: handleSessionCleared,
     setApiMessage,
     setApiState,
     showToast,
@@ -96,11 +104,14 @@ export function App() {
     setSession,
   });
 
+  setProfileRef.current = setProfile;
+
   const {
     createTask,
     deleteCandidate,
     deleteTask,
     editingTask,
+    executeTaskChatAction,
     isCreateOpen,
     openTaskDetails,
     remoteCategories,
@@ -138,6 +149,8 @@ export function App() {
     remoteCategories,
     tasks,
   });
+
+  const handleChatAction = useCallback<ChatActionHandler>((action, context) => executeTaskChatAction(action, context), [executeTaskChatAction]);
 
   useEffect(() => {
     const syncPageFromPath = () => {
@@ -275,7 +288,12 @@ export function App() {
           profile={profile}
         />
       )}
-      <FloatingChat initialModelId={settings.modelName || "gpt-5.4-mini"} isBlocked={isSettingsOpen} />
+      <FloatingChat
+        initialModelId={settings.modelName || "deepseek-v4-pro"}
+        isBlocked={isSettingsOpen}
+        onAction={handleChatAction}
+        token={activeToken}
+      />
       <ToastViewport items={toasts} onDismiss={dismissToast} />
     </Layout>
   );

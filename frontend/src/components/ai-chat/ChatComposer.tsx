@@ -2,7 +2,7 @@ import { ArrowUp, FilePlus2, X, ChevronDown, Check, Bot } from "lucide-react";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { CHAT_MODEL_GROUPS } from "./models";
 import { createId } from "./storage";
-import type { ChatAttachment } from "./types";
+import type { ChatAttachment, ChatSendOptions } from "./types";
 
 function toAttachment(file: File): ChatAttachment {
   return {
@@ -95,7 +95,9 @@ export default function ChatComposer({
   attachments,
   disabled,
   input,
+  isFollowUpMode,
   onAttachmentsChange,
+  onFollowUpModeChange,
   onInputChange,
   onModelChange,
   onSend,
@@ -104,10 +106,12 @@ export default function ChatComposer({
   attachments: ChatAttachment[];
   disabled: boolean;
   input: string;
+  isFollowUpMode: boolean;
   onAttachmentsChange: (attachments: ChatAttachment[]) => void;
+  onFollowUpModeChange: (enabled: boolean) => void;
   onInputChange: (value: string) => void;
   onModelChange: (modelId: string) => void;
-  onSend: (input: string, attachments: ChatAttachment[]) => Promise<void> | void;
+  onSend: (input: string, attachments: ChatAttachment[], options: ChatSendOptions) => Promise<void> | void;
   selectedModelId: string;
 }) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -131,7 +135,7 @@ export default function ChatComposer({
       }
       onInputChange("");
     });
-    void onSend(nextInput, nextAttachments);
+    void onSend(nextInput, nextAttachments, { followUpMode: isFollowUpMode });
   };
 
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -188,6 +192,16 @@ export default function ChatComposer({
         />
         <button type="button" onClick={() => fileInputRef.current?.click()} aria-label="选择文件">
           <FilePlus2 size={19} />
+        </button>
+        <button
+          className={`ai-follow-up-toggle ${isFollowUpMode ? "active" : ""}`}
+          type="button"
+          aria-label={isFollowUpMode ? "关闭追问模式" : "开启追问模式"}
+          aria-pressed={isFollowUpMode}
+          title={isFollowUpMode ? "追问模式已开启" : "追问模式"}
+          onClick={() => onFollowUpModeChange(!isFollowUpMode)}
+        >
+          <span>追问模式</span>
         </button>
         
         <ModelSelector selectedModelId={selectedModelId} onModelChange={onModelChange} />
