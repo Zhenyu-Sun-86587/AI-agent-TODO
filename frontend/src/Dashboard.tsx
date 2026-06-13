@@ -44,9 +44,13 @@ export default function Dashboard({
     <main className="minimal-dashboard focus-space">
       <section className="focus-hero">
         <div className="focus-greeting">
-          <Sparkles className="hero-sparkle" size={28} />
-          <h1>早安，保持专注。</h1>
-          <p>AI 已为您梳理今日优先级。{openTodayTasks > 0 ? `还有 ${openTodayTasks} 项任务待处理。` : "今日任务已清空。"}</p>
+          <h1>早上好，今天也要高效完成任务！</h1>
+          <p>先处理今日截止与 AI 标记的重点任务，完成后得进入全部任务池。</p>
+          <div className="focus-tags">
+            <span className="focus-tag">{openTodayTasks} 个待处理</span>
+            <span className="focus-tag">{recommendedTasks.length} 条 AI 建议</span>
+            <span className="focus-tag">{overdueCount} 个逾期</span>
+          </div>
         </div>
         <OverviewCards completionRate={completionRate} recommendedCount={recommendedTasks.length} />
       </section>

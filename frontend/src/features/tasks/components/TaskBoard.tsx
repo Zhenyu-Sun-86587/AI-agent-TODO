@@ -22,7 +22,6 @@ export function TaskBoard({ categories, isApiMode, onCreateTask, onOpenTask, tas
 
   return (
     <main className="page-content">
-      <div className="page-heading"><div><h1>任务看板</h1></div></div>
       <div className="board-toolbar">
         <label className="filter-search"><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索任务" /></label>
         <select value={priority} onChange={(event) => setPriority(event.target.value as TaskPriority | "全部")}><option value="全部">全部优先级</option>{priorityOptions.map((item) => <option key={item} value={item}>{item}</option>)}</select>

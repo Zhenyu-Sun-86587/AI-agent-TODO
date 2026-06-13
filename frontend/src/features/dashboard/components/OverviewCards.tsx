@@ -8,8 +8,11 @@ export function OverviewCards({
   return (
     <div className="focus-metrics">
       <div className="metric-item">
-        <span>完成度</span>
-        <strong>{completionRate}<small>%</small></strong>
+        <span>今日完成率</span>
+        <strong>
+          {completionRate}
+          <small>%</small>
+        </strong>
       </div>
       <div className="metric-item">
         <span>AI 建议</span>

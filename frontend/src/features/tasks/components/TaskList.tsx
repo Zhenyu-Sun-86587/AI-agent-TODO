@@ -54,7 +54,7 @@ export function TaskTable({
     <div className="responsive-task-container">
       <div className="desktop-table-wrapper task-table-wrap">
         <table className="task-table">
-          <thead><tr><th>任务</th><th>状态</th><th>优先级</th><th>分类</th><th>截止时间</th><th>操作</th></tr></thead>
+          <thead><tr><th>任务</th><th>状态</th><th>优先级</th><th>分类</th><th>截止时间</th><th className="task-actions-header">操作</th></tr></thead>
           <tbody>
             {tasks.map((task, index) => (
               <tr className={`task-table-row ${task.status === "已完成" ? "is-complete" : ""} ${task.priority === "高" ? "is-high-priority" : ""}`} key={task.id} style={{ "--stagger-index": index } as CSSProperties} onClick={() => { setOpenMenuTaskId(null); onOpenTask(task); }}>
@@ -63,7 +63,7 @@ export function TaskTable({
                 <td><PriorityBadge priority={task.priority} /></td>
                 <td><span style={{ color: "var(--text-secondary)", fontSize: "14px" }}>{task.category}</span></td>
                 <td><span className="table-due">{formatDue(task)}</span></td>
-                <td><TaskRowActions isOpen={openMenuTaskId === task.id} onChangeStatus={onUpdateTaskStatus} onToggleMenu={(event) => { event.stopPropagation(); setOpenMenuTaskId((currentTaskId) => (currentTaskId === task.id ? null : task.id)); }} task={task} /></td>
+                <td className="task-actions-cell"><TaskRowActions isOpen={openMenuTaskId === task.id} onChangeStatus={onUpdateTaskStatus} onToggleMenu={(event) => { event.stopPropagation(); setOpenMenuTaskId((currentTaskId) => (currentTaskId === task.id ? null : task.id)); }} task={task} /></td>
               </tr>
             ))}
           </tbody>
@@ -110,7 +110,7 @@ function TaskRowActions({
   task: Task;
 }) {
   return (
-    <div className="row-actions">
+    <div className="row-actions task-actions">
       <button className={`row-menu-trigger ${isOpen ? "is-open" : ""}`} type="button" onClick={onToggleMenu} aria-expanded={isOpen} aria-haspopup="menu" aria-label="修改任务状态" title="修改任务状态"><MoreHorizontal size={16} /></button>
       {isOpen && (
         <div className="row-menu" role="menu" onClick={(event) => event.stopPropagation()}>

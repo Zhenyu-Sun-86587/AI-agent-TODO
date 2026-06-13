@@ -3,13 +3,12 @@ import { AlertCircle, CalendarDays, CheckCircle2, Clock3, ListTodo, Sparkles } f
 import { buildDateRange, buildTaskListPath, mapApiTask } from "../api/mappers";
 import { fetchCategoryStats, fetchOverview, fetchPriorityStats, fetchTrendStats } from "../api/stats";
 import { fetchTasksPage } from "../api/tasks";
-import type { ApiCategoryStats, ApiPriorityStats, ApiStatsOverview } from "../api/types";
+import type { ApiCategoryStats, ApiPriority, ApiPriorityStats, ApiStatsOverview } from "../api/types";
 import { TaskBoard } from "../features/tasks/components/TaskBoard";
 import { EmptyState } from "../features/tasks/components/TaskDisplay";
 import { FilterBar, TaskTable } from "../features/tasks/components/TaskList";
 import { dateFromToday, formatLocalDate, getMonthEnd, getMonthStart, getWeekStart } from "../lib/date";
 import type { Task, TaskPriority, TaskStatus } from "../features/tasks/types";
-import PageHeading from "./PageHeading";
 
 const statusOptions: TaskStatus[] = ["待办", "进行中", "已完成"];
 const apiStatusOptions: TaskStatus[] = ["待办", "已完成"];
@@ -115,7 +114,6 @@ function TodayTasksPage({
 
   return (
     <main className="page-content">
-      <PageHeading title="今日任务" />
       <section className="stats-grid">
         <StatsCard icon={CalendarDays} label="今日任务" value={todayTasks.length} tone="blue" />
         <StatsCard icon={CheckCircle2} label="已完成" value={done} tone="green" />
@@ -233,6 +231,66 @@ function getStatsRangeConfig(range: StatsRangeKey) {
     endDate: formatLocalDate(end),
     buckets: Array.from({ length: totalDays }, (_, index) => ({ key: formatLocalDate(new Date(start.getFullYear(), start.getMonth(), start.getDate() + index)), label: `${index + 1}日` })),
   };
+}
+
+function isDateInRange(date: string, startDate: string, endDate: string) {
+  return Boolean(date) && date >= startDate && date <= endDate;
+}
+
+function isOverdue(task: Task) {
+  return task.status !== "已完成" && Boolean(task.dueDate) && task.dueDate < dateFromToday(0);
+}
+
+function buildLocalTrend(tasks: Task[], buckets: Array<{ key: string; label: string }>) {
+  return buckets.map((bucket) => ({
+    label: bucket.label,
+    created: tasks.filter((task) => task.createdAt === bucket.key).length,
+    done: tasks.filter((task) => task.completedAt === bucket.key || (task.status === "已完成" && task.dueDate === bucket.key)).length,
+  }));
+}
+
+function buildLocalCategoryStats(tasks: Task[], startDate: string, endDate: string): ApiCategoryStats[] {
+  const relevantTasks = tasks.filter((task) => !task.dueDate || isDateInRange(task.dueDate, startDate, endDate));
+  const categoryMap = new Map<string, { done: number; todo: number; total: number }>();
+  relevantTasks.forEach((task) => {
+    const category = task.category || "未分类";
+    const current = categoryMap.get(category) || { done: 0, todo: 0, total: 0 };
+    current.total += 1;
+    if (task.status === "已完成") {
+      current.done += 1;
+    } else {
+      current.todo += 1;
+    }
+    categoryMap.set(category, current);
+  });
+
+  return Array.from(categoryMap.entries())
+    .map(([category, stats]) => ({
+      category,
+      done: stats.done,
+      todo: stats.todo,
+      total: stats.total,
+      completion_rate: stats.total ? stats.done / stats.total : 0,
+    }))
+    .sort((left, right) => right.total - left.total);
+}
+
+function buildLocalPriorityStats(tasks: Task[], startDate: string, endDate: string): ApiPriorityStats[] {
+  const relevantTasks = tasks.filter((task) => !task.dueDate || isDateInRange(task.dueDate, startDate, endDate));
+  return priorityOptions.map((priority) => {
+    const priorityTasks = relevantTasks.filter((task) => task.priority === priority);
+    const apiPriority: ApiPriority = priority === "高" ? "high" : priority === "低" ? "low" : "medium";
+    return {
+      priority: apiPriority,
+      done: priorityTasks.filter((task) => task.status === "已完成").length,
+      todo: priorityTasks.filter((task) => task.status !== "已完成").length,
+      total: priorityTasks.length,
+    };
+  }).filter((item) => item.total > 0);
+}
+
+function priorityLabel(priority: ApiPriorityStats["priority"]) {
+  return priority === "high" ? "高" : priority === "low" ? "低" : "中";
 }
 
 function TrendLineChart({
@@ -444,7 +502,6 @@ function AllTasksPage({
 
   return (
     <main className="page-content">
-      <PageHeading title="全部任务" />
       <div className="content-card table-card">
         <FilterBar
           categories={categories}
@@ -505,15 +562,30 @@ function StatsPage({
   const [remoteError, setRemoteError] = useState("");
   const [isRemoteLoading, setRemoteLoading] = useState(false);
   const rangeConfig = getStatsRangeConfig(range);
+  const localTrend = useMemo(() => buildLocalTrend(tasks, rangeConfig.buckets), [rangeConfig.buckets, tasks]);
+  const localCategoryStats = useMemo(
+    () => buildLocalCategoryStats(tasks, rangeConfig.startDate, rangeConfig.endDate),
+    [rangeConfig.endDate, rangeConfig.startDate, tasks],
+  );
+  const localPriorityStats = useMemo(
+    () => buildLocalPriorityStats(tasks, rangeConfig.startDate, rangeConfig.endDate),
+    [rangeConfig.endDate, rangeConfig.startDate, tasks],
+  );
+  const visibleTrend = isApiMode ? trend : localTrend;
+  const visibleCategoryStats = isApiMode ? categoryStats : localCategoryStats;
+  const visiblePriorityStats = isApiMode ? priorityStats : localPriorityStats;
   const totalTasks = overview?.total_tasks || tasks.length;
   const done = overview?.done_tasks || tasks.filter((task) => task.status === "已完成").length;
   const todo = overview?.todo_tasks || tasks.filter((task) => task.status !== "已完成").length;
-  const overdueTotal = overview?.overdue_tasks || 0;
-  const todayDue = overview?.today_due_tasks || 0;
+  const overdueTotal = overview?.overdue_tasks || tasks.filter(isOverdue).length;
+  const todayDue = overview?.today_due_tasks || tasks.filter((task) => task.dueDate === dateFromToday(0)).length;
 
   useEffect(() => {
     if (!isApiMode || !token) {
       setOverview(null);
+      setTrend([]);
+      setCategoryStats([]);
+      setPriorityStats([]);
       return;
     }
     let isCancelled = false;
@@ -540,7 +612,6 @@ function StatsPage({
 
   return (
     <main className="page-content">
-      <PageHeading title="数据统计" />
       {isRemoteLoading && <p className="table-state">正在同步统计范围...</p>}
       {remoteError && <p className="form-error">{remoteError}</p>}
       <section className="stats-grid stats-grid-wide">
@@ -554,10 +625,10 @@ function StatsPage({
         <section className="content-card"><EmptyState title="暂无统计数据" description="创建任务后，这里会显示完成率、分布和趋势。" /></section>
       ) : (
         <section className="stats-panels">
-          <div className="content-card chart-card"><TrendLineChart title={rangeConfig.title} subtitle={rangeConfig.subtitle} trend={trend} selectValue={range} onSelectChange={setRange} /></div>
+          <div className="content-card chart-card"><TrendLineChart title={rangeConfig.title} subtitle={rangeConfig.subtitle} trend={visibleTrend} selectValue={range} onSelectChange={setRange} /></div>
           <div className="stats-distribution-row">
-            <DistributionBarChart title="分类分布" subtitle="不同任务类型的数量占比" items={categoryStats.map((item) => ({ label: item.category, value: item.total }))} />
-            <DistributionBarChart title="优先级分布" subtitle="高、中、低优先级任务数量" items={priorityStats.map((item) => ({ label: item.priority, value: item.total, accentClass: `bar-${item.priority}` }))} />
+            <DistributionBarChart title="分类分布" subtitle="不同任务类型的数量占比" items={visibleCategoryStats.map((item, index) => ({ label: item.category, value: item.total, accentClass: `bar-cat-${index % 5}` }))} />
+            <DistributionBarChart title="优先级分布" subtitle="高、中、低优先级任务数量" items={visiblePriorityStats.map((item) => ({ label: priorityLabel(item.priority), value: item.total, accentClass: `bar-${item.priority}` }))} />
           </div>
         </section>
       )}

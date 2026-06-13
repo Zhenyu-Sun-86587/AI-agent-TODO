@@ -1,7 +1,27 @@
-import { Search } from "lucide-react";
+import { ChevronDown, Search } from "lucide-react";
+import type { ReactNode } from "react";
 import type { TaskPriority, TaskStatus } from "../types";
 
 const priorityOptions: TaskPriority[] = ["高", "中", "低"];
+
+function SelectField({
+  children,
+  value,
+  onChange,
+}: {
+  children: ReactNode;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="filter-select">
+      <select value={value} onChange={(event) => onChange(event.target.value)}>
+        {children}
+      </select>
+      <ChevronDown aria-hidden="true" size={18} />
+    </label>
+  );
+}
 
 export function FilterBar({
   categories,
@@ -36,23 +56,23 @@ export function FilterBar({
         <Search size={17} />
         <input value={query} onChange={(event) => onQueryChange(event.target.value)} placeholder="搜索任务..." />
       </label>
-      <select value={status} onChange={(event) => onStatusChange(event.target.value as TaskStatus | "全部")}>
+      <SelectField value={status} onChange={(value) => onStatusChange(value as TaskStatus | "全部")}>
         <option value="全部">全部状态</option>
         {statusOptions.map((item) => <option key={item} value={item}>{item}</option>)}
-      </select>
-      <select value={priority} onChange={(event) => onPriorityChange(event.target.value as TaskPriority | "全部")}>
+      </SelectField>
+      <SelectField value={priority} onChange={(value) => onPriorityChange(value as TaskPriority | "全部")}>
         <option value="全部">全部优先级</option>
         {priorityOptions.map((item) => <option key={item} value={item}>{item}</option>)}
-      </select>
-      <select value={category} onChange={(event) => onCategoryChange(event.target.value)}>
+      </SelectField>
+      <SelectField value={category} onChange={onCategoryChange}>
         <option value="全部">全部分类</option>
         {categories.map((item) => <option key={item} value={item}>{item}</option>)}
-      </select>
-      <select value={sort} onChange={(event) => onSortChange(event.target.value)}>
+      </SelectField>
+      <SelectField value={sort} onChange={onSortChange}>
         <option value="dueDate">按截止时间排序</option>
         <option value="priority">按优先级排序</option>
         <option value="createdAt">按创建时间排序</option>
-      </select>
+      </SelectField>
     </section>
   );
 }
