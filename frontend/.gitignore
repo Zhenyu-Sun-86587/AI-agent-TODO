@@ -3,3 +3,6 @@ dist/
 *.tsbuildinfo
 .env.local
 .env.*.local
+test-results/
+playwright-report/
+tmp/

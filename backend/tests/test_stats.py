@@ -93,3 +93,43 @@ def test_stats_time_range_filters_created_at(client):
 
     assert response.status_code == 200
     assert response.json()["data"]["total_tasks"] == 0
+
+
+def test_trend_days_boundary(client):
+    """TC-STAT-04: trend days=1 边界返回仅当天数据"""
+    headers = auth_headers(client)
+
+    response = client.get("/api/stats/trend", headers=headers, params={"days": 1})
+
+    assert response.status_code == 200
+    trend = response.json()["data"]
+    assert len(trend) == 1
+    assert "date" in trend[0]
+    assert "created" in trend[0]
+    assert "done" in trend[0]
+
+
+def test_overview_only_overdue_tasks(client):
+    """TC-STAT-05: 只含逾期任务的 overview 统计正确"""
+    headers = auth_headers(client)
+    from datetime import datetime, timedelta, timezone
+
+    yesterday = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
+    client.post(
+        "/api/tasks",
+        headers=headers,
+        json={"title": "已逾期任务", "due_time": yesterday},
+    )
+    client.post(
+        "/api/tasks",
+        headers=headers,
+        json={"title": "另一个逾期任务", "due_time": yesterday},
+    )
+
+    response = client.get("/api/stats/overview", headers=headers)
+    overview = response.json()["data"]
+    assert overview["total_tasks"] == 2
+    assert overview["todo_tasks"] == 2
+    assert overview["done_tasks"] == 0
+    assert overview["completion_rate"] == 0.0
+    assert overview["overdue_tasks"] == 2

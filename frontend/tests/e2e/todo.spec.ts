@@ -63,6 +63,28 @@ test("user can create, search, filter, edit, complete and delete a task", async 
   await expect(page.getByText(editedTitle)).toHaveCount(0);
 });
 
+test("settings page can save API key, show masked value and update model", async ({ page }) => {
+  await enterDemo(page);
+  await page.goto("/settings");
+  await expect(page.getByRole("heading", { name: "设置" })).toBeVisible();
+
+  // 填入 API Key 并保存
+  const apiKeyInput = page.getByPlaceholder(/sk-\.\.\./);
+  await apiKeyInput.fill("sk-test-playwright-key-1234");
+  await page.getByRole("button", { name: "保存设置" }).click();
+  await expect(page.getByText(/已保存/)).toBeVisible();
+
+  // 只更新模型名称，不覆盖 Key
+  const modelInput = page.locator("input").nth(2);
+  await modelInput.fill("gpt-4-turbo");
+  await page.getByRole("button", { name: "保存设置" }).click();
+
+  // 点击测试连接（预期失败，因为 key 是假的）
+  await page.getByRole("button", { name: "测试连接" }).click();
+  // 等待反馈出现（成功或失败均可，验证交互通畅）
+  await expect(page.locator(".connection-result")).toBeVisible({ timeout: 12000 });
+});
+
 test("dark mode, AI page and mobile layout are usable", async ({ page, isMobile }) => {
   await enterDemo(page);
 

@@ -76,3 +76,67 @@ def test_get_and_update_current_user(client):
     assert response.status_code == 200
     assert response.json()["data"]["username"] == "alice_new"
     assert response.json()["data"]["email"] == "alice_new@example.com"
+
+
+def test_login_success_with_username(client):
+    """TC-AUTH-07: 使用用户名（而非邮箱）登录成功"""
+    auth_headers(client)
+
+    response = client.post(
+        "/api/auth/login",
+        json={"account": "alice", "password": "12345678"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["data"]["user"]["username"] == "alice"
+    assert response.json()["data"]["access_token"]
+
+
+def test_register_duplicate_username_fails(client):
+    """TC-AUTH-08: 重复用户名注册返回 409/2001"""
+    client.post(
+        "/api/auth/register",
+        json={"username": "alice", "email": "alice@example.com", "password": "12345678"},
+    )
+
+    response = client.post(
+        "/api/auth/register",
+        json={"username": "alice", "email": "other@example.com", "password": "12345678"},
+    )
+
+    assert response.status_code == 409
+    assert response.json()["code"] == 2001
+
+
+def test_register_weak_password_fails(client):
+    """TC-AUTH-09: 弱密码（少于8位）注册返回 422"""
+    response = client.post(
+        "/api/auth/register",
+        json={"username": "testuser", "email": "test@example.com", "password": "1234567"},
+    )
+
+    assert response.status_code == 422
+    body = response.json()
+    assert body["code"] == 1001
+
+
+def test_register_invalid_email_fails(client):
+    """TC-AUTH-10: 非法邮箱格式注册返回 422"""
+    response = client.post(
+        "/api/auth/register",
+        json={"username": "testuser", "email": "not-an-email", "password": "12345678"},
+    )
+
+    assert response.status_code == 422
+    body = response.json()
+    assert body["code"] == 1001
+
+
+def test_tampered_token_returns_unauthorized(client):
+    """TC-AUTH-11: 伪造 Token 访问受保护接口返回 401"""
+    headers = {"Authorization": "Bearer tampered-invalid-token"}
+
+    response = client.get("/api/users/me", headers=headers)
+
+    assert response.status_code == 401
+    assert response.json()["code"] == 1002
