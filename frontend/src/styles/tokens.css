@@ -17,6 +17,10 @@
   --motion-slow: 400ms;
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+  --duration-fast: var(--motion-fast);
+  --duration-base: var(--motion-base);
+  --ease-quick: var(--ease-out);
+  --ease-modal: cubic-bezier(0.2, 0.8, 0.2, 1);
   
   font-synthesis: none;
   line-height: 1.6;

@@ -3940,6 +3940,10 @@ p {
   animation: drawerSlideIn 200ms var(--ease-modal) forwards;
 }
 
+.drawer.entering {
+  animation: drawerSlideIn 200ms var(--ease-modal) forwards;
+}
+
 .drawer.closing {
   animation: drawerSlideOut var(--motion-base) var(--ease-smooth) forwards;
 }
@@ -4094,6 +4098,10 @@ p {
   animation: fadeIn var(--duration-base) var(--ease-quick) forwards;
 }
 
+.drawer-backdrop.entering {
+  animation: fadeIn var(--duration-base) var(--ease-quick) forwards;
+}
+
 .drawer-backdrop.closing {
   animation: fadeOut var(--motion-fast) var(--ease-out) forwards;
 }
@@ -4180,18 +4188,22 @@ p {
 
 @keyframes drawerSlideIn {
   from {
+    opacity: 0;
     transform: translateX(100%);
   }
   to {
+    opacity: 1;
     transform: translateX(0);
   }
 }
 
 @keyframes drawerSlideOut {
   from {
+    opacity: 1;
     transform: translateX(0);
   }
   to {
+    opacity: 0;
     transform: translateX(100%);
   }
 }
@@ -4726,6 +4738,10 @@ p {
     border-left: 0;
     border-top: 1px solid var(--line);
     border-radius: 18px 18px 0 0;
+    animation: drawerSheetIn 200ms var(--ease-modal) forwards;
+  }
+
+  .drawer.entering {
     animation: drawerSheetIn 200ms var(--ease-modal) forwards;
   }
 

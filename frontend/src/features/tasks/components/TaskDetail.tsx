@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Sparkles, X } from "lucide-react";
 import { useAnimatedDismiss, useEscapeToClose } from "../../../hooks/useDismissAnimation";
 import type { Task, TaskDetailState } from "../types";
@@ -18,6 +19,11 @@ export interface TaskDetailDrawerProps {
 export function TaskDetailDrawer({ detailState, isApiMode, onClose, onDelete, onEdit, onToggleComplete, task }: TaskDetailDrawerProps) {
   const { closeWithAnimation, isClosing } = useAnimatedDismiss(onClose, OVERLAY_EXIT_MS, task?.id ?? null);
   useEscapeToClose(closeWithAnimation);
+  const [isEntering, setIsEntering] = useState(true);
+
+  useEffect(() => {
+    setIsEntering(Boolean(task));
+  }, [task?.id]);
 
   if (!task) {
     return null;
@@ -25,8 +31,8 @@ export function TaskDetailDrawer({ detailState, isApiMode, onClose, onDelete, on
 
   return (
     <>
-      <button className={`drawer-backdrop ${isClosing ? "closing" : ""}`} type="button" onClick={() => closeWithAnimation()} aria-label="关闭任务详情遮罩" />
-      <aside className={`drawer ${isClosing ? "closing" : ""}`}>
+      <button className={`drawer-backdrop ${isEntering ? "entering" : ""} ${isClosing ? "closing" : ""}`} type="button" onClick={() => closeWithAnimation()} aria-label="关闭任务详情遮罩" />
+      <aside className={`drawer ${isEntering ? "entering" : ""} ${isClosing ? "closing" : ""}`}>
         <div className="drawer-header">
           <div>
             <p className="eyebrow">任务详情</p>
