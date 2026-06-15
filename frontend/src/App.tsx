@@ -44,7 +44,13 @@ export function App() {
   const showToast = useCallback((title: string, message?: string, tone: ToastTone = "info") => {
     toastIdRef.current += 1;
     const id = toastIdRef.current;
-    setToasts((currentToasts) => [...currentToasts.slice(-2), { id, message, title, tone }]);
+    setToasts((currentToasts) => {
+      if (currentToasts.some((toast) => toast.title === title && toast.message === message && toast.tone === tone)) {
+        return currentToasts;
+      }
+
+      return [...currentToasts.slice(-2), { id, message, title, tone }];
+    });
   }, []);
 
   const navigateTo = useCallback((pageKey: PageKey) => {

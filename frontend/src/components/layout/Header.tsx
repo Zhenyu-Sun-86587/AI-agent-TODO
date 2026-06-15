@@ -61,9 +61,9 @@ export default function Header({
         <button className="minimal-icon minimal-theme-toggle" type="button" onClick={onToggleTheme} aria-label="切换主题">
           {isDark ? <Sun size={18} /> : <Moon size={18} />}
         </button>
-        <button className="minimal-primary" type="button" onClick={onCreateTask}>
+        <button className="minimal-primary create-task-button" type="button" onClick={onCreateTask}>
           <Plus size={16} />
-          新建任务
+          <span className="create-task-button-label">新建任务</span>
         </button>
         <div className="minimal-action-wrap minimal-mobile-more-wrap">
           <button

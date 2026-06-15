@@ -27,7 +27,7 @@ export function TaskBoard({ categories, isApiMode, onCreateTask, onOpenTask, tas
         <label className="filter-search"><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索任务" /></label>
         <SelectField value={priority} onChange={(value) => setPriority(value as TaskPriority | "全部")}><option value="全部">全部优先级</option>{priorityOptions.map((item) => <option key={item} value={item}>{item}</option>)}</SelectField>
         <SelectField value={category} onChange={setCategory}><option value="全部">全部分类</option>{categories.map((item) => <option key={item} value={item}>{item}</option>)}</SelectField>
-        <button className="primary-button" type="button" onClick={onCreateTask}><Plus size={17} />新建任务</button>
+        <button className="primary-button create-task-button" type="button" onClick={onCreateTask}><Plus size={17} /><span className="create-task-button-label">新建任务</span></button>
       </div>
       <div className="kanban-board">
         {(isApiMode ? apiStatusOptions : statusOptions).map((status, index) => (

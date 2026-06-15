@@ -1,6 +1,8 @@
 import type { CSSProperties, ReactNode } from "react";
 import { Clock3, FileText, Sparkles } from "lucide-react";
 import type { DashboardTask } from "../../../Dashboard";
+import { PriorityBadge } from "../../tasks/components/TaskDisplay";
+import type { TaskPriority } from "../../tasks/types";
 
 function formatDue(task: Pick<DashboardTask, "dueDate" | "dueTime">) {
   if (!task.dueDate) {
@@ -57,7 +59,7 @@ export function RecommendedTasks({
                 </div>
                 <p>智能分析：{task.aiReason}</p>
               </div>
-              <span className="minimal-recommend-priority">{task.priority}</span>
+              <PriorityBadge priority={task.priority as TaskPriority} />
               <small>
                 <Clock3 size={12} />
                 {formatDue(task)}

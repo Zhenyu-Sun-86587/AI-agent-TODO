@@ -441,21 +441,9 @@
   font-size: 13px;
 }
 
-.minimal-recommend-list .minimal-recommend-priority {
-  min-width: 78px;
-  min-height: 28px;
-  display: inline-grid;
-  place-items: center;
+.minimal-recommend-list .priority-badge {
   align-self: start;
   justify-self: end;
-  padding: 0 12px;
-  border-radius: 999px;
-  background: #eef2ff;
-  color: #4f46e5;
-  font-size: 13px;
-  font-weight: 900;
-  line-height: 1;
-  text-align: center;
 }
 
 .minimal-recommend-list small {
@@ -757,11 +745,6 @@
   color: #e0e7ff;
 }
 
-.minimal-shell-dark .minimal-recommend-list .minimal-recommend-priority {
-  background: rgba(129, 140, 248, 0.2);
-  color: #e0e7ff;
-}
-
 .minimal-shell-dark .minimal-mobile-nav {
   border-top-color: rgba(148, 163, 184, 0.16);
   background: rgba(15, 23, 42, 0.96);
@@ -1044,11 +1027,6 @@
 .minimal-shell-light .minimal-recommend-list .ai-tiny-tag {
   border-color: #a5b4fc;
   background: #eef2ff;
-  color: #4338ca;
-}
-
-.minimal-shell-light .minimal-recommend-list .minimal-recommend-priority {
-  background: #e0e7ff;
   color: #4338ca;
 }
 
@@ -2093,6 +2071,14 @@ p {
   color: #ffffff;
 }
 
+.ai-card-mark {
+  box-shadow: 0 10px 24px rgba(99, 102, 241, 0.28);
+}
+
+.ai-card-mark svg {
+  color: #ffffff;
+}
+
 .ai-card-header p,
 .section-title p,
 .page-heading p {
@@ -2171,14 +2157,9 @@ p {
   gap: 14px;
 }
 
-.ai-logs-panel select {
-  max-width: 100%;
-  min-height: 40px;
-  padding: 8px 12px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--surface);
-  color: var(--text);
+.ai-logs-panel .filter-select {
+  width: 150px;
+  flex: 0 0 150px;
   font-weight: 800;
 }
 
@@ -3084,11 +3065,18 @@ p {
   min-height: 58px;
   padding: 10px 14px;
   border-bottom: 1px solid var(--line);
+  transition:
+    background-color var(--motion-fast) var(--ease-out),
+    box-shadow var(--motion-fast) var(--ease-out),
+    transform var(--motion-fast) var(--ease-out);
+  animation: calendarItemEnter var(--motion-base) var(--ease-out) both;
+  animation-delay: calc(var(--stagger-index, 0) * 18ms);
 }
 
 .timeline-hour.current {
   background: color-mix(in srgb, var(--primary-soft) 58%, var(--surface));
   box-shadow: inset 3px 0 0 var(--primary);
+  animation: calendarTodayPulse 1.8s ease-in-out infinite;
 }
 
 .timeline-hour-label {
@@ -3123,13 +3111,109 @@ p {
 .overdue-list button {
   display: grid;
   gap: 3px;
-  padding: 9px 10px;
+  min-height: var(--calendar-task-card-min-height, 92px);
+  padding: var(--calendar-task-card-padding, 5px 10px 10px 12px);
   border: 1px solid var(--line);
   border-radius: 10px;
   background: var(--surface-soft);
   color: var(--text);
   text-align: left;
   font-weight: 800;
+  transition:
+    background-color var(--motion-fast) var(--ease-out),
+    border-color var(--motion-fast) var(--ease-out),
+    box-shadow var(--motion-fast) var(--ease-out),
+    transform var(--motion-fast) var(--ease-out);
+}
+
+.timeline-hour button {
+  animation: calendarTaskSlideIn var(--motion-base) var(--ease-out) both;
+  animation-delay: calc(var(--stagger-index, 0) * 28ms);
+}
+
+.timeline-task {
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.timeline-task::before {
+  content: "";
+  position: absolute;
+  inset: 8px auto 8px 0;
+  width: 3px;
+  border-radius: 999px;
+  background: var(--primary);
+}
+
+.timeline-task-focus::before {
+  background: var(--blue);
+}
+
+.timeline-task-calm::before {
+  background: var(--green);
+}
+
+.timeline-task-urgent::before {
+  background: var(--orange);
+}
+
+.timeline-task-done::before {
+  background: var(--muted);
+}
+
+.timeline-task-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+
+.timeline-task-meta .priority-badge {
+  flex: 0 0 auto;
+}
+
+.timeline-task strong,
+.timeline-task-description {
+  min-width: 0;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  text-overflow: ellipsis;
+}
+
+.timeline-task strong {
+  display: block;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.35;
+  white-space: nowrap;
+}
+
+.timeline-task-description {
+  display: -webkit-box;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.timeline-hour button:hover,
+.overdue-list button:hover,
+.calendar-pending-list button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
+}
+
+.timeline-hour button:hover {
+  border-color: color-mix(in srgb, var(--primary) 28%, var(--line));
+}
+
+.overdue-list button {
+  animation: calendarItemEnter var(--motion-base) var(--ease-out) both;
+  animation-delay: calc(var(--stagger-index, 0) * 36ms);
 }
 
 .timeline-hour button small {
@@ -3711,7 +3795,12 @@ p {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 360px;
   gap: 16px;
-  align-items: start;
+  align-items: stretch;
+}
+
+.suggest-left-column {
+  display: grid;
+  gap: 16px;
 }
 
 .ai-suggest-grid label,
@@ -3740,6 +3829,23 @@ p {
   resize: vertical;
 }
 
+.ai-suggest-grid > label {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: stretch;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.ai-suggest-grid > label textarea {
+  height: 100%;
+  min-height: 0;
+}
+
+.suggest-left-column {
+  grid-column: 1;
+  grid-row: 1;
+}
+
 .ai-natural-input,
 .ai-task-generator textarea,
 .ai-suggest-grid textarea {
@@ -3758,10 +3864,10 @@ p {
 
 .suggest-result {
   display: grid;
-  gap: 10px;
+  gap: 16px;
 }
 
-.suggest-result p,
+.suggest-reason,
 .settings-info p {
   color: var(--muted);
 }
@@ -4566,6 +4672,11 @@ p {
     flex-direction: column;
   }
 
+  .ai-logs-panel .filter-select {
+    width: 100%;
+    flex-basis: auto;
+  }
+
   .stats-grid,
   .filter-bar,
   .board-toolbar,
@@ -5179,12 +5290,80 @@ textarea:disabled {
   font-weight: 800;
 }
 
-.minimal-primary:hover,
-.primary-button:hover {
+.create-task-button {
+  position: relative;
+  width: 150px;
+  min-width: 150px;
+  height: 42px;
+  min-height: 42px;
+  flex: 0 0 150px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  padding: 0 20px;
+  text-align: center;
+  white-space: nowrap;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: #4f46e5;
+  box-shadow: none;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+.create-task-button svg {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  width: 16px;
+  height: 16px;
+  transform: translateY(-50%);
+}
+
+.create-task-button-label {
+  display: inline-block;
+  line-height: 1;
+}
+
+.create-task-button::after {
+  content: none;
+  display: none;
+}
+
+.create-task-button:hover {
+  background: #5b55ea;
+  border-color: rgba(255, 255, 255, 0.28);
+  box-shadow: none;
+  transform: none;
+}
+
+.create-task-button:active {
+  background: #4338ca;
+  box-shadow: none;
+  transform: none;
+}
+
+.minimal-primary:hover:not(.create-task-button),
+.primary-button:hover:not(.create-task-button) {
   border-color: var(--primary-dark);
   background: var(--primary-dark);
   box-shadow: var(--shadow-soft);
   transform: translateY(-1px);
+}
+
+.minimal-shell-light .create-task-button {
+  border-color: rgba(255, 255, 255, 0.15);
+  background: #4f46e5;
+  box-shadow: none;
+}
+
+.minimal-shell-light .create-task-button:hover {
+  border-color: rgba(255, 255, 255, 0.28);
+  background: #5b55ea;
+  box-shadow: none;
 }
 
 .minimal-icon,
@@ -5679,8 +5858,6 @@ textarea:disabled {
   color: var(--primary);
 }
 
-.minimal-recommend-list .minimal-recommend-priority,
-
 .minimal-task-row > button,
 .task-check {
   border-color: var(--line-strong);
@@ -5780,7 +5957,7 @@ textarea:disabled {
 .filter-bar,
 .board-toolbar {
   display: grid;
-  grid-template-columns: minmax(240px, 1fr) repeat(3, minmax(128px, 150px)) minmax(190px, 20px);
+  grid-template-columns: minmax(240px, 1fr) repeat(3, minmax(128px, 150px)) 150px;
   align-items: center;
   gap: 10px;
   margin-bottom: 16px;
@@ -6391,6 +6568,16 @@ textarea:disabled {
     grid-template-columns: 1fr;
   }
 
+  .ai-suggest-grid > label,
+  .suggest-left-column {
+    grid-column: auto;
+    grid-row: auto;
+  }
+
+  .ai-suggest-grid > label textarea {
+    min-height: 112px;
+  }
+
   .filter-bar,
   .board-toolbar {
     grid-template-columns: 1fr 1fr;
@@ -6427,12 +6614,32 @@ textarea:disabled {
   .minimal-primary {
     width: 40px;
     height: 40px;
+    min-width: 40px;
     padding: 0;
     font-size: 0;
   }
 
   .minimal-primary svg {
+    left: 50%;
     margin: 0;
+    transform: translate(-50%, -50%);
+  }
+
+  .create-task-button {
+    width: 40px;
+    min-width: 40px;
+    height: 40px;
+    min-height: 40px;
+    padding: 0;
+  }
+
+  .create-task-button-label {
+    display: none;
+  }
+
+  .create-task-button svg {
+    left: 50%;
+    transform: translate(-50%, -50%);
   }
 
   .minimal-action-wrap:has(.minimal-icon):not(.minimal-mobile-more-wrap),
@@ -6669,6 +6876,7 @@ textarea:disabled {
   .minimal-primary {
     width: 38px;
     height: 38px;
+    min-width: 38px;
   }
 
   .minimal-stats,
@@ -6905,12 +7113,62 @@ select:focus-visible,
   color: var(--primary);
 }
 
+@keyframes calendarViewEnter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes calendarItemEnter {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes calendarTaskSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(7px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes calendarTodayPulse {
+  0%, 100% {
+    box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--primary) 34%, transparent);
+  }
+  50% {
+    box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--primary) 48%, transparent), 0 0 0 5px color-mix(in srgb, var(--primary) 8%, transparent);
+  }
+}
+
+
 /* Calendar Grid Aesthetics */
 .calendar-page-shell {
+  --calendar-view-height: clamp(560px, calc(100vh - 222px), 700px);
+  --calendar-task-card-min-height: 92px;
+  --calendar-task-card-padding: 5px 10px 10px 12px;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 330px;
+  grid-template-columns: minmax(0, 1.3fr) 280px;
   gap: 22px;
   align-items: stretch;
+}
+
+.calendar-page-shell:has(.calendar-week-board) {
+  grid-template-columns: minmax(0, 1.3fr) 280px;
 }
 
 .calendar-main-panel {
@@ -6957,12 +7215,22 @@ select:focus-visible,
   font-size: 15px;
   font-weight: 800;
   box-shadow: 0 2px 5px rgba(15, 23, 42, 0.04);
+  transition:
+    background-color var(--motion-fast) var(--ease-out),
+    border-color var(--motion-fast) var(--ease-out),
+    color var(--motion-fast) var(--ease-out),
+    box-shadow var(--motion-fast) var(--ease-out),
+    transform var(--motion-fast) var(--ease-out);
+  animation: calendarItemEnter var(--motion-base) var(--ease-out) both;
+  animation-delay: calc(var(--stagger-index, 0) * 42ms);
 }
 
 .calendar-month-actions button:hover,
 .calendar-controls button:hover {
   border-color: color-mix(in srgb, var(--primary) 42%, var(--line));
   background: var(--surface-soft);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
 }
 
 .calendar-controls button.active {
@@ -6999,11 +7267,15 @@ select:focus-visible,
 }
 
 .calendar-view-slot {
-  height: clamp(560px, calc(100vh - 222px), 700px);
+  height: var(--calendar-view-height);
 }
 
 .calendar-view-slot {
   min-height: 0;
+}
+
+.calendar-view-enter {
+  animation: calendarViewEnter var(--motion-base) var(--ease-out) both;
 }
 
 .timeline-layout.calendar-view-slot {
@@ -7019,6 +7291,7 @@ select:focus-visible,
 }
 
 .overdue-list.calendar-view-slot {
+  height: var(--calendar-view-height);
   align-content: start;
 }
 
@@ -7148,6 +7421,13 @@ select:focus-visible,
   text-align: left;
   box-shadow: 0 6px 14px color-mix(in srgb, var(--task-color) 16%, transparent);
   pointer-events: auto;
+  transition:
+    background-color var(--motion-fast) var(--ease-out),
+    border-color var(--motion-fast) var(--ease-out),
+    box-shadow var(--motion-fast) var(--ease-out),
+    transform var(--motion-fast) var(--ease-out);
+  animation: calendarTaskSlideIn var(--motion-base) var(--ease-out) both;
+  animation-delay: calc(var(--stagger-index, 0) * 24ms);
 }
 
 .calendar-task-bar:hover {
@@ -7186,22 +7466,13 @@ select:focus-visible,
   white-space: nowrap;
 }
 
-.calendar-week-agenda {
-  max-width: 100%;
-  display: grid;
-  gap: 14px;
-  overflow-x: auto;
-  padding-bottom: 2px;
-  scrollbar-gutter: stable;
-}
-
 .calendar-week-list {
-  min-width: 960px;
+  min-width: 0;
   height: 100%;
   min-height: 0;
   display: grid;
-  grid-template-columns: repeat(7, minmax(150px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0;
 }
 
 .calendar-week-day {
@@ -7214,6 +7485,12 @@ select:focus-visible,
   overflow: hidden;
   background: var(--calendar-week-bg);
   box-shadow: 0 12px 28px rgba(15, 23, 42, 0.05);
+  animation: calendarItemEnter var(--motion-base) var(--ease-out) both;
+  animation-delay: calc(var(--stagger-index, 0) * 34ms);
+  transition:
+    border-color var(--motion-fast) var(--ease-out),
+    box-shadow var(--motion-fast) var(--ease-out),
+    transform var(--motion-fast) var(--ease-out);
 }
 
 .calendar-week-day.today {
@@ -7224,40 +7501,40 @@ select:focus-visible,
 }
 
 .calendar-week-day-header {
-  min-height: 66px;
+  min-height: 54px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  padding: 14px 14px 12px;
+  gap: 8px;
+  padding: 12px 12px 10px;
   border-bottom: 1px solid var(--line);
   background: var(--calendar-week-band);
 }
 
-.calendar-week-day-header div {
+.calendar-week-day-label {
   min-width: 0;
   display: grid;
-  gap: 3px;
+  gap: 4px;
 }
 
 .calendar-week-day-header span,
 .calendar-week-day-header small {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 850;
   line-height: 1;
 }
 
 .calendar-week-day-header strong {
   color: var(--text);
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 850;
   line-height: 1.15;
 }
 
 .calendar-week-day-header small {
   flex: 0 0 auto;
-  padding: 5px 8px;
+  padding: 4px 8px;
   border-radius: 999px;
   background: var(--calendar-week-time-bg);
   color: var(--calendar-week-time-text);
@@ -7267,26 +7544,44 @@ select:focus-visible,
   min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 9px;
-  padding: 12px;
+  gap: 8px;
+  padding: 10px 10px 12px;
   overflow-y: auto;
 }
 
 .calendar-week-task {
   --week-task-accent: var(--calendar-week-focus);
+  --week-task-dot-size: 10px;
+  --week-task-dot-gap: 8px;
   min-width: 0;
-  min-height: 64px;
-  display: grid;
-  grid-template-columns: 54px minmax(0, 1fr);
-  align-items: center;
-  gap: 10px;
-  padding: 10px;
+  min-height: var(--calendar-task-card-min-height);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  padding: var(--calendar-task-card-padding);
   border: 1px solid var(--calendar-week-task-border);
-  border-radius: 8px;
+  border-radius: 10px;
   background: var(--calendar-week-task-bg);
   color: var(--text);
   text-align: left;
-  box-shadow: inset 3px 0 0 var(--week-task-accent);
+  box-shadow: none;
+  transition:
+    background-color var(--motion-fast) var(--ease-out),
+    border-color var(--motion-fast) var(--ease-out),
+    box-shadow var(--motion-fast) var(--ease-out),
+    transform var(--motion-fast) var(--ease-out);
+  animation: calendarTaskSlideIn var(--motion-base) var(--ease-out) both;
+  animation-delay: calc(var(--stagger-index, 0) * 26ms);
+}
+
+.calendar-week-task::before {
+  content: "";
+  position: absolute;
+  inset: -1px auto -1px -1px;
+  width: 5px;
+  border-radius: 10px 0 0 10px;
+  background: var(--week-task-accent);
 }
 
 .calendar-week-task:hover {
@@ -7295,29 +7590,39 @@ select:focus-visible,
   transform: translateY(-1px);
 }
 
-.calendar-week-task-time {
+.calendar-week-task-dot {
+  display: none;
+  width: var(--week-task-dot-size);
+  height: var(--week-task-dot-size);
+  margin-right: var(--week-task-dot-gap);
+  border-radius: 999px;
+  background: var(--week-task-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--week-task-accent) 18%, transparent);
+  transform: translateY(1px);
+}
+
+.calendar-week-task-copy {
   min-width: 0;
-  min-height: 34px;
   display: grid;
-  place-items: center;
-  border-radius: 7px;
-  background: var(--calendar-week-time-bg);
+  gap: 5px;
+}
+
+.calendar-week-task-copy small {
+  display: block;
   color: var(--calendar-week-time-text);
-  font-size: 12px;
-  font-weight: 900;
-  line-height: 1;
-  white-space: nowrap;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.35;
 }
 
 .calendar-week-task strong {
   min-width: 0;
-  overflow: hidden;
+  display: block;
   color: inherit;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 850;
   line-height: 1.35;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
 }
 
 .calendar-week-task-focus {
@@ -7339,7 +7644,7 @@ select:focus-visible,
 
 .calendar-week-empty {
   margin: 0;
-  padding: 18px 8px;
+  padding: 20px 8px;
   border: 1px dashed var(--line);
   border-radius: 8px;
   color: var(--muted);
@@ -7373,20 +7678,27 @@ select:focus-visible,
 
 .calendar-pending-list button {
   min-width: 0;
-  min-height: 54px;
+  min-height: var(--calendar-task-card-min-height);
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
+  align-items: start;
   gap: 10px;
-  padding: 10px 12px;
+  padding: var(--calendar-task-card-padding);
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 10px;
   background: var(--surface);
   color: var(--text);
   text-align: left;
   font-size: 16px;
   font-weight: 800;
   box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
+  transition:
+    background-color var(--motion-fast) var(--ease-out),
+    border-color var(--motion-fast) var(--ease-out),
+    box-shadow var(--motion-fast) var(--ease-out),
+    transform var(--motion-fast) var(--ease-out);
+  animation: calendarItemEnter var(--motion-base) var(--ease-out) both;
+  animation-delay: calc(var(--stagger-index, 0) * 32ms);
 }
 
 .calendar-pending-list button > span {
@@ -7461,10 +7773,6 @@ select:focus-visible,
   .calendar-month-actions,
   .calendar-controls {
     justify-content: flex-start;
-  }
-
-  .calendar-wrapper {
-    overflow-x: auto;
   }
 
   .calendar-header-row,

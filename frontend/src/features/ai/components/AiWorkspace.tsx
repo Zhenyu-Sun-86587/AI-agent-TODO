@@ -1,15 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
+import { Sparkles } from "lucide-react";
 import { fetchAiLogs } from "../../../api/ai";
 import { asErrorMessage } from "../../../api/errors";
 import type { ApiAiLog } from "../../../api/types";
 import type { Task, TaskFieldSuggestion, TaskPriority } from "../../tasks/types";
 import { EmptyState, Field, formatDue, PriorityBadge } from "../../tasks/components/TaskDisplay";
+import { SelectField } from "../../tasks/components/TaskFilters";
 
 export function AIAssistantCard({ onOpenTask, tasks }: { onOpenTask: (task: Task) => void; tasks: Task[] }) {
   return (
     <section className="ai-card">
       <div className="ai-card-header">
-        <span />
+        <span className="ai-card-mark" aria-hidden="true">
+          <Sparkles size={22} />
+        </span>
         <div>
           <h2>AI 智能建议</h2>
           <p>根据截止时间、优先级和任务复杂度，AI 建议你优先完成以下任务。</p>
@@ -27,7 +31,7 @@ export function AIAssistantCard({ onOpenTask, tasks }: { onOpenTask: (task: Task
                 <span>截止：{formatDue(task)}</span>
               </div>
             </div>
-            <span className={`priority-badge priority-${task.priority}`}>{task.priority}</span>
+            <PriorityBadge priority={task.priority} />
           </button>
         )) : <EmptyState title="暂无 AI 推荐" description="所有任务都已完成，或者还没有可分析的待办任务。" />}
       </div>
@@ -108,9 +112,9 @@ function AILogsPanel({ isApiMode, onApiError, taskVersion, token }: { isApiMode:
     <section className="content-card ai-logs-panel">
       <div className="section-title">
         <div><h2>AI 调用记录</h2><p>来自 /ai/logs，用于确认解析、创建和推荐请求已由后端处理。</p></div>
-        <select value={status} onChange={(event) => setStatus(event.target.value as typeof status)}>
+        <SelectField value={status} onChange={(value) => setStatus(value as typeof status)}>
           <option value="全部">全部状态</option><option value="success">success</option><option value="mocked">mocked</option><option value="failed">failed</option>
-        </select>
+        </SelectField>
       </div>
       {!isApiMode ? <EmptyState title="本地演示模式无 AI 日志" description="登录后端账号后，这里会展示真实 /ai/logs 返回。" /> : isLoading ? <p className="table-state">正在读取 AI 日志...</p> : error ? <p className="form-error">{error}</p> : logs.length ? (
         <>
@@ -161,16 +165,18 @@ function AISuggestTool({ onSuggestTaskFields }: { onSuggestTaskFields: (title: s
         <button className="ghost-button" type="button" onClick={requestSuggestion} disabled={isLoading}>{isLoading ? "分析中" : "获取建议"}</button>
       </div>
       <div className="ai-suggest-grid">
-        <label>任务标题<input value={title} onChange={(event) => setTitle(event.target.value)} /></label>
         <label>任务描述<textarea value={description} onChange={(event) => setDescription(event.target.value)} rows={3} /></label>
-        <div className="suggest-result">
-          <Field label="推荐优先级"><PriorityBadge priority={suggestion.priority} /></Field>
-          <Field label="推荐分类">{suggestion.category}</Field>
-          <Field label="建议来源">{suggestion.source || "/ai/suggest"}</Field>
-          <p>{suggestion.reason}</p>
-          {error && <p className="form-error">{error}</p>}
+        <div className="suggest-left-column">
+          <label>任务标题<input value={title} onChange={(event) => setTitle(event.target.value)} /></label>
+          <div className="suggest-result">
+            <Field label="推荐优先级"><PriorityBadge priority={suggestion.priority} /></Field>
+            <Field label="推荐分类">{suggestion.category}</Field>
+            <Field label="建议来源">{suggestion.source || "/ai/suggest"}</Field>
+          </div>
         </div>
       </div>
+      <p className="suggest-reason">{suggestion.reason}</p>
+      {error && <p className="form-error">{error}</p>}
     </section>
   );
 }

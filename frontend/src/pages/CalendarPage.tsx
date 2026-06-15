@@ -28,6 +28,10 @@ function parseHour(time: string) {
   return Number.isFinite(hour) ? hour : null;
 }
 
+function getSelectedDate(baseDate: Date) {
+  return formatLocalDate(baseDate);
+}
+
 function buildDateKeys(start: Date, count: number) {
   return Array.from({ length: count }, (_, index) => {
     const date = new Date(start);
@@ -69,9 +73,10 @@ function buildWeekDays(baseDate: Date) {
   });
 }
 
-function getDateRangeForView(view: CalendarView, monthDays: Array<{ date: string }>, weekDays: Array<{ date: string }>) {
+function getDateRangeForView(view: CalendarView, baseDate: Date, monthDays: Array<{ date: string }>, weekDays: Array<{ date: string }>) {
   if (view === "24h") {
-    return { start: dateFromToday(0), end: dateFromToday(0) };
+    const selectedDate = getSelectedDate(baseDate);
+    return { start: selectedDate, end: selectedDate };
   }
   if (view === "week") {
     return { start: weekDays[0]?.date || dateFromToday(0), end: weekDays[weekDays.length - 1]?.date || dateFromToday(0) };
@@ -142,6 +147,25 @@ function buildWeekTasksByDate(weekDays: ReturnType<typeof buildWeekDays>, tasks:
   return tasksByDate;
 }
 
+function buildTimelineTasksByHour(selectedDate: string, tasks: Task[]) {
+  const tasksByHour = new Map<number, Task[]>();
+
+  tasks
+    .filter((task) => task.dueDate === selectedDate && Boolean(task.dueTime))
+    .sort((left, right) => `${left.dueTime || "99:99"} ${left.title}`.localeCompare(`${right.dueTime || "99:99"} ${right.title}`))
+    .forEach((task) => {
+      const hour = parseHour(task.dueTime);
+      if (hour === null || hour < 0 || hour > 23) {
+        return;
+      }
+      const hourTasks = tasksByHour.get(hour) ?? [];
+      hourTasks.push(task);
+      tasksByHour.set(hour, hourTasks);
+    });
+
+  return tasksByHour;
+}
+
 function sortByPriorityThenDue(left: Task, right: Task) {
   const priorityDiff = priorityRank[left.priority] - priorityRank[right.priority];
   if (priorityDiff !== 0) {
@@ -177,6 +201,10 @@ function formatDateTitle(date: Date) {
   return `${date.getFullYear()}年${String(date.getMonth() + 1).padStart(2, "0")}月${String(date.getDate()).padStart(2, "0")}日`;
 }
 
+function motionStyle(index: number, extra: Record<string, string | number> = {}) {
+  return { "--stagger-index": index, ...extra } as CSSProperties;
+}
+
 export default function CalendarPage({
   isApiMode,
   onApiError,
@@ -200,11 +228,12 @@ export default function CalendarPage({
   const timelineRef = useRef<HTMLDivElement | null>(null);
   const days = useMemo(() => buildCalendarDays(baseDate), [baseDate]);
   const weekDays = useMemo(() => buildWeekDays(baseDate), [baseDate]);
-  const dateRange = useMemo(() => getDateRangeForView(view, days, weekDays), [days, view, weekDays]);
+  const dateRange = useMemo(() => getDateRangeForView(view, baseDate, days, weekDays), [baseDate, days, view, weekDays]);
   const calendarWeeks = useMemo(() => chunkCalendarWeeks(days), [days]);
   const calendarTasks = isApiMode ? remoteTasks : tasks;
   const weekTasksByDate = useMemo(() => buildWeekTasksByDate(weekDays, calendarTasks), [calendarTasks, weekDays]);
-  const todayTimedTasks = calendarTasks.filter((task) => isToday(task.dueDate) && Boolean(task.dueTime));
+  const selectedDate = useMemo(() => getSelectedDate(baseDate), [baseDate]);
+  const timelineTasksByHour = useMemo(() => buildTimelineTasksByHour(selectedDate, calendarTasks), [calendarTasks, selectedDate]);
   const overdueTasks = calendarTasks.filter(isOverdue).sort((left, right) => left.dueDate.localeCompare(right.dueDate));
   const pendingScheduleTasks = calendarTasks
     .filter((task) => {
@@ -218,6 +247,7 @@ export default function CalendarPage({
     })
     .sort(sortByPriorityThenDue);
   const currentHour = new Date().getHours();
+  const calendarMotionKey = `${view}-${formatLocalDate(baseDate)}`;
   const calendarTitle = view === "week"
     ? formatWeekRangeTitle(weekDays)
     : view === "24h"
@@ -294,13 +324,13 @@ export default function CalendarPage({
   }, [dateRange.end, dateRange.start, isApiMode, onApiError, taskVersion, token, view]);
 
   useEffect(() => {
-    if (view !== "24h" || !timelineRef.current) {
+    if (view !== "24h" || selectedDate !== dateFromToday(0) || !timelineRef.current) {
       return;
     }
 
     const currentHourElement = timelineRef.current.querySelector<HTMLElement>("[data-current-hour='true']");
     currentHourElement?.scrollIntoView({ block: "center" });
-  }, [view]);
+  }, [selectedDate, view]);
 
   return (
     <main className="page-content">
@@ -309,21 +339,21 @@ export default function CalendarPage({
           <div className="calendar-toolbar">
             <PageHeading title="日历视图" />
             <div className="calendar-month-actions" aria-label={view === "week" ? "周切换" : view === "24h" ? "日期切换" : "月份切换"}>
-              <button type="button" onClick={jumpToToday}>今天</button>
+              <button style={motionStyle(0)} type="button" onClick={jumpToToday}>今天</button>
               {view === "week" ? (
                 <>
-                  <button type="button" onClick={() => moveWeek(-1)}>上一周</button>
-                  <button type="button" onClick={() => moveWeek(1)}>下一周</button>
+                  <button style={motionStyle(1)} type="button" onClick={() => moveWeek(-1)}>上一周</button>
+                  <button style={motionStyle(2)} type="button" onClick={() => moveWeek(1)}>下一周</button>
                 </>
               ) : view === "24h" ? (
                 <>
-                  <button type="button" onClick={() => moveDay(-1)}>上一天</button>
-                  <button type="button" onClick={() => moveDay(1)}>下一天</button>
+                  <button style={motionStyle(1)} type="button" onClick={() => moveDay(-1)}>上一天</button>
+                  <button style={motionStyle(2)} type="button" onClick={() => moveDay(1)}>下一天</button>
                 </>
               ) : (
                 <>
-                  <button type="button" onClick={() => moveMonth(-1)}>上个月</button>
-                  <button type="button" onClick={() => moveMonth(1)}>下个月</button>
+                  <button style={motionStyle(1)} type="button" onClick={() => moveMonth(-1)}>上个月</button>
+                  <button style={motionStyle(2)} type="button" onClick={() => moveMonth(1)}>下个月</button>
                 </>
               )}
             </div>
@@ -336,8 +366,8 @@ export default function CalendarPage({
                 ["month", "30 天"],
                 ["24h", "24 小时"],
                 ["overdue", "逾期"],
-              ].map(([key, label]) => (
-                <button className={view === key ? "active" : ""} key={key} type="button" onClick={() => setView(key as CalendarView)}>
+              ].map(([key, label], index) => (
+                <button className={view === key ? "active" : ""} key={key} style={motionStyle(index)} type="button" onClick={() => setView(key as CalendarView)}>
                   {label}
                 </button>
               ))}
@@ -347,21 +377,26 @@ export default function CalendarPage({
           {remoteError && <p className="form-error">{remoteError}</p>}
 
           {view === "24h" ? (
-            <section className="calendar-view-slot timeline-layout">
+            <section key={calendarMotionKey} className="calendar-view-slot timeline-layout calendar-view-enter">
               <div className="today-timeline" ref={timelineRef}>
                 {Array.from({ length: 24 }, (_, hour) => {
-                  const hourTasks = todayTimedTasks.filter((task) => parseHour(task.dueTime) === hour);
-                  const isCurrentHour = hour === currentHour;
+                  const hourTasks = timelineTasksByHour.get(hour) ?? [];
+                  const isCurrentHour = selectedDate === dateFromToday(0) && hour === currentHour;
                   return (
-                    <div className={`timeline-hour ${isCurrentHour ? "current" : ""}`} data-current-hour={isCurrentHour ? "true" : undefined} key={hour}>
+                    <div className={`timeline-hour ${isCurrentHour ? "current" : ""}`} data-current-hour={isCurrentHour ? "true" : undefined} key={hour} style={motionStyle(hour)}>
                       <span className="timeline-hour-label">
                         <strong>{String(hour).padStart(2, "0")}:00</strong>
                         {isCurrentHour ? <em>当前时间</em> : null}
                       </span>
                       <div>
-                        {hourTasks.map((task) => (
-                          <button key={task.id} type="button" onClick={() => onOpenTask(task)}>
+                        {hourTasks.map((task, taskIndex) => (
+                          <button className={`timeline-task timeline-task-${getTaskTone(task)}`} key={task.id} style={motionStyle(taskIndex)} title={formatDue(task)} type="button" onClick={() => onOpenTask(task)}>
+                            <span className="timeline-task-meta">
+                              <small>{task.dueTime}</small>
+                              <PriorityBadge priority={task.priority} />
+                            </span>
                             <strong>{task.title}</strong>
+                            {task.description ? <span className="timeline-task-description">{task.description}</span> : null}
                             <small>{task.category}</small>
                           </button>
                         ))}
@@ -372,10 +407,10 @@ export default function CalendarPage({
               </div>
             </section>
           ) : view === "overdue" ? (
-            <section className="calendar-view-slot content-card overdue-list">
+            <section key={calendarMotionKey} className="calendar-view-slot content-card overdue-list calendar-view-enter">
               {overdueTasks.length ? (
-                overdueTasks.map((task) => (
-                  <button key={task.id} type="button" onClick={() => onOpenTask(task)}>
+                overdueTasks.map((task, index) => (
+                  <button key={task.id} style={motionStyle(index)} type="button" onClick={() => onOpenTask(task)}>
                     <div>
                       <strong>{task.title}</strong>
                       <span>{formatDue(task)}</span>
@@ -388,31 +423,37 @@ export default function CalendarPage({
               )}
             </section>
           ) : view === "week" ? (
-            <section className="calendar-view-slot calendar-week-agenda" aria-label="本周任务">
+            <section key={calendarMotionKey} className="calendar-view-slot calendar-wrapper calendar-view-enter calendar-week-board" aria-label="本周任务">
               <div className="calendar-week-list">
-                {weekDays.map((day) => {
+                {weekDays.map((day, dayIndex) => {
                   const dayTasks = weekTasksByDate.get(day.date) ?? [];
                   return (
-                    <article className={`calendar-week-day ${day.isToday ? "today" : ""}`} key={day.date}>
+                    <article className={`calendar-week-day ${day.isToday ? "today" : ""}`} key={day.date} style={motionStyle(dayIndex)}>
                       <header className="calendar-week-day-header">
-                        <div>
+                        <div className="calendar-week-day-label">
                           <span>周{day.weekday}</span>
-                          <strong>{day.monthNumber}月{day.dayNumber}日</strong>
+                          <strong>{day.dayNumber}</strong>
                         </div>
-                        <small>{dayTasks.length} 项</small>
+                        <small>{day.monthNumber}月</small>
                       </header>
                       <div className="calendar-week-task-list">
                         {dayTasks.length ? (
-                          dayTasks.map((task) => (
+                          dayTasks.map((task, taskIndex) => (
                             <button
                               className={`calendar-week-task calendar-week-task-${getTaskTone(task)}`}
                               key={task.id}
+                              style={motionStyle(taskIndex)}
                               title={formatDue(task)}
                               type="button"
                               onClick={() => onOpenTask(task)}
                             >
-                              <span className="calendar-week-task-time">{task.dueTime || "未设时段"}</span>
-                              <strong>{task.title}</strong>
+                              <div className="calendar-week-task-copy">
+                                <strong>
+                                  <span className="calendar-week-task-dot" aria-hidden="true" />
+                                  {task.title}
+                                </strong>
+                                <small>{task.dueTime ? `${task.dueTime} · ${task.category}` : task.category}</small>
+                              </div>
                             </button>
                           ))
                         ) : (
@@ -425,7 +466,7 @@ export default function CalendarPage({
               </div>
             </section>
           ) : (
-            <div className="calendar-view-slot calendar-wrapper">
+            <div key={calendarMotionKey} className="calendar-view-slot calendar-wrapper calendar-view-enter">
               <div className="calendar-header-row" aria-hidden="true">
                 {weekLabels.map((label) => (
                   <span className="calendar-header-cell" key={label}>{label}</span>
@@ -435,12 +476,13 @@ export default function CalendarPage({
                 {calendarWeeks.map((weekDays, weekIndex) => {
                   const taskBars = buildTaskBarsForWeek(weekDays, calendarTasks);
                   return (
-                    <section className="calendar-week-row" key={weekDays[0]?.date || weekIndex}>
-                      {weekDays.map(({ date, isOutsideMonth }) => {
+                    <section className="calendar-week-row" key={weekDays[0]?.date || weekIndex} style={motionStyle(weekIndex)}>
+                      {weekDays.map(({ date, isOutsideMonth }, dayIndex) => {
                         const dayNumber = new Date(`${date}T00:00:00`).getDate();
                         return (
                           <div
                             className={`calendar-day ${date === dateFromToday(0) ? "today" : ""} ${isOutsideMonth ? "outside-month" : ""}`}
+                            style={motionStyle(weekIndex * 7 + dayIndex)}
                             key={date}
                           >
                             <div className="calendar-day-top">
@@ -450,11 +492,11 @@ export default function CalendarPage({
                         );
                       })}
                       <div className="calendar-task-layer" aria-label="本周任务">
-                        {taskBars.map(({ column, isOverflow, row, task, tone }) => (
+                        {taskBars.map(({ column, isOverflow, row, task, tone }, taskIndex) => (
                           <button
                             className={`calendar-task-bar calendar-task-bar-${tone} ${isOverflow ? "calendar-task-bar-overflow" : ""}`}
                             key={task.id}
-                            style={{ "--task-column": column, "--task-row": row } as CSSProperties}
+                            style={motionStyle(taskIndex, { "--task-column": column, "--task-row": row })}
                             title={formatDue(task)}
                             type="button"
                             onClick={() => onOpenTask(task)}
@@ -474,8 +516,8 @@ export default function CalendarPage({
           <h2>待排程任务</h2>
           <div className="calendar-pending-list">
             {pendingScheduleTasks.length ? (
-              pendingScheduleTasks.map((task) => (
-                <button key={task.id} type="button" onClick={() => onOpenTask(task)}>
+              pendingScheduleTasks.map((task, index) => (
+                <button key={task.id} style={motionStyle(index)} type="button" onClick={() => onOpenTask(task)}>
                   <span>
                     <strong>{task.title}</strong>
                     <small>{task.dueDate}</small>
