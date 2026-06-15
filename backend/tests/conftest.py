@@ -5,8 +5,14 @@ from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.api.deps import get_db
+from app.core.config import settings
 from app.db.base import Base
 from app.main import app
+
+
+@pytest.fixture(autouse=True)
+def isolate_secret_settings(monkeypatch):
+    monkeypatch.setattr(settings, "openai_api_key", None)
 
 
 @pytest.fixture

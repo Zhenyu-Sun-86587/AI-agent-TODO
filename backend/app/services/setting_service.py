@@ -43,9 +43,10 @@ class SettingService:
 
     def to_read(self, setting: UserSetting) -> dict:
         api_key = self._decrypt_optional(setting.openai_api_key_encrypted)
+        configured_api_key = api_key or settings.openai_api_key
         return {
-            "openai_api_key_masked": mask_secret(api_key),
-            "has_openai_api_key": bool(api_key),
+            "openai_api_key_masked": mask_secret(configured_api_key),
+            "has_openai_api_key": bool(configured_api_key),
             "model_name": setting.model_name,
             "created_at": setting.created_at,
             "updated_at": setting.updated_at,
@@ -56,7 +57,7 @@ class SettingService:
 
     def get_openai_api_key(self, user: User) -> Optional[str]:
         setting = self.get_or_create(user)
-        return self._decrypt_optional(setting.openai_api_key_encrypted)
+        return self._decrypt_optional(setting.openai_api_key_encrypted) or settings.openai_api_key
 
     def require_openai_api_key(self, user: User) -> str:
         api_key = self.get_openai_api_key(user)

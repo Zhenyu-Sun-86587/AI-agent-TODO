@@ -77,3 +77,29 @@ def test_ai_parse_suggest_create_and_logs_in_mock_mode(client, monkeypatch):
     response = client.get("/api/ai/logs", headers=headers, params={"status": "mocked"})
     assert response.status_code == 200
     assert response.json()["data"]["pagination"]["total"] == 3
+
+
+def test_ai_chat_endpoint_uses_deepseek_model(client, monkeypatch):
+    headers = auth_headers(client)
+    monkeypatch.setattr(settings, "openai_api_key", "sk-env-secret-5678")
+
+    def fake_call_chat_model(self, api_key, model_name, messages):
+        assert api_key == "sk-env-secret-5678"
+        assert model_name == "deepseek-v4-pro"
+        assert messages[0].content == "test"
+        return "收到：test"
+
+    monkeypatch.setattr("app.services.ai_service.AiService._call_chat_model", fake_call_chat_model)
+
+    response = client.post(
+        "/api/ai/chat",
+        headers=headers,
+        json={
+            "model_name": "deepseek-v4-pro",
+            "messages": [{"role": "user", "content": "test"}],
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["data"]["content"] == "收到：test"
+    assert response.json()["data"]["model_name"] == "deepseek-v4-pro"

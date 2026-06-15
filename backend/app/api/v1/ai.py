@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user, get_db
 from app.core.response import page_response, success_response
 from app.models.user import User
-from app.schemas.ai import AiLogRead, AiSuggestRequest, CreateTaskByAiRequest, ParseTaskRequest
+from app.schemas.ai import AiChatRequest, AiLogRead, AiSuggestRequest, CreateTaskByAiRequest, ParseTaskRequest
 from app.schemas.task import TaskRead
 from app.services.ai_service import AiService
 
@@ -44,6 +44,17 @@ def suggest_task_fields(
     db: Session = Depends(get_db),
 ) -> dict:
     data = AiService(db).suggest_task_fields(current_user, payload.title, payload.description)
+    return success_response(data, request_id=request.state.request_id)
+
+
+@router.post("/chat")
+def chat(
+    payload: AiChatRequest,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict:
+    data = AiService(db).chat(current_user, payload.messages, payload.model_name)
     return success_response(data, request_id=request.state.request_id)
 
 
