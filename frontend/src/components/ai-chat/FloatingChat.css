@@ -156,6 +156,11 @@
   transform-origin: bottom right;
 }
 
+.ai-chat-panel.closing {
+  pointer-events: none;
+  animation: panelSlideDown 0.2s cubic-bezier(0.55, 0, 1, 0.45) forwards;
+}
+
 .minimal-shell-light .ai-chat-panel {
   background: var(--ai-chat-bg);
   backdrop-filter: blur(34px) saturate(150%);
@@ -165,6 +170,11 @@
 @keyframes panelSlideUp {
   0% { opacity: 0; transform: scale(0.9) translateY(20px); }
   100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes panelSlideDown {
+  0% { opacity: 1; transform: scale(1) translateY(0); }
+  100% { opacity: 0; transform: scale(0.94) translateY(18px); }
 }
 
 .ai-chat-header {

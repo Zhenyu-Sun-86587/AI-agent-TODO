@@ -1,5 +1,5 @@
 import { MessageCirclePlus, Minus } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import ChatComposer from "./ChatComposer";
 import ChatThread from "./ChatThread";
 import ConversationMenu from "./ConversationMenu";
@@ -8,6 +8,8 @@ import { useChatConversations } from "../../features/ai-chat/hooks/useChatConver
 import { useChatPanelResize } from "../../features/ai-chat/hooks/useChatPanelResize";
 import { DEFAULT_CONVERSATION_TITLE } from "../../features/ai-chat/constants";
 import type { ChatAttachment } from "./types";
+
+const CLOSE_ANIMATION_MS = 200;
 
 export default function FloatingChat({
   initialModelId,
@@ -21,10 +23,13 @@ export default function FloatingChat({
   token?: string;
 }) {
   const [isOpen, setOpen] = useState(false);
+  const [isClosing, setClosing] = useState(false);
   const [isConversationMenuOpen, setConversationMenuOpen] = useState(false);
   const [composerInput, setComposerInput] = useState("");
   const [composerAttachments, setComposerAttachments] = useState<ChatAttachment[]>([]);
   const [isFollowUpMode, setFollowUpMode] = useState(false);
+  const floatingRef = useRef<HTMLDivElement | null>(null);
+  const closeTimerRef = useRef<number | null>(null);
   const conversationMenuRef = useRef<HTMLDivElement | null>(null);
   const conversationTitleButtonRef = useRef<HTMLButtonElement | null>(null);
   const { handleResizeStart, panelSize } = useChatPanelResize();
@@ -43,13 +48,71 @@ export default function FloatingChat({
     sortedConversations,
   } = useChatConversations(initialModelId, token, onTaskChanged);
 
+  const clearCloseTimer = useCallback(() => {
+    if (closeTimerRef.current !== null) {
+      window.clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+  }, []);
+
+  const closeChatPanel = useCallback(() => {
+    setConversationMenuOpen(false);
+
+    if (!isOpen || isClosing) {
+      return;
+    }
+
+    clearCloseTimer();
+    setClosing(true);
+    closeTimerRef.current = window.setTimeout(() => {
+      setOpen(false);
+      setClosing(false);
+      closeTimerRef.current = null;
+    }, CLOSE_ANIMATION_MS);
+  }, [clearCloseTimer, isClosing, isOpen]);
+
+  const openChatPanel = useCallback(() => {
+    clearCloseTimer();
+    setClosing(false);
+    setOpen(true);
+  }, [clearCloseTimer]);
+
+  useEffect(() => {
+    return () => clearCloseTimer();
+  }, [clearCloseTimer]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setClosing(false);
+    }
+  }, [isOpen]);
+
   useEffect(() => {
     if (!isBlocked) {
       return;
     }
-    setOpen(false);
-    setConversationMenuOpen(false);
-  }, [isBlocked]);
+    closeChatPanel();
+  }, [closeChatPanel, isBlocked]);
+
+  useEffect(() => {
+    if (!isOpen || isBlocked) {
+      return;
+    }
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Node)) {
+        return;
+      }
+      if (floatingRef.current?.contains(target)) {
+        return;
+      }
+      closeChatPanel();
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown, { capture: true });
+    return () => document.removeEventListener("pointerdown", handlePointerDown, { capture: true });
+  }, [closeChatPanel, isBlocked, isOpen]);
 
   useEffect(() => {
     if (!isConversationMenuOpen) {
@@ -85,7 +148,7 @@ export default function FloatingChat({
     createConversation({
       onOpen: () => {
         setConversationMenuOpen(false);
-        setOpen(true);
+        openChatPanel();
       },
     });
   };
@@ -93,13 +156,13 @@ export default function FloatingChat({
   const openSelectedConversation = (conversationId: string) => {
     selectConversation(conversationId);
     setConversationMenuOpen(false);
-    setOpen(true);
+    openChatPanel();
   };
 
   return (
-    <div className={`ai-chat-floating ${isOpen ? "open" : ""}`}>
+    <div className={`ai-chat-floating ${isOpen ? "open" : ""} ${isClosing ? "closing" : ""}`} ref={floatingRef}>
       {isOpen ? (
-        <section className="ai-chat-panel" aria-label="AI 聊天浮窗" style={panelSize.width > 0 ? { width: panelSize.width, height: panelSize.height } : undefined}>
+        <section className={`ai-chat-panel ${isClosing ? "closing" : ""}`} aria-label="AI 聊天浮窗" style={panelSize.width > 0 ? { width: panelSize.width, height: panelSize.height } : undefined}>
           <div className="ai-chat-resizer-top" onPointerDown={(e) => handleResizeStart(e, 'top')} />
           <div className="ai-chat-resizer-left" onPointerDown={(e) => handleResizeStart(e, 'left')} />
           <div className="ai-chat-resizer-corner" onPointerDown={(e) => handleResizeStart(e, 'both')} />
@@ -121,10 +184,7 @@ export default function FloatingChat({
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  setOpen(false);
-                  setConversationMenuOpen(false);
-                }}
+                onClick={closeChatPanel}
                 aria-label="最小化 AI 聊天"
               >
                 <Minus size={24} />
@@ -167,7 +227,7 @@ export default function FloatingChat({
           />
         </section>
       ) : !isBlocked ? (
-        <button className="ai-chat-launcher" type="button" onClick={() => setOpen(true)} aria-label="打开 AI 聊天">
+        <button className="ai-chat-launcher" type="button" onClick={openChatPanel} aria-label="打开 AI 聊天">
           <span className="ai-chat-launcher-avatar" aria-hidden="true" />
         </button>
       ) : null}
