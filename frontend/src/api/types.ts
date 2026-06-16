@@ -80,6 +80,9 @@ export interface ApiAiSuggestResponse {
 export interface ApiAiChatResponse {
   content: string;
   model_name: string;
+  agent_action?: string | null;
+  task_changed?: boolean;
+  task?: ApiTask | null;
 }
 
 export interface ApiStatsOverview {

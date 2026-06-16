@@ -3,7 +3,7 @@ from typing import Any, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.schemas.task import Priority
+from app.schemas.task import Priority, TaskRead
 
 
 class ParseTaskRequest(BaseModel):
@@ -52,11 +52,17 @@ class AiChatMessage(BaseModel):
 class AiChatRequest(BaseModel):
     model_name: Optional[str] = Field(default=None, max_length=100)
     messages: list[AiChatMessage] = Field(min_length=1, max_length=30)
+    agent_mode: bool = False
+    follow_up_mode: bool = False
+    timezone: str = "Asia/Shanghai"
 
 
 class AiChatResponse(BaseModel):
     content: str
     model_name: str
+    agent_action: Optional[str] = None
+    task_changed: bool = False
+    task: Optional[TaskRead] = None
 
 
 class AiLogRead(BaseModel):

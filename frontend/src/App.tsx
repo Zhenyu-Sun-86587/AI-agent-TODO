@@ -4,7 +4,6 @@ import { CalendarDays, Home, ListTodo, Sparkles } from "lucide-react";
 import { getPageFromPath, isKnownPagePath, pagePaths, pushAppPath } from "./app/router/routes";
 import type { PageKey } from "./app/types/common";
 import FloatingChat from "./components/ai-chat/FloatingChat";
-import type { ChatActionHandler } from "./components/ai-chat/types";
 import Layout from "./Layout";
 import ToastViewport, { type ToastMessage, type ToastTone } from "./components/Toast";
 import ProfileModal from "./components/settings/ProfileModal";
@@ -88,7 +87,7 @@ export function App() {
 
   const initialProfile = useMemo<ProfileState>(() => ({
     username: session?.name || "Demo User",
-    email: session?.email || "demo@aitodo.local",
+    email: session?.email || "demo@aitodo.dev",
   }), [session?.email, session?.name]);
 
   const {
@@ -117,8 +116,8 @@ export function App() {
     deleteCandidate,
     deleteTask,
     editingTask,
-    executeTaskChatAction,
     isCreateOpen,
+    loadRemoteWorkspace,
     openTaskDetails,
     remoteCategories,
     remoteStats,
@@ -156,7 +155,11 @@ export function App() {
     tasks,
   });
 
-  const handleChatAction = useCallback<ChatActionHandler>((action, context) => executeTaskChatAction(action, context), [executeTaskChatAction]);
+  const handleChatTaskChanged = useCallback(async () => {
+    if (activeToken) {
+      await loadRemoteWorkspace(activeToken);
+    }
+  }, [activeToken, loadRemoteWorkspace]);
 
   useEffect(() => {
     const syncPageFromPath = () => {
@@ -297,7 +300,7 @@ export function App() {
       <FloatingChat
         initialModelId={settings.modelName || "deepseek-v4-pro"}
         isBlocked={isSettingsOpen}
-        onAction={handleChatAction}
+        onTaskChanged={handleChatTaskChanged}
         token={activeToken}
       />
       <ToastViewport items={toasts} onDismiss={dismissToast} />

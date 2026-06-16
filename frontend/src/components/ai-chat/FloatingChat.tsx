@@ -7,17 +7,17 @@ import "./FloatingChat.css";
 import { useChatConversations } from "../../features/ai-chat/hooks/useChatConversations";
 import { useChatPanelResize } from "../../features/ai-chat/hooks/useChatPanelResize";
 import { DEFAULT_CONVERSATION_TITLE } from "../../features/ai-chat/constants";
-import type { ChatActionHandler, ChatAttachment } from "./types";
+import type { ChatAttachment } from "./types";
 
 export default function FloatingChat({
   initialModelId,
   isBlocked = false,
-  onAction,
+  onTaskChanged,
   token = "",
 }: {
   initialModelId?: string;
   isBlocked?: boolean;
-  onAction?: ChatActionHandler;
+  onTaskChanged?: () => Promise<void> | void;
   token?: string;
 }) {
   const [isOpen, setOpen] = useState(false);
@@ -41,7 +41,7 @@ export default function FloatingChat({
     sendMessage,
     setSelectedModelId,
     sortedConversations,
-  } = useChatConversations(initialModelId, token, onAction);
+  } = useChatConversations(initialModelId, token, onTaskChanged);
 
   useEffect(() => {
     if (!isBlocked) {

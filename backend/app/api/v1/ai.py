@@ -54,7 +54,14 @@ def chat(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> dict:
-    data = AiService(db).chat(current_user, payload.messages, payload.model_name)
+    data = AiService(db).chat(
+        current_user,
+        payload.messages,
+        payload.model_name,
+        follow_up_mode=payload.follow_up_mode,
+        agent_mode=payload.agent_mode,
+        timezone_name=payload.timezone,
+    )
     return success_response(data, request_id=request.state.request_id)
 
 

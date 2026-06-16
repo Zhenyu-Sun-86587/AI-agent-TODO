@@ -6,9 +6,86 @@ async function enterDemo(page: import("@playwright/test").Page, path = "/") {
     localStorage.removeItem("ai-agent-todo.session");
     localStorage.removeItem("ai-agent-todo.tasks");
     localStorage.removeItem("ai-agent-todo.theme");
+    localStorage.removeItem("ai-agent-todo.ai-chat.conversations");
+    localStorage.removeItem("ai-agent-todo.ai-chat.activeConversationId");
+    localStorage.removeItem("ai-agent-todo.ai-chat.selectedModelId");
   });
   await page.goto(path);
-  await page.getByRole("button", { name: "使用演示账号（本地）" }).click();
+  await page.getByRole("button", { name: "使用后端演示账号" }).click();
+  await expect(page.locator(".minimal-shell")).toBeVisible();
+  await expect.poll(() =>
+    page.evaluate(() => {
+      const session = JSON.parse(localStorage.getItem("ai-agent-todo.session") || "null") as { token?: string } | null;
+      return Boolean(session?.token);
+    }),
+  ).toBe(true);
+  await page.evaluate(async () => {
+    const session = JSON.parse(localStorage.getItem("ai-agent-todo.session") || "null") as { token?: string } | null;
+    if (!session?.token) {
+      return;
+    }
+    const headers = { Authorization: `Bearer ${session.token}` };
+    const response = await fetch("http://127.0.0.1:8000/api/tasks?page=1&page_size=100", { headers });
+    const payload = await response.json();
+    const tasks = payload?.data?.items || [];
+    await Promise.all(
+      tasks.map((task: { id: number }) =>
+        fetch(`http://127.0.0.1:8000/api/tasks/${task.id}`, {
+          method: "DELETE",
+          headers,
+        }),
+      ),
+    );
+  });
+  await page.goto(path);
+}
+
+async function getDemoToken(page: import("@playwright/test").Page) {
+  return page.evaluate(() => {
+    const session = JSON.parse(localStorage.getItem("ai-agent-todo.session") || "null") as { token?: string } | null;
+    return session?.token || "";
+  });
+}
+
+async function createRemoteTask(page: import("@playwright/test").Page, title: string) {
+  const token = await getDemoToken(page);
+  const response = await page.request.post("http://127.0.0.1:8000/api/tasks", {
+    data: {
+      title,
+      description: "E2E follow-up task",
+      priority: "medium",
+      category: "测试",
+    },
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  expect(response.status()).toBe(201);
+}
+
+async function sendChat(page: import("@playwright/test").Page, text: string) {
+  const input = page.getByLabel("AI 聊天输入");
+  const sendButton = page.getByRole("button", { name: "发送消息" });
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    await input.fill(text);
+    await page.waitForTimeout(120);
+    if ((await input.inputValue()) === text) {
+      break;
+    }
+  }
+  await expect(input).toHaveValue(text);
+  await expect(sendButton).toBeEnabled();
+  await sendButton.click();
+}
+
+async function openChatPanel(page: import("@playwright/test").Page) {
+  await page.getByRole("button", { name: "打开 AI 聊天" }).click();
+  await expect(page.locator(".ai-chat-panel")).toBeVisible();
+}
+
+async function expectChatPanelClosed(page: import("@playwright/test").Page) {
+  await expect(page.locator(".ai-chat-panel")).toBeHidden();
+  await expect(page.getByRole("button", { name: "打开 AI 聊天" })).toBeVisible();
 }
 
 test("page routes open without a blank screen", async ({ page }) => {
@@ -101,4 +178,113 @@ test("dark mode, AI page and mobile layout are usable", async ({ page, isMobile 
     await page.getByRole("button", { name: "日历" }).click();
     await expect(page.getByRole("heading", { name: "日历" })).toBeVisible();
   }
+});
+
+test("AI chat follow-up mode delegates task instructions to backend agent", async ({ page }) => {
+  await enterDemo(page);
+  const aiRequests: Array<{ agent_mode?: boolean; follow_up_mode?: boolean; messages?: Array<{ content: string }>; model_name?: string }> = [];
+  await page.route("**/api/ai/chat", async (route) => {
+    const payload = route.request().postDataJSON() as { agent_mode?: boolean; follow_up_mode?: boolean; messages?: Array<{ content: string }>; model_name?: string };
+    aiRequests.push(payload);
+    const responses = [
+      {
+        agent_action: "follow_up",
+        content: "信息有点少，请补充任务内容。",
+        task_changed: false,
+      },
+      {
+        agent_action: "follow_up",
+        content: "找到多个匹配“报告”的任务，请回复序号或更完整的任务标题：\n1. 软件工程报告初稿\n2. 软件工程报告终稿",
+        task_changed: false,
+      },
+      {
+        agent_action: "set_task_status",
+        content: "已将任务“软件工程报告初稿”标记为已完成。",
+        task_changed: true,
+      },
+    ];
+    const response = responses[Math.min(aiRequests.length - 1, responses.length - 1)];
+    await route.fulfill({
+      body: JSON.stringify({
+        code: 0,
+        data: {
+          ...response,
+          model_name: payload.model_name || "deepseek-v4-pro",
+          task: null,
+        },
+        message: "success",
+      }),
+      contentType: "application/json",
+      status: 200,
+    });
+  });
+
+  await page.getByRole("button", { name: "打开 AI 聊天" }).click();
+  await page.getByRole("button", { name: "开启追问模式" }).click();
+
+  await sendChat(page, "创建任务：弄一下");
+  await expect(page.getByText(/信息有点少/)).toBeVisible();
+  await expect.poll(() => aiRequests.length).toBe(1);
+  expect(aiRequests[0].agent_mode).toBe(true);
+  expect(aiRequests[0].follow_up_mode).toBe(true);
+
+  await sendChat(page, "完成任务 报告");
+  await expect(page.getByText(/找到多个匹配“报告”的任务/)).toBeVisible();
+  await expect.poll(() => aiRequests.length).toBe(2);
+  expect(aiRequests[1].messages?.at(-1)?.content).toBe("完成任务 报告");
+
+  await sendChat(page, "1");
+  await expect(page.getByText(/已将任务“软件工程报告/)).toBeVisible();
+  await expect.poll(() => aiRequests.length).toBe(3);
+  expect(aiRequests[2].messages?.at(-1)?.content).toBe("1");
+});
+
+test("AI chat closes on outside interactions without swallowing target clicks", async ({ page, isMobile }) => {
+  test.skip(isMobile, "移动端 AI 浮窗覆盖主要页面控件，桌面用例验证可见浮窗外目标点击。");
+
+  await enterDemo(page);
+  const taskTitle = "浮窗外点击关闭验证任务";
+  await createRemoteTask(page, taskTitle);
+
+  await openChatPanel(page);
+  await page.getByLabel("AI 聊天输入").click();
+  await expect(page.locator(".ai-chat-panel")).toBeVisible();
+
+  await page.getByRole("navigation", { name: "主导航" }).getByRole("button", { name: "任务中心" }).click();
+  await expectChatPanelClosed(page);
+  await expect(page).toHaveURL(/\/tasks$/);
+
+  await openChatPanel(page);
+  await page.getByRole("button", { name: "今日任务" }).click();
+  await expectChatPanelClosed(page);
+  await expect(page.getByRole("button", { name: "今日任务" })).toHaveClass(/active/);
+
+  await openChatPanel(page);
+  await page.locator(".minimal-header .create-task-button").click();
+  await expectChatPanelClosed(page);
+  await expect(page.getByRole("heading", { name: "新建任务" })).toBeVisible();
+  await page.getByRole("button", { name: "关闭弹窗" }).click();
+  await expect(page.getByRole("heading", { name: "新建任务" })).toBeHidden();
+
+  await openChatPanel(page);
+  const globalSearch = page.getByPlaceholder("搜索任务、标签或项目...");
+  await globalSearch.click();
+  await expectChatPanelClosed(page);
+  await globalSearch.fill("浮窗外搜索");
+  await expect(globalSearch).toHaveValue("浮窗外搜索");
+
+  await page.goto("/calendar");
+  await expect(page.getByRole("heading", { name: "日历视图" })).toBeVisible();
+  await openChatPanel(page);
+  await page.getByRole("button", { name: "24 小时" }).click();
+  await expectChatPanelClosed(page);
+  await expect(page.getByRole("button", { name: "24 小时" })).toHaveClass(/active/);
+
+  await page.goto("/tasks");
+  const taskSurface = page.locator("tbody tr").filter({ hasText: taskTitle }).first();
+  await expect(taskSurface).toBeVisible({ timeout: 12_000 });
+  await openChatPanel(page);
+  await taskSurface.click({ position: { x: 24, y: 24 } });
+  await expectChatPanelClosed(page);
+  await expect(page.getByRole("heading", { name: taskTitle })).toBeVisible();
 });

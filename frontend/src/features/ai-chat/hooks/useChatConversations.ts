@@ -1,9 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { sendChatMessage } from "../../../components/ai-chat/aiClient";
 import { DEFAULT_CHAT_MODEL_ID, getChatModel, isKnownChatModel } from "../../../components/ai-chat/models";
-import type { ChatActionHandler, ChatAttachment, ChatMessage, ChatSendOptions, Conversation } from "../../../components/ai-chat/types";
+import type {
+  ChatAttachment,
+  ChatMessage,
+  ChatSendOptions,
+  Conversation,
+} from "../../../components/ai-chat/types";
 import { DEFAULT_CONVERSATION_TITLE } from "../constants";
-import { parseChatAction } from "../services/chatActions";
 import {
   createEmptyConversation,
   createId,
@@ -46,7 +50,7 @@ function isFreshEmptyConversation(conversation: Conversation | undefined) {
   return Boolean(conversation && conversation.messages.length === 0 && conversation.title === DEFAULT_CONVERSATION_TITLE);
 }
 
-export function useChatConversations(initialModelId: string | undefined, token?: string, onAction?: ChatActionHandler) {
+export function useChatConversations(initialModelId: string | undefined, token?: string, onTaskChanged?: () => Promise<void> | void) {
   const [isSending, setSending] = useState(false);
   const [conversations, setConversations] = useState<Conversation[]>(() => readConversations());
   const [activeConversationId, setActiveConversationId] = useState(() => getInitialActiveConversationId(readConversations()));
@@ -81,7 +85,11 @@ export function useChatConversations(initialModelId: string | undefined, token?:
   }, [activeConversationId, conversations]);
 
   const updateConversation = (conversationId: string, updater: (conversation: Conversation) => Conversation) => {
-    setConversations((current) => current.map((conversation) => (conversation.id === conversationId ? updater(conversation) : conversation)));
+    setConversations((current) => {
+      const next = current.map((conversation) => (conversation.id === conversationId ? updater(conversation) : conversation));
+      writeConversations(next);
+      return next;
+    });
   };
 
   const createConversation = ({ onOpen }: { onOpen: () => void }) => {
@@ -150,48 +158,30 @@ export function useChatConversations(initialModelId: string | undefined, token?:
       ...conversation,
       title: isFreshEmptyConversation(conversation) ? getConversationTitle(input, attachments) : conversation.title,
       messages: [...conversation.messages, userMessage],
+      pendingFollowUp: undefined,
       updatedAt: now,
     }));
 
     setSending(true);
     try {
-      const action = parseChatAction(input);
-      if (action && onAction) {
-        const actionResponse = await onAction(action, { followUpMode: options.followUpMode });
-        if (actionResponse) {
-          const createdAt = new Date().toISOString();
-          updateConversation(conversationId, (conversation) => ({
-            ...conversation,
-            messages: [
-              ...conversation.messages,
-              {
-                id: createId("action-message"),
-                role: "assistant",
-                content: actionResponse.content,
-                modelId: "task-action",
-                createdAt,
-                status: "sent",
-              },
-            ],
-            updatedAt: createdAt,
-          }));
-          return;
-        }
-      }
-
       const response = await sendChatMessage({
-        conversationId,
         model: selectedModel,
-        messages: nextMessages,
+        conversationId,
         input,
+        messages: nextMessages,
         attachments,
+        followUpMode: options.followUpMode,
         token,
       });
       updateConversation(conversationId, (conversation) => ({
         ...conversation,
         messages: [...conversation.messages, response.message],
+        pendingFollowUp: undefined,
         updatedAt: response.message.createdAt,
       }));
+      if (response.taskChanged) {
+        await onTaskChanged?.();
+      }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "消息发送失败，请稍后再试。";
       const createdAt = new Date().toISOString();

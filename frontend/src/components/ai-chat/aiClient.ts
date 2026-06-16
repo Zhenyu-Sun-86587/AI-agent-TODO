@@ -8,11 +8,13 @@ export type SendChatRequest = {
   messages: ChatMessage[];
   input: string;
   attachments: ChatAttachment[];
+  followUpMode: boolean;
   token?: string;
 };
 
 export type SendChatResponse = {
   message: ChatMessage;
+  taskChanged: boolean;
 };
 
 export async function sendChatMessage(request: SendChatRequest): Promise<SendChatResponse> {
@@ -32,6 +34,7 @@ export async function sendChatMessage(request: SendChatRequest): Promise<SendCha
         role: message.role,
         content: message.content.trim(),
       })),
+    { followUpMode: request.followUpMode },
   );
 
   return {
@@ -43,5 +46,6 @@ export async function sendChatMessage(request: SendChatRequest): Promise<SendCha
       createdAt: new Date().toISOString(),
       status: "sent",
     },
+    taskChanged: Boolean(data.task_changed),
   };
 }

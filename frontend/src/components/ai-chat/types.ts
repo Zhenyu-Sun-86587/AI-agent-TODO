@@ -15,14 +15,6 @@ export type ChatMessage = {
   status?: "sending" | "sent" | "error";
 };
 
-export type Conversation = {
-  id: string;
-  title: string;
-  messages: ChatMessage[];
-  createdAt: string;
-  updatedAt: string;
-};
-
 export type ModelProvider = "openai" | "deepseek";
 
 export type ChatModel = {
@@ -32,23 +24,6 @@ export type ChatModel = {
   description?: string;
   supportsFiles?: boolean;
   supportsReasoning?: boolean;
-};
-
-export type ChatTaskActionResult = {
-  category?: string;
-  dueDate?: string;
-  dueTime?: string;
-  priority?: string;
-  title: string;
-};
-
-export type ChatActionResult = {
-  content: string;
-  task?: ChatTaskActionResult;
-};
-
-export type ChatActionContext = {
-  followUpMode: boolean;
 };
 
 export type ChatTaskAction =
@@ -84,6 +59,44 @@ export type ChatTaskAction =
       status: "待办" | "已完成";
       target: string;
     };
+
+export type ChatFollowUpCandidate = {
+  id: number;
+  title: string;
+};
+
+export type ChatPendingFollowUp = {
+  action: ChatTaskAction;
+  candidates?: ChatFollowUpCandidate[];
+  prompt: string;
+};
+
+export type Conversation = {
+  id: string;
+  title: string;
+  messages: ChatMessage[];
+  pendingFollowUp?: ChatPendingFollowUp;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ChatTaskActionResult = {
+  category?: string;
+  dueDate?: string;
+  dueTime?: string;
+  priority?: string;
+  title: string;
+};
+
+export type ChatActionResult = {
+  content: string;
+  followUp?: ChatPendingFollowUp;
+  task?: ChatTaskActionResult;
+};
+
+export type ChatActionContext = {
+  followUpMode: boolean;
+};
 
 export type ChatActionHandler = (action: ChatTaskAction, context: ChatActionContext) => Promise<ChatActionResult | null>;
 

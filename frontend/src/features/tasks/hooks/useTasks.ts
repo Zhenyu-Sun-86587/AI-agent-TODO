@@ -24,7 +24,7 @@ import {
   updateTaskStatus as updateRemoteTaskStatus,
 } from "../../../api/tasks";
 import type { RemoteStatsState } from "../../../api/types";
-import type { ChatActionContext, ChatActionResult, ChatTaskAction } from "../../../components/ai-chat/types";
+import type { ChatActionContext, ChatActionResult, ChatFollowUpCandidate, ChatPendingFollowUp, ChatTaskAction } from "../../../components/ai-chat/types";
 import type { ToastTone } from "../../../components/Toast";
 import type { DemoSession } from "../../auth/types";
 import type { ProfileState, SettingsState } from "../../settings/types";
@@ -65,13 +65,22 @@ const CHAT_HELP_TEXT = [
 
 function looksUnderspecifiedTaskText(text: string) {
   const normalized = text.trim();
+  const compact = normalized.replace(/[\s，,。；;:：-]/g, "");
   if (!normalized) {
     return true;
   }
-  if (normalized.length <= 2) {
+  if (compact.length <= 4) {
     return true;
   }
-  return /^(任务|待办|事情|这个|那个|一下|弄一下|处理一下|搞一下)$/i.test(normalized);
+  return /^(任务|待办|事情|东西|这个|那个|它|一下|弄一下|处理一下|搞一下|安排一下|改一下|删一下|完成一下)$/i.test(normalized);
+}
+
+function isMissingOrGenericTaskTarget(text: string) {
+  const normalized = text.trim();
+  if (!normalized) {
+    return true;
+  }
+  return /^(任务|待办|事情|东西|这个|那个|它|一下|弄一下|处理一下|搞一下|安排一下|改一下|删一下|完成一下)$/i.test(normalized);
 }
 
 function buildCreateFollowUp(text: string) {
@@ -80,6 +89,30 @@ function buildCreateFollowUp(text: string) {
     "请补充任务内容，最好包含截止时间、优先级或分类。",
     "例如：创建任务：明天下午 3 点完成软件工程报告，优先级高，分类学习",
   ].join("\n");
+}
+
+function toFollowUpCandidates(matches: Task[]): ChatFollowUpCandidate[] {
+  return matches.slice(0, 6).map((task) => ({
+    id: task.id,
+    title: task.title,
+  }));
+}
+
+function buildCandidateFollowUpContent(target: string, matches: Task[], actionLabel: string) {
+  return [
+    `找到多个匹配“${target || "这个任务"}”的任务，你想${actionLabel}哪一个？`,
+    matches.slice(0, 6).map((task, index) => formatTaskLine(task, index)).join("\n"),
+    "请回复序号或更完整的任务标题；也可以回复“取消”。",
+  ].join("\n");
+}
+
+function withFollowUp(content: string, action: ChatTaskAction, candidates?: ChatFollowUpCandidate[]): ChatActionResult {
+  const followUp: ChatPendingFollowUp = {
+    action,
+    candidates: candidates?.length ? candidates : undefined,
+    prompt: content,
+  };
+  return { content, followUp };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -368,12 +401,12 @@ export function useTasks({
       void loadRemoteWorkspace(session.token);
     } else {
       setApiState("local");
-      setApiMessage("本地演示模式");
+      setApiMessage(session ? "本地演示模式" : "请选择登录或使用演示账号");
       setRemoteStats(emptyRemoteStats);
       setRemoteCategories([]);
       setProfile({
         username: session?.name || "Demo User",
-        email: session?.email || "demo@aitodo.local",
+        email: session?.email || "demo@aitodo.dev",
       });
     }
   }, [loadRemoteWorkspace, session?.email, session?.isApiSession, session?.name, session?.token, setApiMessage, setApiState, setProfile]);
@@ -572,6 +605,23 @@ export function useTasks({
         showToast("聊天已创建任务", task.title, "success");
         return task;
       } catch (error) {
+        if (isAiConfigError(error)) {
+          const input = generateTaskFromPrompt(normalizedPrompt);
+          const normalizedInput = normalizeTaskInput({
+            ...input,
+            isAiCreated: true,
+            sourceText: normalizedPrompt,
+          });
+          const task = await createRemoteTask(inputToApiTaskPayload(normalizedInput), activeToken);
+          const mappedTask = mapApiTask(task);
+          setTasks((currentTasks) => [mappedTask, ...currentTasks]);
+          markTaskDataChanged();
+          await loadRemoteWorkspace(activeToken);
+          setApiState("online");
+          setApiMessage("后端 AI Key 未配置，聊天已使用前端规则创建任务。");
+          showToast("聊天已创建任务", mappedTask.title, "success");
+          return mappedTask;
+        }
         handleApiError(error);
         throw error;
       }
@@ -727,10 +777,12 @@ export function useTasks({
       if (!matches.length) {
         return {
           error: `没有找到匹配“${target}”的任务。可以输入“查询任务”查看当前任务列表。`,
+          matches,
         };
       }
       return {
         error: `找到多个匹配“${target}”的任务，请说得更具体一些：\n${matches.slice(0, 6).map(formatTaskLine).join("\n")}`,
+        matches,
       };
     };
 
@@ -740,7 +792,8 @@ export function useTasks({
 
     if (action.kind === "create-task") {
       if (context.followUpMode && looksUnderspecifiedTaskText(action.text)) {
-        return { content: buildCreateFollowUp(action.text) };
+        const content = buildCreateFollowUp(action.text);
+        return withFollowUp(content, action);
       }
       const task = await createTaskFromChat(action.text);
       return {
@@ -766,8 +819,16 @@ export function useTasks({
     }
 
     if (action.kind === "show-task") {
+      if (context.followUpMode && isMissingOrGenericTaskTarget(action.target)) {
+        const content = "你想查看哪个任务？请提供更明确的任务标题，例如：查看任务 软件工程报告";
+        return withFollowUp(content, action);
+      }
       const resolved = resolveOneTask(action.target);
       if (!resolved.task) {
+        if (context.followUpMode && resolved.matches?.length) {
+          const content = buildCandidateFollowUpContent(action.target, resolved.matches, "查看");
+          return withFollowUp(content, action, toFollowUpCandidates(resolved.matches));
+        }
         return { content: resolved.error || "没有找到任务。" };
       }
       const task = activeToken ? mapApiTask(await fetchTask(resolved.task.id, activeToken)) : resolved.task;
@@ -792,11 +853,16 @@ export function useTasks({
     }
 
     if (action.kind === "set-task-status") {
-      if (context.followUpMode && looksUnderspecifiedTaskText(action.target)) {
-        return { content: `你想更新哪个任务的状态？请提供更明确的任务标题，例如：完成任务 软件工程报告` };
+      if (context.followUpMode && isMissingOrGenericTaskTarget(action.target)) {
+        const content = `你想${action.status === "已完成" ? "完成" : "恢复"}哪个任务？请提供更明确的任务标题，例如：完成任务 软件工程报告`;
+        return withFollowUp(content, action);
       }
       const resolved = resolveOneTask(action.target);
       if (!resolved.task) {
+        if (context.followUpMode && resolved.matches?.length) {
+          const content = buildCandidateFollowUpContent(action.target, resolved.matches, action.status === "已完成" ? "完成" : "恢复");
+          return withFollowUp(content, action, toFollowUpCandidates(resolved.matches));
+        }
         return { content: resolved.error || "没有找到任务。" };
       }
       const targetTask = resolved.task;
@@ -842,11 +908,16 @@ export function useTasks({
     }
 
     if (action.kind === "update-task") {
-      if (context.followUpMode && (looksUnderspecifiedTaskText(action.target) || looksUnderspecifiedTaskText(action.changesText))) {
-        return { content: `你想修改哪个任务、改成什么？请说得更完整一些，例如：修改任务 软件工程报告 优先级为高` };
+      if (context.followUpMode && (isMissingOrGenericTaskTarget(action.target) || looksUnderspecifiedTaskText(action.changesText))) {
+        const content = `你想修改哪个任务、改成什么？请说得更完整一些，例如：修改任务 软件工程报告 优先级为高`;
+        return withFollowUp(content, action);
       }
       const resolved = resolveOneTask(action.target);
       if (!resolved.task) {
+        if (context.followUpMode && resolved.matches?.length) {
+          const content = buildCandidateFollowUpContent(action.target, resolved.matches, "修改");
+          return withFollowUp(content, action, toFollowUpCandidates(resolved.matches));
+        }
         return { content: resolved.error || "没有找到任务。" };
       }
       const targetTask = resolved.task;
@@ -886,11 +957,16 @@ export function useTasks({
     }
 
     if (action.kind === "delete-task") {
-      if (context.followUpMode && looksUnderspecifiedTaskText(action.target)) {
-        return { content: `你想删除哪个任务？请提供明确的任务标题，例如：删除任务 软件工程报告` };
+      if (context.followUpMode && isMissingOrGenericTaskTarget(action.target)) {
+        const content = `你想删除哪个任务？请提供明确的任务标题，例如：删除任务 软件工程报告`;
+        return withFollowUp(content, action);
       }
       const resolved = resolveOneTask(action.target);
       if (!resolved.task) {
+        if (context.followUpMode && resolved.matches?.length) {
+          const content = buildCandidateFollowUpContent(action.target, resolved.matches, "删除");
+          return withFollowUp(content, action, toFollowUpCandidates(resolved.matches));
+        }
         return { content: resolved.error || "没有找到任务。" };
       }
       const targetTask = resolved.task;

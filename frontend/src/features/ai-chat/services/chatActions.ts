@@ -23,18 +23,22 @@ const UPDATE_TASK_PATTERNS = [
   /^(?:把|将)(.+?)(?:任务|待办)?\s*(?:改为|更新为|设为|设置为)\s*(.+)$/i,
 ];
 
+const UPDATE_TASK_TARGET_ONLY_PATTERNS = [
+  /^(?:修改|更新|编辑|改)(?:任务|待办)?\s*[:：,，-]?\s*(.*)$/i,
+];
+
 const DELETE_TASK_PATTERNS = [
-  /^(?:删除|移除|删掉|去掉|取消)(?:任务|待办)?\s*[:：,，-]?\s*(.+)$/i,
+  /^(?:删除|移除|删掉|去掉|取消)(?:任务|待办)?\s*[:：,，-]?\s*(.*)$/i,
   /^(?:把|将)(.+?)(?:从)?(?:任务|待办|todo|TODO)(?:里|列表)?(?:删除|移除|删掉|去掉)$/i,
 ];
 
 const COMPLETE_TASK_PATTERNS = [
-  /^(?:完成|标记完成|设为完成|把|将)(?:任务|待办)?\s*[:：,，-]?\s*(.+?)(?:\s*(?:标记为|设为|改为)?\s*(?:完成|已完成))?$/i,
+  /^(?:完成|标记完成|设为完成|把|将)(?:任务|待办)?\s*[:：,，-]?\s*(.*?)(?:\s*(?:标记为|设为|改为)?\s*(?:完成|已完成))?$/i,
   /^(.+?)(?:任务|待办)?\s*(?:完成了|已完成)$/i,
 ];
 
 const REOPEN_TASK_PATTERNS = [
-  /^(?:恢复|重新打开|取消完成|标记未完成|设为待办)(?:任务|待办)?\s*[:：,，-]?\s*(.+)$/i,
+  /^(?:恢复|重新打开|取消完成|标记未完成|设为待办)(?:任务|待办)?\s*[:：,，-]?\s*(.*)$/i,
   /^(?:把|将)(.+?)(?:任务|待办)?\s*(?:恢复为|改为|设为|标记为)\s*(?:待办|未完成)$/i,
 ];
 
@@ -106,21 +110,27 @@ export function parseChatAction(input: string): ChatTaskAction | null {
     return { kind: "help" };
   }
 
+  const createMatch = matchFirst(normalized, CREATE_TASK_PATTERNS);
+  const taskText = cleanupText(createMatch?.[1] || "");
+  if (taskText) {
+    return { kind: "create-task", text: taskText };
+  }
+
   const deleteMatch = matchFirst(normalized, DELETE_TASK_PATTERNS);
   const deleteTarget = cleanupText(deleteMatch?.[1] || "");
-  if (deleteTarget) {
+  if (deleteTarget || deleteMatch) {
     return { kind: "delete-task", target: deleteTarget };
   }
 
   const reopenMatch = matchFirst(normalized, REOPEN_TASK_PATTERNS);
   const reopenTarget = cleanupText(reopenMatch?.[1] || "");
-  if (reopenTarget) {
+  if (reopenTarget || reopenMatch) {
     return { kind: "set-task-status", status: "待办", target: reopenTarget };
   }
 
   const completeMatch = matchFirst(normalized, COMPLETE_TASK_PATTERNS);
   const completeTarget = cleanupText(completeMatch?.[1] || "");
-  if (completeTarget && !/^(任务|待办|todo)$/i.test(completeTarget)) {
+  if (completeMatch && !/^(任务|待办|todo)$/i.test(completeTarget)) {
     return { kind: "set-task-status", status: "已完成", target: completeTarget };
   }
 
@@ -130,11 +140,10 @@ export function parseChatAction(input: string): ChatTaskAction | null {
   if (updateTarget && changesText) {
     return { changesText, kind: "update-task", target: updateTarget };
   }
-
-  const createMatch = matchFirst(normalized, CREATE_TASK_PATTERNS);
-  const taskText = cleanupText(createMatch?.[1] || "");
-  if (taskText) {
-    return { kind: "create-task", text: taskText };
+  const updateTargetOnlyMatch = matchFirst(normalized, UPDATE_TASK_TARGET_ONLY_PATTERNS);
+  const updateTargetOnly = cleanupText(updateTargetOnlyMatch?.[1] || "");
+  if (updateTargetOnly || updateTargetOnlyMatch) {
+    return { changesText: "", kind: "update-task", target: updateTargetOnly };
   }
 
   const showMatch = matchFirst(normalized, SHOW_TASK_PATTERNS);

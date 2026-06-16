@@ -7,9 +7,10 @@ from app.core.errors import BusinessError
 from app.db.base import Base
 from app.models.user import User
 from app.schemas.ai import AiChatMessage, AiSuggestRequest, CreateTaskByAiRequest, ParseTaskRequest
-from app.schemas.task import Priority
+from app.schemas.task import Priority, TaskCreate
 from app.services.ai_service import AiService
 from app.services.setting_service import SettingService
+from app.services.task_service import TaskService
 
 
 def make_db():
@@ -144,6 +145,124 @@ def test_chat_uses_requested_model_and_returns_content(monkeypatch):
 
     assert response.content == "pong"
     assert response.model_name == "deepseek-v4-pro"
+
+
+def test_agent_chat_creates_task_from_ai_decision(monkeypatch):
+    monkeypatch.setattr(settings, "openai_api_key", "sk-env-secret-5678")
+    db = make_db()
+    user = make_user(db)
+    service = AiService(db)
+
+    def fake_call_agent_model(api_key, model_name, messages, current_user, follow_up_mode, timezone_name):
+        assert api_key == "sk-env-secret-5678"
+        assert model_name == "deepseek-v4-pro"
+        assert current_user.id == user.id
+        assert follow_up_mode is True
+        assert timezone_name == "Asia/Shanghai"
+        assert messages[0].content == "帮我创建明天交报告"
+        return """
+        {
+          "action": "create_task",
+          "message": "已创建任务：明天交报告",
+          "task": {
+            "title": "明天交报告",
+            "description": null,
+            "priority": "high",
+            "category": "学习",
+            "due_time": null
+          }
+        }
+        """
+
+    monkeypatch.setattr(service, "_call_agent_model", fake_call_agent_model)
+
+    response = service.chat(
+        user,
+        [AiChatMessage(role="user", content="帮我创建明天交报告")],
+        "deepseek-v4-pro",
+        agent_mode=True,
+        follow_up_mode=True,
+    )
+
+    assert response.agent_action == "create_task"
+    assert response.task_changed is True
+    assert response.task is not None
+    assert response.task.title == "明天交报告"
+    assert response.task.priority == Priority.high
+
+
+def test_agent_chat_follow_up_mode_blocks_uncertain_task_json(monkeypatch):
+    monkeypatch.setattr(settings, "openai_api_key", "sk-env-secret-5678")
+    db = make_db()
+    user = make_user(db)
+    service = AiService(db)
+
+    def fake_call_agent_model(api_key, model_name, messages, current_user, follow_up_mode, timezone_name):
+        return """
+        {
+          "action": "create_task",
+          "message": "",
+          "uncertain_fields": ["due_time", "priority"],
+          "task": {
+            "title": "写实验报告",
+            "description": null,
+            "priority": "medium",
+            "category": "学习",
+            "due_time": null
+          }
+        }
+        """
+
+    monkeypatch.setattr(service, "_call_agent_model", fake_call_agent_model)
+
+    response = service.chat(
+        user,
+        [AiChatMessage(role="user", content="帮我加个写实验报告的任务")],
+        "deepseek-v4-pro",
+        agent_mode=True,
+        follow_up_mode=True,
+    )
+    tasks, total = TaskService(db).list_tasks(user, page=1, page_size=10)
+
+    assert response.agent_action == "follow_up"
+    assert response.task_changed is False
+    assert response.task is None
+    assert "截止时间" in response.content
+    assert "优先级" in response.content
+    assert tasks == []
+    assert total == 0
+
+
+def test_agent_chat_updates_status_only_with_ai_selected_task(monkeypatch):
+    monkeypatch.setattr(settings, "openai_api_key", "sk-env-secret-5678")
+    db = make_db()
+    user = make_user(db)
+    task = TaskService(db).create_task(user, TaskCreate(title="软件工程报告", priority=Priority.medium))
+    service = AiService(db)
+
+    def fake_call_agent_model(api_key, model_name, messages, current_user, follow_up_mode, timezone_name):
+        return f"""
+        {{
+          "action": "set_task_status",
+          "message": "",
+          "target_task_id": {task.id},
+          "updates": {{"status": "done"}}
+        }}
+        """
+
+    monkeypatch.setattr(service, "_call_agent_model", fake_call_agent_model)
+
+    response = service.chat(
+        user,
+        [AiChatMessage(role="user", content="完成软件工程报告")],
+        "deepseek-v4-pro",
+        agent_mode=True,
+    )
+
+    assert response.agent_action == "set_task_status"
+    assert response.task_changed is True
+    assert response.task is not None
+    assert response.task.status == "done"
 
 
 def test_parse_task_without_api_key_fails(monkeypatch):
