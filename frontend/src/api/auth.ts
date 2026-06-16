@@ -15,6 +15,12 @@ export function register(username: string, email: string, password: string) {
   });
 }
 
+export function demoLogin() {
+  return apiRequest<ApiAuthResponse>("/auth/demo", {
+    method: "POST",
+  });
+}
+
 export function logout(token: string) {
   return apiRequest<null>("/auth/logout", {
     method: "POST",

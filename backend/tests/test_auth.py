@@ -42,6 +42,23 @@ def test_login_success_with_email(client):
     assert response.json()["data"]["access_token"]
 
 
+def test_demo_login_returns_backend_session(client):
+    response = client.post("/api/auth/demo")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["code"] == 0
+    assert body["data"]["user"]["username"] == "demo_user"
+    assert body["data"]["user"]["email"] == "demo@aitodo.dev"
+    assert body["data"]["access_token"]
+
+    token = body["data"]["access_token"]
+    me_response = client.get("/api/users/me", headers={"Authorization": f"Bearer {token}"})
+
+    assert me_response.status_code == 200
+    assert me_response.json()["data"]["email"] == "demo@aitodo.dev"
+
+
 def test_login_wrong_password_fails(client):
     auth_headers(client)
 

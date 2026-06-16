@@ -25,6 +25,13 @@ def login(payload: LoginRequest, request: Request, db: Session = Depends(get_db)
     return success_response(data, request_id=request.state.request_id)
 
 
+@router.post("/demo")
+def demo_login(request: Request, db: Session = Depends(get_db)) -> dict:
+    data = AuthService(db).demo_login()
+    data["user"] = UserRead.model_validate(data["user"])
+    return success_response(data, request_id=request.state.request_id)
+
+
 @router.post("/logout")
 def logout(
     request: Request,

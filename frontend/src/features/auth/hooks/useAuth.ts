@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { login, logout as logoutApi, register } from "../../../api/auth";
+import { demoLogin, login, logout as logoutApi, register } from "../../../api/auth";
 import { ApiError, asErrorMessage } from "../../../api/errors";
 import { readStoredJson, writeStoredJson } from "../../../lib/storage";
 import type { ToastTone } from "../../../components/Toast";
@@ -16,12 +16,16 @@ function readStoredSession() {
   if (!isRecord(storedSession) || typeof storedSession.name !== "string" || typeof storedSession.email !== "string") {
     return null;
   }
+  if (storedSession.isApiSession !== true || typeof storedSession.token !== "string" || !storedSession.token) {
+    window.localStorage.removeItem(SESSION_STORAGE_KEY);
+    return null;
+  }
 
   return {
     name: storedSession.name,
     email: storedSession.email,
-    token: typeof storedSession.token === "string" ? storedSession.token : "",
-    isApiSession: storedSession.isApiSession === true,
+    token: storedSession.token,
+    isApiSession: true,
   };
 }
 
@@ -116,13 +120,23 @@ export function useAuth({
   }, [authenticate, setApiMessage, setApiState]);
 
   const useDemoSession = useCallback(() => {
-    authenticate({
-      name: "Demo User",
-      email: "demo@aitodo.local",
-      token: `mock-token-${Date.now()}`,
-      isApiSession: false,
-    });
-  }, [authenticate]);
+    setApiState("loading");
+    setApiMessage("正在登录演示账号...");
+    return demoLogin()
+      .then((data) => {
+        authenticate({
+          name: data.user.username,
+          email: data.user.email,
+          token: data.access_token,
+          isApiSession: true,
+        });
+      })
+      .catch((error) => {
+        setApiState("offline");
+        setApiMessage(asErrorMessage(error));
+        throw error;
+      });
+  }, [authenticate, setApiMessage, setApiState]);
 
   const logout = useCallback(async () => {
     if (activeToken) {

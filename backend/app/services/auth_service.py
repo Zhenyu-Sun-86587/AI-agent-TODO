@@ -11,6 +11,10 @@ from app.schemas.user import UserCreate
 
 
 class AuthService:
+    DEMO_USERNAME = "demo_user"
+    DEMO_EMAIL = "demo@aitodo.dev"
+    DEMO_PASSWORD = "aitodo-demo-account"
+
     def __init__(self, db: Session) -> None:
         self.db = db
 
@@ -51,6 +55,24 @@ class AuthService:
                 "用户名、邮箱或密码错误",
                 status_code=401,
             )
+        return self._auth_payload(user)
+
+    def demo_login(self) -> dict:
+        user = self.db.query(User).filter(User.email == self.DEMO_EMAIL).first()
+        if not user:
+            user = User(
+                username=self.DEMO_USERNAME,
+                email=self.DEMO_EMAIL,
+                password_hash=hash_password(self.DEMO_PASSWORD),
+            )
+            self.db.add(user)
+            self.db.flush()
+
+        if not user.setting:
+            self.db.add(UserSetting(user_id=user.id, model_name=settings.openai_default_model))
+
+        self.db.commit()
+        self.db.refresh(user)
         return self._auth_payload(user)
 
     def _auth_payload(self, user: User) -> dict:

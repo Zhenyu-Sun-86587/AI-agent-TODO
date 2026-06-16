@@ -7,7 +7,7 @@ import { isBackendCompatibleEmail } from "../features/auth/utils/validation";
 export interface AuthPageProps {
   apiMessage: string;
   mode: "login" | "register";
-  onDemo: () => void;
+  onDemo: () => Promise<void>;
   onLogin: (account: string, password: string) => Promise<void>;
   onModeChange: (mode: "login" | "register") => void;
   onRegister: (username: string, email: string, password: string) => Promise<void>;
@@ -57,6 +57,18 @@ export default function AuthPage({ apiMessage, mode, onDemo, onLogin, onModeChan
     }
   };
 
+  const startDemo = async () => {
+    setError("");
+    try {
+      setSubmitting(true);
+      await onDemo();
+    } catch (requestError) {
+      setError(asErrorMessage(requestError));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <main className="auth-shell">
       <section className="auth-brand-panel">
@@ -64,8 +76,8 @@ export default function AuthPage({ apiMessage, mode, onDemo, onLogin, onModeChan
           <Bot size={24} />
         </span>
         <p className="eyebrow">AI TODO</p>
-        <h1>把一段想法变成可执行的任务系统</h1>
-        <p>默认连接 {API_BASE_URL}。如果后端未启动，可以使用演示账号进入本地模式。</p>
+        <h1>把一段想法变成可执行<br />的任务系统</h1>
+        <p>默认连接 {API_BASE_URL}。也可以直接使用后端演示账号进入完整体验。</p>
         <div className="auth-feature-list">
           <span>AI 任务助手</span>
           <span>任务表格筛选</span>
@@ -121,8 +133,8 @@ export default function AuthPage({ apiMessage, mode, onDemo, onLogin, onModeChan
           <button className="primary-button full" type="submit" disabled={isSubmitting}>
             {isSubmitting ? "请求中..." : mode === "login" ? "登录后端" : "注册并进入"}
           </button>
-          <button className="ghost-button full" type="button" onClick={onDemo}>
-            使用演示账号（本地）
+          <button className="ghost-button full" type="button" onClick={startDemo} disabled={isSubmitting}>
+            使用后端演示账号
           </button>
         </form>
       </section>
