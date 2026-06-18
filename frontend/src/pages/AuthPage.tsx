@@ -1,8 +1,9 @@
-import { useState, type FormEvent } from "react";
-import { Bot } from "lucide-react";
+import { useCallback, useState, type FormEvent, type KeyboardEvent, type MouseEvent } from "react";
+import { ArrowRight, KeyRound, Mail, Sparkles, UserRound } from "lucide-react";
 import { API_BASE_URL } from "../api/client";
 import { asErrorMessage } from "../api/errors";
 import { isBackendCompatibleEmail } from "../features/auth/utils/validation";
+import { useAnimatedDismiss, useEscapeToClose } from "../hooks/useDismissAnimation";
 
 export interface AuthPageProps {
   apiMessage: string;
@@ -14,12 +15,17 @@ export interface AuthPageProps {
 }
 
 export default function AuthPage({ apiMessage, mode, onDemo, onLogin, onModeChange, onRegister }: AuthPageProps) {
+  const [isPanelOpen, setPanelOpen] = useState(false);
   const [name, setName] = useState("Hikari");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("aitodo1234");
   const [confirmPassword, setConfirmPassword] = useState("aitodo1234");
   const [error, setError] = useState("");
   const [isSubmitting, setSubmitting] = useState(false);
+  const completePanelClose = useCallback(() => {
+    setPanelOpen(false);
+  }, []);
+  const { closeWithAnimation, isClosing } = useAnimatedDismiss(completePanelClose, 260, isPanelOpen);
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -69,75 +75,143 @@ export default function AuthPage({ apiMessage, mode, onDemo, onLogin, onModeChan
     }
   };
 
+  const openPanel = () => {
+    if (isPanelOpen || isClosing) {
+      return;
+    }
+    setPanelOpen(true);
+  };
+
+  const closePanel = useCallback(() => {
+    if (!isPanelOpen || isClosing) {
+      return;
+    }
+    closeWithAnimation();
+  }, [closeWithAnimation, isClosing, isPanelOpen]);
+
+  useEscapeToClose(closePanel);
+
+  const handlePanelStageClick = (event: MouseEvent<HTMLDivElement>) => {
+    event.stopPropagation();
+    closePanel();
+  };
+
+  const handleShellKeyDown = (event: KeyboardEvent<HTMLElement>) => {
+    if (isPanelOpen) {
+      return;
+    }
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      openPanel();
+    }
+  };
+
   return (
-    <main className="auth-shell">
-      <section className="auth-brand-panel">
-        <span className="brand-mark">
-          <Bot size={24} />
-        </span>
-        <p className="eyebrow">AI TODO</p>
-        <h1>把一段想法变成可执行<br />的任务系统</h1>
-        <p>默认连接 {API_BASE_URL}。也可以直接使用后端演示账号进入完整体验。</p>
-        <div className="auth-feature-list">
-          <span>AI 任务助手</span>
-          <span>任务表格筛选</span>
-          <span>日历和统计</span>
+    <main
+      aria-label={isPanelOpen ? "TaskPilot 登录注册面板" : "TaskPilot 登录封面，点击任意位置进入"}
+      className={[
+        "auth-shell",
+        isPanelOpen ? "panel-open" : "",
+        isClosing ? "panel-closing" : "",
+      ].filter(Boolean).join(" ")}
+      onClick={openPanel}
+      onKeyDown={handleShellKeyDown}
+      tabIndex={isPanelOpen ? -1 : 0}
+    >
+      <div className="auth-backdrop-image" />
+      <div className="auth-night-overlay" />
+      <section aria-hidden={isPanelOpen} className="auth-cover-copy">
+        <div className="auth-cover-badge auth-rise auth-rise-1">把想法变成可执行任务</div>
+        <h1 className="auth-cover-title auth-rise auth-rise-2">TaskPilot</h1>
+        <div className="auth-cover-lines auth-rise auth-rise-3">
+          <p>这是一个面向个人使用的智能任务管理系统，</p>
+          <p>支持手动创建、编辑、完成任务，也支持通过 AI 聊天快速生成待办。</p>
+          <p>任务状态会自动实时更新。</p>
+          <p>你可以随时查看进度、截止时间和完成情况。</p>
         </div>
+        <p className="auth-cover-note auth-rise auth-rise-4">点击页面任意位置，登录并进入任务工作台。</p>
       </section>
-      <section className="auth-card">
-        <div className="auth-tabs">
-          <button className={mode === "login" ? "active" : ""} type="button" onClick={() => onModeChange("login")}>
-            登录
-          </button>
-          <button className={mode === "register" ? "active" : ""} type="button" onClick={() => onModeChange("register")}>
-            注册
-          </button>
+
+      {isPanelOpen && (
+        <div className={`auth-panel-stage ${isClosing ? "closing" : ""}`} onClick={handlePanelStageClick}>
+          <section
+            className={`auth-card auth-card-${mode} ${isClosing ? "closing" : ""}`}
+            aria-label={mode === "login" ? "登录 TaskPilot" : "注册 TaskPilot"}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="auth-tabs" role="tablist" aria-label="选择登录或注册">
+              <button
+                aria-selected={mode === "login"}
+                className={mode === "login" ? "active" : ""}
+                role="tab"
+                type="button"
+                onClick={() => onModeChange("login")}
+              >
+                <KeyRound size={17} />
+                登录
+              </button>
+              <button
+                aria-selected={mode === "register"}
+                className={mode === "register" ? "active" : ""}
+                role="tab"
+                type="button"
+                onClick={() => onModeChange("register")}
+              >
+                <UserRound size={17} />
+                注册
+              </button>
+            </div>
+            <div className="auth-title">
+              <p className="eyebrow">{mode === "login" ? "TASKPILOT ACCESS" : "CREATE WORKSPACE"}</p>
+              <h2>{mode === "login" ? "登录任务工作台" : "创建任务账户"}</h2>
+              <p>{mode === "login" ? "连接你的 TaskPilot 工作区，继续处理今天的待办与 AI 建议。" : "建立个人任务空间，用 AI 辅助整理待办、优先级和截止安排。"}</p>
+            </div>
+            <form className="auth-form" onSubmit={submit}>
+              {mode === "register" && (
+                <label>
+                  <span className="auth-label-text"><UserRound size={16} />用户名</span>
+                  <input value={name} onChange={(event) => setName(event.target.value)} placeholder="请输入用户名" />
+                </label>
+              )}
+              <label>
+                <span className="auth-label-text"><Mail size={16} />邮箱</span>
+                <input value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@qq.com" />
+              </label>
+              <label>
+                <span className="auth-label-text"><KeyRound size={16} />密码</span>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  placeholder="至少 6 位"
+                />
+              </label>
+              {mode === "register" && (
+                <label>
+                  <span className="auth-label-text"><KeyRound size={16} />确认密码</span>
+                  <input
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(event) => setConfirmPassword(event.target.value)}
+                    placeholder="再次输入密码"
+                  />
+                </label>
+              )}
+              {error && <p className="form-error" role="alert">{error}</p>}
+              {!error && apiMessage && <p className="api-message" role="status">{apiMessage}</p>}
+              <button className="primary-button full" type="submit" disabled={isSubmitting}>
+                <span>{isSubmitting ? "请求中..." : mode === "login" ? "登录并进入" : "注册并进入"}</span>
+                <ArrowRight size={18} />
+              </button>
+              <button className="ghost-button full" type="button" onClick={startDemo} disabled={isSubmitting}>
+                <Sparkles size={18} />
+                <span>使用演示账号体验</span>
+              </button>
+            </form>
+            <p className="auth-endpoint">默认连接 {API_BASE_URL}</p>
+          </section>
         </div>
-        <div className="auth-title">
-          <p className="eyebrow">{mode === "login" ? "Welcome Back" : "Create Account"}</p>
-          <h2>{mode === "login" ? "登录 AI TODO" : "注册 AI TODO"}</h2>
-        </div>
-        <form className="auth-form" onSubmit={submit}>
-          {mode === "register" && (
-            <label>
-              用户名
-              <input value={name} onChange={(event) => setName(event.target.value)} placeholder="请输入用户名" />
-            </label>
-          )}
-          <label>
-            邮箱
-            <input value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@qq.com" />
-          </label>
-          <label>
-            密码
-            <input
-              type="password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              placeholder="至少 6 位"
-            />
-          </label>
-          {mode === "register" && (
-            <label>
-              确认密码
-              <input
-                type="password"
-                value={confirmPassword}
-                onChange={(event) => setConfirmPassword(event.target.value)}
-                placeholder="再次输入密码"
-              />
-            </label>
-          )}
-          {error && <p className="form-error">{error}</p>}
-          {!error && apiMessage && <p className="api-message">{apiMessage}</p>}
-          <button className="primary-button full" type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "请求中..." : mode === "login" ? "登录后端" : "注册并进入"}
-          </button>
-          <button className="ghost-button full" type="button" onClick={startDemo} disabled={isSubmitting}>
-            使用后端演示账号
-          </button>
-        </form>
-      </section>
+      )}
     </main>
   );
 }

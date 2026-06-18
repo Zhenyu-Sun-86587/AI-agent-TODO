@@ -216,10 +216,7 @@ export function App() {
         mode={authMode}
         onDemo={useDemoSession}
         onLogin={loginWithApi}
-        onModeChange={(mode) => {
-          setAuthMode(mode);
-          window.history.pushState(null, "", mode === "register" ? "/register" : "/login");
-        }}
+        onModeChange={setAuthMode}
         onRegister={registerWithApi}
       />
     );
