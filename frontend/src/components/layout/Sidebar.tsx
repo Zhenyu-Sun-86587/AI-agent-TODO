@@ -35,7 +35,7 @@ export default function Sidebar({
           <Sparkles size={16} />
         </span>
         <div>
-          <strong>AI TODO</strong>
+          <strong>TaskPilot</strong>
           <small>Workspace</small>
         </div>
       </div>

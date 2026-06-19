@@ -27,8 +27,8 @@ export default function AuthPage({
   const [isPanelOpen, setPanelOpen] = useState(false);
   const [name, setName] = useState("Hikari");
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("aitodo1234");
-  const [confirmPassword, setConfirmPassword] = useState("aitodo1234");
+  const [password, setPassword] = useState("taskpilot1234");
+  const [confirmPassword, setConfirmPassword] = useState("taskpilot1234");
   const [error, setError] = useState("");
   const [isSubmitting, setSubmitting] = useState(false);
   const completePanelClose = useCallback(() => {

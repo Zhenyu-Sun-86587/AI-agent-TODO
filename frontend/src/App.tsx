@@ -109,7 +109,7 @@ export function App() {
 
   const initialProfile = useMemo<ProfileState>(() => ({
     username: session?.name || "Demo User",
-    email: session?.email || "demo@aitodo.dev",
+    email: session?.email || "demo@taskpilot.dev",
   }), [session?.email, session?.name]);
 
   const {

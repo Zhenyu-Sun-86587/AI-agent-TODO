@@ -406,7 +406,7 @@ export function useTasks({
       setRemoteCategories([]);
       setProfile({
         username: session?.name || "Demo User",
-        email: session?.email || "demo@aitodo.dev",
+        email: session?.email || "demo@taskpilot.dev",
       });
     }
   }, [loadRemoteWorkspace, session?.email, session?.isApiSession, session?.name, session?.token, setApiMessage, setApiState, setProfile]);

@@ -5,7 +5,7 @@ export const initialTasks: Task[] = [
   {
     id: 1,
     title: "完成前端首页布局",
-    description: "设计并实现 AI TODO 系统的 Dashboard 首页。",
+    description: "设计并实现 TaskPilot 系统的 Dashboard 首页。",
     status: "进行中",
     priority: "高",
     category: "前端开发",

@@ -9,7 +9,7 @@ await page.evaluate(() => {
     "ai-agent-todo.session",
     JSON.stringify({
       name: "Demo User",
-      email: "demo@aitodo.local",
+      email: "demo@taskpilot.dev",
       token: "visual-audit",
       isApiSession: false,
     }),
