@@ -30,12 +30,14 @@ function readStoredSession() {
 }
 
 export function useAuth({
+  onBeforeAuthenticated,
   onAuthenticated,
   onSessionCleared,
   setApiMessage,
   setApiState,
   showToast,
 }: {
+  onBeforeAuthenticated?: (session: DemoSession) => Promise<void> | void;
   onAuthenticated: (session: DemoSession) => void;
   onSessionCleared: () => void;
   setApiMessage: (message: string) => void;
@@ -77,18 +79,19 @@ export function useAuth({
     return message;
   }, [clearSession, setApiMessage, setApiState, showToast]);
 
-  const authenticate = useCallback((nextSession: DemoSession) => {
+  const authenticate = useCallback(async (nextSession: DemoSession) => {
+    await onBeforeAuthenticated?.(nextSession);
     setSession(nextSession);
     writeStoredJson(SESSION_STORAGE_KEY, nextSession);
     onAuthenticated(nextSession);
-  }, [onAuthenticated]);
+  }, [onAuthenticated, onBeforeAuthenticated]);
 
   const loginWithApi = useCallback(async (account: string, password: string) => {
     setApiState("loading");
     setApiMessage("正在登录后端...");
     try {
       const data = await login(account, password);
-      authenticate({
+      await authenticate({
         name: data.user.username,
         email: data.user.email,
         token: data.access_token,
@@ -106,7 +109,7 @@ export function useAuth({
     setApiMessage("正在注册后端账号...");
     try {
       const data = await register(username, email, password);
-      authenticate({
+      await authenticate({
         name: data.user.username,
         email: data.user.email,
         token: data.access_token,
@@ -119,23 +122,22 @@ export function useAuth({
     }
   }, [authenticate, setApiMessage, setApiState]);
 
-  const useDemoSession = useCallback(() => {
+  const useDemoSession = useCallback(async () => {
     setApiState("loading");
     setApiMessage("正在登录演示账号...");
-    return demoLogin()
-      .then((data) => {
-        authenticate({
-          name: data.user.username,
-          email: data.user.email,
-          token: data.access_token,
-          isApiSession: true,
-        });
-      })
-      .catch((error) => {
-        setApiState("offline");
-        setApiMessage(asErrorMessage(error));
-        throw error;
+    try {
+      const data = await demoLogin();
+      await authenticate({
+        name: data.user.username,
+        email: data.user.email,
+        token: data.access_token,
+        isApiSession: true,
       });
+    } catch (error) {
+      setApiState("offline");
+      setApiMessage(asErrorMessage(error));
+      throw error;
+    }
   }, [authenticate, setApiMessage, setApiState]);
 
   const logout = useCallback(async () => {

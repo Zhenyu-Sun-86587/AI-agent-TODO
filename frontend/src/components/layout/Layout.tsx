@@ -18,6 +18,7 @@ export default function Layout({
   onOpenSettings,
   onSearchChange,
   onToggleTheme,
+  transitionState = "idle",
   userName,
 }: LayoutProps) {
   const statusLabel = apiState === "online" ? "API" : apiState === "loading" ? "同步中" : apiState === "offline" ? "离线" : "本地";
@@ -80,7 +81,14 @@ export default function Layout({
   };
 
   return (
-    <div className={`minimal-shell ${isDark ? "minimal-shell-dark" : "minimal-shell-light"}`}>
+    <div
+      className={[
+        "minimal-shell",
+        isDark ? "minimal-shell-dark" : "minimal-shell-light",
+        transitionState === "entering" ? "workspace-entering" : "",
+        transitionState === "leaving" ? "workspace-leaving" : "",
+      ].filter(Boolean).join(" ")}
+    >
       <Sidebar
         activePage={activePage}
         navItems={navItems}

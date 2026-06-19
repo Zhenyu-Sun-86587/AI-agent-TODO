@@ -24,6 +24,21 @@ const navItems: Array<{ key: PageKey; label: string; icon: LucideIcon }> = [
   { key: "ai", label: "智能助手", icon: Sparkles },
 ];
 
+type AuthTransitionPhase = "auth-to-app" | "app-to-auth" | null;
+
+function getAuthTransitionDuration(duration: number) {
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    return 0;
+  }
+  return duration;
+}
+
+function waitForTransition(duration: number) {
+  return new Promise<void>((resolve) => {
+    window.setTimeout(resolve, getAuthTransitionDuration(duration));
+  });
+}
+
 export function App() {
   const [apiState, setApiState] = useState<"local" | "loading" | "online" | "offline">("local");
   const [apiMessage, setApiMessage] = useState("");
@@ -32,6 +47,7 @@ export function App() {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [globalSearch, setGlobalSearch] = useState("");
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const [authTransitionPhase, setAuthTransitionPhase] = useState<AuthTransitionPhase>(null);
   const toastIdRef = useRef(0);
   const resetTaskSelectionRef = useRef<() => void>(() => undefined);
   const setProfileRef = useRef<(profile: ProfileState) => void>(() => undefined);
@@ -62,6 +78,11 @@ export function App() {
     navigateTo("dashboard");
   }, [navigateTo]);
 
+  const handleBeforeAuthenticated = useCallback(async () => {
+    setAuthTransitionPhase("auth-to-app");
+    await waitForTransition(120);
+  }, []);
+
   const handleSessionCleared = useCallback(() => {
     resetTaskSelectionRef.current();
   }, []);
@@ -78,6 +99,7 @@ export function App() {
     setSession,
     useDemoSession,
   } = useAuth({
+    onBeforeAuthenticated: handleBeforeAuthenticated,
     onAuthenticated: handleAuthenticated,
     onSessionCleared: handleSessionCleared,
     setApiMessage,
@@ -181,6 +203,40 @@ export function App() {
     return () => window.removeEventListener("popstate", syncPageFromPath);
   }, [setAuthMode]);
 
+  useEffect(() => {
+    if (authTransitionPhase !== "auth-to-app" || !session) {
+      return undefined;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setAuthTransitionPhase(null);
+    }, getAuthTransitionDuration(220));
+    return () => window.clearTimeout(timeoutId);
+  }, [authTransitionPhase, session]);
+
+  useEffect(() => {
+    if (authTransitionPhase !== "app-to-auth" || session) {
+      return undefined;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setAuthTransitionPhase(null);
+    }, getAuthTransitionDuration(220));
+    return () => window.clearTimeout(timeoutId);
+  }, [authTransitionPhase, session]);
+
+  const handleLogout = useCallback(async () => {
+    if (authTransitionPhase) {
+      return;
+    }
+
+    setIsSettingsOpen(false);
+    setIsProfileOpen(false);
+    setAuthTransitionPhase("app-to-auth");
+    await waitForTransition(120);
+    await logout();
+  }, [authTransitionPhase, logout]);
+
   const page = (
     <WorkspacePageRenderer
       activePage={activePage}
@@ -213,6 +269,7 @@ export function App() {
     return (
       <AuthPage
         apiMessage={apiMessage}
+        transitionState={authTransitionPhase === "auth-to-app" ? "leaving" : authTransitionPhase === "app-to-auth" ? "returning" : "idle"}
         mode={authMode}
         onDemo={useDemoSession}
         onLogin={loginWithApi}
@@ -231,7 +288,7 @@ export function App() {
       isDark={isDark}
       navItems={navItems}
       onCreateTask={() => setCreateOpen(true)}
-      onLogout={logout}
+      onLogout={handleLogout}
       onNavigate={(pageKey) => navigateTo(pageKey as PageKey)}
       onOpenProfile={() => setIsProfileOpen(true)}
       onOpenSettings={() => {
@@ -239,6 +296,7 @@ export function App() {
       }}
       onSearchChange={setGlobalSearch}
       onToggleTheme={() => setIsDark((value) => !value)}
+      transitionState={authTransitionPhase === "auth-to-app" ? "entering" : authTransitionPhase === "app-to-auth" ? "leaving" : "idle"}
       userName={session.name}
     >
       {page}

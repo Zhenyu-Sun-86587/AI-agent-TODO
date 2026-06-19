@@ -22,5 +22,6 @@ export interface LayoutProps {
   onOpenSettings: () => void;
   onSearchChange: (value: string) => void;
   onToggleTheme: () => void;
+  transitionState?: "idle" | "entering" | "leaving";
   userName: string;
 }

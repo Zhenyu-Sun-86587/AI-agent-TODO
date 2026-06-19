@@ -12,9 +12,18 @@ export interface AuthPageProps {
   onLogin: (account: string, password: string) => Promise<void>;
   onModeChange: (mode: "login" | "register") => void;
   onRegister: (username: string, email: string, password: string) => Promise<void>;
+  transitionState?: "idle" | "leaving" | "returning";
 }
 
-export default function AuthPage({ apiMessage, mode, onDemo, onLogin, onModeChange, onRegister }: AuthPageProps) {
+export default function AuthPage({
+  apiMessage,
+  mode,
+  onDemo,
+  onLogin,
+  onModeChange,
+  onRegister,
+  transitionState = "idle",
+}: AuthPageProps) {
   const [isPanelOpen, setPanelOpen] = useState(false);
   const [name, setName] = useState("Hikari");
   const [email, setEmail] = useState("");
@@ -97,6 +106,9 @@ export default function AuthPage({ apiMessage, mode, onDemo, onLogin, onModeChan
   };
 
   const handleShellKeyDown = (event: KeyboardEvent<HTMLElement>) => {
+    if (transitionState !== "idle") {
+      return;
+    }
     if (isPanelOpen) {
       return;
     }
@@ -113,8 +125,10 @@ export default function AuthPage({ apiMessage, mode, onDemo, onLogin, onModeChan
         "auth-shell",
         isPanelOpen ? "panel-open" : "",
         isClosing ? "panel-closing" : "",
+        transitionState === "leaving" ? "auth-leaving" : "",
+        transitionState === "returning" ? "auth-returning" : "",
       ].filter(Boolean).join(" ")}
-      onClick={openPanel}
+      onClick={transitionState === "idle" ? openPanel : undefined}
       onKeyDown={handleShellKeyDown}
       tabIndex={isPanelOpen ? -1 : 0}
     >
@@ -129,7 +143,9 @@ export default function AuthPage({ apiMessage, mode, onDemo, onLogin, onModeChan
           <p>任务状态会自动实时更新。</p>
           <p>你可以随时查看进度、截止时间和完成情况。</p>
         </div>
-        <p className="auth-cover-note auth-rise auth-rise-4">点击页面任意位置，登录并进入任务工作台。</p>
+        <p className="auth-cover-note auth-rise auth-rise-4">
+          <span className="auth-pulse-text">点击页面任意位置，登录并进入任务工作台。</span>
+        </p>
       </section>
 
       {isPanelOpen && (
