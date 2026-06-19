@@ -1,0 +1,406 @@
+/* AI workspace styles migrated from app.css. */
+
+.content-card:hover,
+.ai-card:hover,
+.task-column:hover {
+  border-color: color-mix(in srgb, var(--primary) 24%, var(--line));
+}
+
+.ai-card {
+  position: relative;
+  overflow: hidden;
+  padding: 20px;
+  background:
+    radial-gradient(circle at top right, rgba(124, 58, 237, 0.2), transparent 34%),
+    linear-gradient(135deg, rgba(79, 70, 229, 0.12), rgba(124, 58, 237, 0.12)),
+    var(--surface);
+}
+
+.ai-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 88% 4%, rgba(79, 70, 229, 0.16), transparent 48%);
+  opacity: 0.72;
+  pointer-events: none;
+  animation: aiGlow 4200ms ease-in-out infinite alternate;
+}
+
+.ai-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+.ai-card-header {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.ai-card-header > span {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--primary), var(--purple));
+  color: #ffffff;
+}
+
+.ai-card-mark {
+  box-shadow: 0 10px 24px rgba(99, 102, 241, 0.28);
+}
+
+.ai-card-mark svg {
+  color: #ffffff;
+}
+
+.ai-recommend-list {
+  display: grid;
+  gap: 10px;
+}
+
+.ai-recommend-list button {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid color-mix(in srgb, var(--primary) 22%, var(--line));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface) 86%, var(--primary-soft));
+  color: var(--text);
+  text-align: left;
+  animation: pageFadeUp var(--motion-base) var(--ease-out) both;
+  animation-delay: calc(var(--stagger-index) * 48ms);
+  transition:
+    background-color var(--motion-fast) var(--ease-out),
+    border-color var(--motion-fast) var(--ease-out),
+    box-shadow var(--motion-base) var(--ease-out),
+    transform var(--motion-fast) var(--ease-out);
+}
+
+.ai-recommend-list button:hover {
+  border-color: color-mix(in srgb, var(--primary) 46%, var(--line));
+  box-shadow: var(--shadow-soft);
+  transform: translateY(-2px);
+}
+
+.ai-recommend-list p {
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.ai-recommend-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.ai-recommend-meta span {
+  min-height: 24px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 8px;
+  border: 1px solid rgba(79, 70, 229, 0.18);
+  border-radius: 999px;
+  background: rgba(79, 70, 229, 0.08);
+  transition:
+    background-color var(--motion-fast) var(--ease-out),
+    border-color var(--motion-fast) var(--ease-out),
+    color var(--motion-fast) var(--ease-out),
+    transform var(--motion-fast) var(--ease-out);
+}
+
+.ai-recommend-meta span:hover {
+  border-color: color-mix(in srgb, var(--primary) 36%, var(--line));
+  background: color-mix(in srgb, var(--primary-soft) 68%, var(--surface));
+  transform: translateY(-1px);
+}
+
+.ai-logs-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.ai-logs-panel .filter-select {
+  width: 150px;
+  flex: 0 0 150px;
+  font-weight: 800;
+}
+
+.ai-log-list {
+  display: grid;
+  gap: 10px;
+}
+
+.ai-log-row {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr) 150px;
+  gap: 12px;
+  align-items: start;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface-soft);
+}
+
+.ai-log-row > div {
+  min-width: 0;
+}
+
+.ai-log-row strong {
+  display: block;
+  overflow: hidden;
+  color: var(--text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ai-log-row p,
+.ai-log-row small {
+  margin-top: 4px;
+  color: var(--muted);
+}
+
+.ai-log-status {
+  min-height: 28px;
+  display: inline-grid;
+  place-items: center;
+  justify-self: start;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.ai-log-status.success {
+  background: #dcfce7;
+  color: var(--green);
+}
+
+.ai-log-status.mocked {
+  background: #ede9fe;
+  color: var(--primary);
+}
+
+.ai-log-status.failed {
+  background: #fee2e2;
+  color: var(--red);
+}
+
+.ai-recommend-list .priority-badge {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: start;
+  justify-self: end;
+}
+
+.suggest-left-column {
+  display: grid;
+  gap: 16px;
+}
+
+.ai-suggest-grid input,
+.ai-suggest-grid textarea,
+.settings-form input {
+  width: 100%;
+  min-height: 42px;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+  outline: none;
+}
+
+.ai-suggest-grid textarea {
+  resize: vertical;
+}
+
+.ai-suggest-grid > label {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: stretch;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.ai-suggest-grid > label textarea {
+  height: 100%;
+  min-height: 0;
+}
+
+.suggest-left-column {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.ai-natural-input,
+.ai-task-generator textarea,
+.ai-suggest-grid textarea {
+  transition:
+    background-color var(--motion-fast) var(--ease-out),
+    border-color var(--motion-fast) var(--ease-out),
+    box-shadow var(--motion-fast) var(--ease-out);
+}
+
+.ai-natural-input:focus,
+.ai-task-generator textarea:focus,
+.ai-suggest-grid textarea:focus {
+  border-color: color-mix(in srgb, var(--purple) 46%, var(--primary));
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15);
+}
+
+.suggest-result {
+  display: grid;
+  gap: 16px;
+}
+
+@keyframes aiGlow {
+  from {
+    opacity: 0.58;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0.95;
+    transform: scale(1.03);
+  }
+}
+
+@keyframes aiBreath {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+@keyframes thinkingDot {
+  0%,
+  80%,
+  100% {
+    opacity: 0.35;
+    transform: translateY(0);
+  }
+  40% {
+    opacity: 1;
+    transform: translateY(-2px);
+  }
+}
+
+.manual-task-form,
+.ai-task-generator {
+  display: grid;
+  gap: 14px;
+}
+
+.ai-task-generator textarea {
+  min-height: 110px;
+}
+
+.ai-empty-preview,
+.generated-preview {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface-soft);
+}
+
+.ai-empty-preview {
+  color: var(--muted);
+}
+
+.ai-empty-preview svg,
+.ai-reason-box svg {
+  color: var(--primary);
+}
+
+.ai-reason-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+@media (max-width: 820px) {
+  .ai-logs-panel .filter-select {
+      width: 100%;
+      flex-basis: auto;
+    }
+
+  .ai-log-row {
+      grid-template-columns: 1fr;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .minimal-ai-panel::before,
+    .ai-card::before,
+    .minimal-ai-panel .minimal-panel-title svg,
+    .ai-card-header > span svg,
+    .ai-analysis-heading > svg,
+    .ai-empty-preview svg,
+    .ai-brand-tag svg,
+    .ai-reason-header svg,
+    .priority-高,
+    .thinking-dots i {
+      animation: none !important;
+    }
+}
+
+.minimal-ai-panel::before,
+.ai-card::before {
+  display: none;
+}
+
+.content-card,
+.ai-card {
+  padding: 18px;
+}
+
+@media (max-width: 1180px) {
+  .ai-suggest-grid > label,
+    .suggest-left-column {
+      grid-column: auto;
+      grid-row: auto;
+    }
+
+  .ai-suggest-grid > label textarea {
+      min-height: 112px;
+    }
+}
+
+@media (max-width: 460px) {
+  .content-card,
+    .ai-card,
+    .minimal-panel {
+      padding: 14px;
+    }
+}
+
+.filter-bar select:focus,
+.create-modal input:focus,
+.create-modal textarea:focus,
+.create-modal select:focus,
+.ai-natural-input:focus,
+.ai-task-generator textarea:focus,
+.ai-suggest-grid input:focus,
+.ai-suggest-grid textarea:focus,
+.settings-form input:focus {
+  border-color: var(--line);
+  box-shadow: none;
+}

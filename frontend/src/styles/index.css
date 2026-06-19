@@ -2,4 +2,11 @@
 @import "./base.css";
 @import "./layout.css";
 @import "./utilities.css";
-@import "./app.css";
+@import "./shared.css";
+@import "./dashboard.css";
+@import "./auth.css";
+@import "./tasks.css";
+@import "./calendar.css";
+@import "./ai.css";
+@import "./settings.css";
+@import "./overlays.css";

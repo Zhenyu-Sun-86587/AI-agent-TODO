@@ -1,0 +1,109 @@
+/* Settings styles migrated from app.css. */
+
+.ai-suggest-tool,
+.settings-form,
+.settings-info {
+  display: grid;
+  gap: 14px;
+}
+
+.ai-suggest-grid,
+.settings-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 16px;
+  align-items: stretch;
+}
+
+.ai-suggest-grid label,
+.settings-form label {
+  display: grid;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.suggest-reason,
+.settings-info p {
+  color: var(--muted);
+}
+
+.settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.connection-result {
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-weight: 800;
+}
+
+.connection-result.success {
+  background: #dcfce7;
+  color: var(--green);
+}
+
+.connection-result.failed {
+  background: #fee2e2;
+  color: var(--red);
+}
+
+.settings-modal-backdrop {
+  z-index: 190;
+}
+
+@media (max-width: 1180px) {
+  .stats-panels,
+    .timeline-layout,
+    .ai-suggest-grid,
+    .settings-layout {
+      grid-template-columns: 1fr;
+    }
+}
+
+.minimal-panel-title h2,
+.ai-card-header h2,
+.section-title h2,
+.page-heading h1,
+.drawer-header h2,
+.distribution-card h2,
+.settings-form h2,
+.settings-info h2 {
+  color: var(--text);
+  letter-spacing: 0;
+}
+
+.settings-layout,
+.ai-suggest-grid {
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
+}
+
+.connection-result {
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+}
+
+.connection-result.success {
+  border-color: color-mix(in srgb, var(--green) 24%, var(--line));
+  background: var(--green-soft);
+  color: var(--green);
+}
+
+.connection-result.failed {
+  border-color: color-mix(in srgb, var(--red) 24%, var(--line));
+  background: var(--red-soft);
+  color: var(--red);
+}
+
+@media (max-width: 1180px) {
+  .minimal-grid,
+    .stats-panels,
+    .timeline-layout,
+    .ai-suggest-grid,
+    .settings-layout {
+      grid-template-columns: 1fr;
+    }
+}
