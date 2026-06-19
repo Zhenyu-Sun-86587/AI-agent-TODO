@@ -32,12 +32,6 @@
   color: var(--text);
 }
 
-.unified-tabs button.active {
-  background: var(--surface);
-  color: var(--primary);
-  box-shadow: var(--shadow-soft);
-}
-
 .unified-content {
   flex: 1;
   overflow: auto;
@@ -404,16 +398,6 @@
 .task-table th:nth-child(5),
 .task-table td:nth-child(5) {
   width: 140px;
-}
-
-.task-table .task-actions-header,
-.task-table .task-actions-cell {
-  width: 80px;
-  text-align: center;
-}
-
-.task-table .task-actions-cell {
-  padding-inline: 8px;
 }
 
 .task-table th:nth-child(n + 2),
@@ -1429,11 +1413,6 @@
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-  .filter-bar,
-    .board-toolbar {
-      grid-template-columns: 1fr 1fr;
-    }
-
   .stats-distribution-row {
       grid-template-columns: 1fr;
     }
@@ -1448,15 +1427,6 @@
     .preview-grid,
     .form-grid {
       grid-template-columns: 1fr;
-    }
-
-  .desktop-table-wrapper {
-      display: none;
-    }
-
-  .mobile-card-list {
-      display: grid;
-      gap: 12px;
     }
 
   .trend-bars {

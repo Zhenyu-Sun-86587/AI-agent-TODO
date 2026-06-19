@@ -74,10 +74,6 @@
   animation: fadeIn var(--duration-base) var(--ease-quick) forwards;
 }
 
-.modal-backdrop.closing {
-  animation: fadeOut var(--motion-fast) var(--ease-out) forwards;
-}
-
 .drawer-backdrop {
   position: fixed;
   inset: 0;
@@ -357,11 +353,6 @@
       animation: drawerSheetOut var(--motion-base) var(--ease-smooth) forwards;
     }
 
-  .modal-backdrop {
-      place-items: end center;
-      padding: 10px;
-    }
-
   .create-modal {
       width: 100%;
       max-height: calc(100vh - 20px);
@@ -503,16 +494,6 @@
 
 .create-modal.closing {
   animation: modalScaleOut var(--motion-fast) var(--ease-out) forwards;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes fadeOut {
-  from { opacity: 1; }
-  to { opacity: 0; }
 }
 
 @keyframes modalScaleIn {

@@ -673,11 +673,6 @@
       display: none;
     }
 
-  .minimal-mobile-more-wrap {
-      display: inline-flex;
-      z-index: 90;
-    }
-
   .minimal-mobile-more {
       display: inline-flex;
       border: 1px solid rgba(148, 163, 184, 0.2);
@@ -688,13 +683,6 @@
   .minimal-mobile-more-panel {
       z-index: 140;
       width: 190px;
-    }
-
-  .minimal-mobile-more-panel button {
-      display: flex;
-      align-items: center;
-      justify-content: flex-start;
-      gap: 8px;
     }
 
   .minimal-shell-light .minimal-theme-toggle {

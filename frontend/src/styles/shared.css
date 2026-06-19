@@ -644,13 +644,6 @@ p {
   line-height: 1.55;
 }
 
-button,
-input,
-textarea,
-select {
-  font: inherit;
-}
-
 button:focus-visible,
 a:focus-visible,
 input:focus-visible,
@@ -726,9 +719,6 @@ textarea:disabled {
       flex-direction: column;
     }
 
-  .page-heading h1 {
-      font-size: 28px;
-    }
 }
 
 input:focus,
@@ -741,9 +731,4 @@ select:focus-visible,
 [contenteditable="true"]:focus-visible {
   outline: none;
   box-shadow: none;
-}
-
-@keyframes pageFadeUp {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
 }
