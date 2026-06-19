@@ -1,8 +1,60 @@
 import { apiRequest } from "./client";
-import type { ApiAiCreateResponse, ApiCategory, ApiPageResult, ApiTask, ApiTaskStatus } from "./types";
+import type { ApiAiCreateResponse, ApiCategory, ApiPageResult, ApiTask, ApiTaskPageParams, ApiTaskStatus } from "./types";
 
-export function fetchTasksPage(path: string, token: string) {
+const taskPageParamKeys = {
+  category: "category",
+  dueFrom: "due_from",
+  dueTo: "due_to",
+  keyword: "keyword",
+  page: "page",
+  pageSize: "page_size",
+  priority: "priority",
+  sortBy: "sort_by",
+  sortOrder: "sort_order",
+  status: "status",
+} satisfies Record<keyof ApiTaskPageParams, string>;
+
+function setSearchParam(params: URLSearchParams, key: string, value: string | number | undefined) {
+  if (value === undefined || value === "") {
+    return;
+  }
+
+  const normalizedValue = typeof value === "string" ? value.trim() : String(value);
+  if (normalizedValue) {
+    params.set(key, normalizedValue);
+  }
+}
+
+export function buildTasksPageSearchParams(pageParams: ApiTaskPageParams = {}) {
+  const params = new URLSearchParams();
+  setSearchParam(params, taskPageParamKeys.page, pageParams.page);
+  setSearchParam(params, taskPageParamKeys.pageSize, pageParams.pageSize);
+  setSearchParam(params, taskPageParamKeys.keyword, pageParams.keyword);
+  setSearchParam(params, taskPageParamKeys.status, pageParams.status);
+  setSearchParam(params, taskPageParamKeys.priority, pageParams.priority);
+  setSearchParam(params, taskPageParamKeys.category, pageParams.category);
+  setSearchParam(params, taskPageParamKeys.dueFrom, pageParams.dueFrom);
+  setSearchParam(params, taskPageParamKeys.dueTo, pageParams.dueTo);
+  setSearchParam(params, taskPageParamKeys.sortBy, pageParams.sortBy);
+  setSearchParam(params, taskPageParamKeys.sortOrder, pageParams.sortOrder);
+  return params;
+}
+
+export function buildTasksPagePath(pageParams: ApiTaskPageParams = {}) {
+  const params = buildTasksPageSearchParams(pageParams);
+  const query = params.toString();
+  return query ? `/tasks?${query}` : "/tasks";
+}
+
+export function fetchTasksPage(params: ApiTaskPageParams, token: string): Promise<ApiPageResult<ApiTask>>;
+export function fetchTasksPage(path: string, token: string): Promise<ApiPageResult<ApiTask>>;
+export function fetchTasksPage(paramsOrPath: ApiTaskPageParams | string, token: string) {
+  const path = typeof paramsOrPath === "string" ? paramsOrPath : buildTasksPagePath(paramsOrPath);
   return apiRequest<ApiPageResult<ApiTask>>(path, { token });
+}
+
+export function fetchTasksPageByPath(path: string, token: string) {
+  return fetchTasksPage(path, token);
 }
 
 export function fetchTask(taskId: number, token: string) {

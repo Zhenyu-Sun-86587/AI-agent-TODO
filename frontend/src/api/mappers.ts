@@ -1,22 +1,29 @@
 import type { ApiParsedTask, ApiPriority, ApiTask, ApiTaskStatus } from "./types";
+import { buildTasksPagePath } from "./tasks";
 import type { NewTaskInput, Task, TaskPriority, TaskStatus } from "../features/tasks/types";
 import { dateFromToday, formatLocalDate } from "../lib/date";
+import {
+  priorityFromApiCode,
+  priorityToApiCode,
+  statusFromApiCode,
+  statusToApiCode,
+} from "../lib/taskPresentation";
 import { pickGeneratedCategory, pickGeneratedDueTime } from "../features/tasks/utils/generation";
 
 export function priorityFromApi(priority: ApiPriority): TaskPriority {
-  return priority === "high" ? "高" : priority === "low" ? "低" : "中";
+  return priorityFromApiCode(priority);
 }
 
 export function priorityToApi(priority: TaskPriority): ApiPriority {
-  return priority === "高" ? "high" : priority === "低" ? "low" : "medium";
+  return priorityToApiCode(priority);
 }
 
 export function statusFromApi(status: ApiTaskStatus): TaskStatus {
-  return status === "done" ? "已完成" : "待办";
+  return statusFromApiCode(status);
 }
 
 export function statusToApi(status: TaskStatus): ApiTaskStatus {
-  return status === "已完成" ? "done" : "todo";
+  return statusToApiCode(status);
 }
 
 export function localPartsFromIso(value: string | null) {
@@ -148,40 +155,17 @@ export function buildTaskListPath({
   sort: string;
   status: TaskStatus | "全部";
 }) {
-  const params = new URLSearchParams({
-    page: String(page),
-    page_size: String(pageSize),
-  });
   const normalizedKeyword = keyword.trim();
-  if (normalizedKeyword) {
-    params.set("keyword", normalizedKeyword);
-  }
-  if (status !== "全部") {
-    params.set("status", statusToApi(status));
-  }
-  if (priority !== "全部") {
-    params.set("priority", priorityToApi(priority));
-  }
-  if (category !== "全部") {
-    params.set("category", category);
-  }
-  if (dueFrom) {
-    params.set("due_from", dueFrom);
-  }
-  if (dueTo) {
-    params.set("due_to", dueTo);
-  }
-
-  if (sort === "priority") {
-    params.set("sort_by", "priority");
-    params.set("sort_order", "desc");
-  } else if (sort === "createdAt") {
-    params.set("sort_by", "created_at");
-    params.set("sort_order", "desc");
-  } else {
-    params.set("sort_by", "due_time");
-    params.set("sort_order", "asc");
-  }
-
-  return `/tasks?${params.toString()}`;
+  return buildTasksPagePath({
+    category: category === "全部" ? undefined : category,
+    dueFrom,
+    dueTo,
+    keyword: normalizedKeyword || undefined,
+    page,
+    pageSize,
+    priority: priority === "全部" ? undefined : priorityToApi(priority),
+    sortBy: sort === "priority" ? "priority" : sort === "createdAt" ? "created_at" : "due_time",
+    sortOrder: sort === "dueDate" ? "asc" : "desc",
+    status: status === "全部" ? undefined : statusToApi(status),
+  });
 }

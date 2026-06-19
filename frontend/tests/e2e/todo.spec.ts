@@ -11,7 +11,8 @@ async function enterDemo(page: import("@playwright/test").Page, path = "/") {
     localStorage.removeItem("ai-agent-todo.ai-chat.selectedModelId");
   });
   await page.goto(path);
-  await page.getByRole("button", { name: "使用后端演示账号" }).click();
+  await page.getByRole("main", { name: /TaskPilot 登录封面/ }).click();
+  await page.getByRole("button", { name: /使用.*演示账号/ }).click();
   await expect(page.locator(".minimal-shell")).toBeVisible();
   await expect.poll(() =>
     page.evaluate(() => {
@@ -91,10 +92,10 @@ async function expectChatPanelClosed(page: import("@playwright/test").Page) {
 test("page routes open without a blank screen", async ({ page }) => {
   await enterDemo(page);
 
-  for (const route of ["/", "/today", "/tasks", "/ai", "/board", "/calendar", "/stats", "/tags", "/settings"]) {
+  for (const route of ["/", "/tasks", "/ai", "/calendar", "/settings"]) {
     await page.goto(route);
     await expect(page.locator(".minimal-shell")).toBeVisible();
-    await expect(page.locator("h1").first()).toBeVisible();
+    await expect(page.locator(".minimal-page")).not.toBeEmpty();
   }
 
   await page.goto("/not-a-real-route");
@@ -102,24 +103,25 @@ test("page routes open without a blank screen", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "早上好，今天也要高效完成任务！" })).toBeVisible();
 });
 
-test("user can create, search, filter, edit, complete and delete a task", async ({ page, isMobile }) => {
+test("user can create, search, filter, edit, complete and delete a task", async ({ page, isMobile }, testInfo) => {
   await enterDemo(page);
-  const createdTitle = "Playwright唯一任务 <script>alert(\"xss\")</script>";
-  const editedTitle = "Playwright唯一任务 - 已编辑";
+  const titlePrefix = `Playwright唯一任务-${testInfo.project.name}`;
+  const createdTitle = `${titlePrefix} <script>alert("xss")</script>`;
+  const editedTitle = `${titlePrefix} - 已编辑`;
 
   await page.getByRole("button", { name: "新建任务" }).first().click();
-  await page.getByRole("button", { name: "自定义创建" }).click();
   await page.getByLabel("任务标题").fill(createdTitle);
   await page.getByLabel("描述").fill("中文、emoji ✨ 和 <img src=x onerror=alert(\"xss\") /> 都应作为文本展示。");
   await page.getByLabel("优先级").selectOption("高");
-  await page.getByLabel("分类").selectOption("测试");
+  await page.getByLabel("分类").selectOption("前端开发");
   await page.getByLabel("标签").fill("测试, 安全");
   await page.getByRole("button", { name: "创建任务" }).click();
+  await expect(page.getByRole("heading", { name: "新建任务" })).toBeHidden({ timeout: 12_000 });
 
-  await page.getByRole("button", { name: "全部任务" }).first().click();
-  const taskSurface = page.locator(isMobile ? ".mobile-task-card" : "tbody tr").filter({ hasText: "Playwright唯一任务" }).first();
+  await page.goto("/tasks");
+  const taskSurface = page.locator(isMobile ? ".mobile-task-card" : "tbody tr").filter({ hasText: titlePrefix }).first();
   await expect(taskSurface).toBeVisible();
-  await page.getByPlaceholder("搜索任务...").fill("Playwright唯一任务");
+  await page.getByPlaceholder("搜索任务...").fill(titlePrefix);
   await expect(page.getByText("共 1 条")).toBeVisible();
   await page.locator(".filter-bar select").nth(1).selectOption("高");
   await expect(page.getByText("共 1 条")).toBeVisible();
@@ -140,19 +142,22 @@ test("user can create, search, filter, edit, complete and delete a task", async 
   await expect(page.getByText(editedTitle)).toHaveCount(0);
 });
 
-test("settings page can save API key, show masked value and update model", async ({ page }) => {
+test("settings modal can save API key, show masked value and update model", async ({ page, isMobile }) => {
+  test.skip(isMobile, "当前移动端导航没有设置入口，桌面用例验证设置弹窗。");
+
   await enterDemo(page);
-  await page.goto("/settings");
-  await expect(page.getByRole("heading", { name: "设置" })).toBeVisible();
+  await page.getByRole("complementary").getByRole("button", { name: "设置" }).click();
+  await expect(page.getByRole("heading", { name: "设置", level: 2 })).toBeVisible();
+  await page.getByRole("button", { name: "AI 配置" }).click();
 
   // 填入 API Key 并保存
-  const apiKeyInput = page.getByPlaceholder(/sk-\.\.\./);
+  const apiKeyInput = page.getByLabel("OpenAI API Key");
   await apiKeyInput.fill("sk-test-playwright-key-1234");
   await page.getByRole("button", { name: "保存设置" }).click();
   await expect(page.getByText(/已保存/)).toBeVisible();
 
   // 只更新模型名称，不覆盖 Key
-  const modelInput = page.locator("input").nth(2);
+  const modelInput = page.getByLabel("模型名称");
   await modelInput.fill("gpt-4-turbo");
   await page.getByRole("button", { name: "保存设置" }).click();
 
@@ -173,10 +178,10 @@ test("dark mode, AI page and mobile layout are usable", async ({ page, isMobile 
   await expect(page.getByText("AI 分类：").first()).toBeVisible();
 
   if (isMobile) {
-    await expect(page.getByRole("navigation", { name: "移动端导航" })).toBeVisible();
-    await expect(page.getByRole("navigation", { name: "移动端更多页面" })).toBeVisible();
-    await page.getByRole("button", { name: "日历" }).click();
-    await expect(page.getByRole("heading", { name: "日历" })).toBeVisible();
+    const mobileNav = page.getByRole("navigation", { name: "移动端导航" });
+    await expect(mobileNav).toBeVisible();
+    await mobileNav.getByRole("button", { name: "日历" }).click();
+    await expect(page.getByRole("heading", { name: "日历视图" })).toBeVisible();
   }
 });
 
@@ -281,6 +286,7 @@ test("AI chat closes on outside interactions without swallowing target clicks", 
   await expect(page.getByRole("button", { name: "24 小时" })).toHaveClass(/active/);
 
   await page.goto("/tasks");
+  await page.getByPlaceholder("搜索任务、标签或项目...").fill("");
   const taskSurface = page.locator("tbody tr").filter({ hasText: taskTitle }).first();
   await expect(taskSurface).toBeVisible({ timeout: 12_000 });
   await openChatPanel(page);

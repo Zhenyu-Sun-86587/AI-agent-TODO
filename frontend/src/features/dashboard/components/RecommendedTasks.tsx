@@ -1,15 +1,7 @@
 import type { CSSProperties, ReactNode } from "react";
 import { Clock3, FileText, Sparkles } from "lucide-react";
-import type { DashboardTask } from "../../../Dashboard";
-import { PriorityBadge } from "../../tasks/components/TaskDisplay";
-import type { TaskPriority } from "../../tasks/types";
-
-function formatDue(task: Pick<DashboardTask, "dueDate" | "dueTime">) {
-  if (!task.dueDate) {
-    return "未设置";
-  }
-  return task.dueTime ? `${task.dueDate} ${task.dueTime}` : task.dueDate;
-}
+import { formatDue, PriorityBadge } from "../../tasks/components/TaskDisplay";
+import type { Task } from "../../tasks/types";
 
 function EmptyState({
   description,
@@ -33,8 +25,8 @@ export function RecommendedTasks({
   onOpenTask,
   tasks,
 }: {
-  onOpenTask: (task: DashboardTask) => void;
-  tasks: DashboardTask[];
+  onOpenTask: (task: Task) => void;
+  tasks: Task[];
 }) {
   return (
     <article className="minimal-panel minimal-ai-panel">
@@ -59,7 +51,7 @@ export function RecommendedTasks({
                 </div>
                 <p>智能分析：{task.aiReason}</p>
               </div>
-              <PriorityBadge priority={task.priority as TaskPriority} />
+              <PriorityBadge priority={task.priority} />
               <small>
                 <Clock3 size={12} />
                 {formatDue(task)}

@@ -156,6 +156,8 @@
 }
 
 .minimal-header {
+  position: relative;
+  z-index: 90;
   min-height: 64px;
   display: flex;
   align-items: center;

@@ -1,6 +1,6 @@
 import { Sparkles, Settings } from "lucide-react";
 import type { RefObject } from "react";
-import type { MinimalNavItem } from "./types";
+import type { LayoutPanel, MinimalNavItem } from "./types";
 import NavItem from "./NavItem";
 
 export default function Sidebar({
@@ -16,14 +16,14 @@ export default function Sidebar({
   userName,
   userRef,
 }: {
-  activePage: string;
+  activePage: MinimalNavItem["key"];
   navItems: MinimalNavItem[];
   onLogout: () => void;
-  onNavigate: (page: string) => void;
+  onNavigate: (page: MinimalNavItem["key"]) => void;
   onOpenProfile?: () => void;
   onOpenSettings: () => void;
-  openPanel: "notifications" | "mobileMore" | "user" | null;
-  setOpenPanel: (panel: "notifications" | "mobileMore" | "user" | null | ((panel: "notifications" | "mobileMore" | "user" | null) => "notifications" | "mobileMore" | "user" | null)) => void;
+  openPanel: LayoutPanel;
+  setOpenPanel: (panel: LayoutPanel | ((panel: LayoutPanel) => LayoutPanel)) => void;
   statusLabel: string;
   userName: string;
   userRef: RefObject<HTMLDivElement | null>;

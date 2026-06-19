@@ -1,14 +1,13 @@
 import type { ReactNode } from "react";
-import type { LucideIcon } from "lucide-react";
+import type { AppNavItem } from "../../app/router/navigation";
+import type { PageKey } from "../../app/types/common";
 
-export interface MinimalNavItem {
-  key: string;
-  label: string;
-  icon: LucideIcon;
-}
+export type MinimalNavItem = AppNavItem;
+
+export type LayoutPanel = "notifications" | "mobileMore" | "user" | null;
 
 export interface LayoutProps {
-  activePage: string;
+  activePage: PageKey;
   apiMessage: string;
   apiState: "local" | "loading" | "online" | "offline";
   children: ReactNode;
@@ -17,7 +16,7 @@ export interface LayoutProps {
   navItems: MinimalNavItem[];
   onCreateTask: () => void;
   onLogout: () => void;
-  onNavigate: (page: string) => void;
+  onNavigate: (page: PageKey) => void;
   onOpenProfile?: () => void;
   onOpenSettings: () => void;
   onSearchChange: (value: string) => void;

@@ -1,18 +1,11 @@
 import { useEffect, useState, type CSSProperties, type MouseEvent } from "react";
 import { Check, MoreHorizontal } from "lucide-react";
+import { TASK_STATUS_OPTIONS } from "../constants";
 import type { Task, TaskStatus } from "../types";
 import { EmptyState, formatDue, PriorityBadge, StatusBadge } from "./TaskDisplay";
+import { statusActionLabel, toggleTaskActionLabel } from "../utils/taskState";
 export { FilterBar } from "./TaskFilters";
-
-const statusOptions: TaskStatus[] = ["待办", "进行中", "已完成"];
-
-export function statusActionLabel(status: TaskStatus) {
-  return status === "待办" ? "设为待办" : status === "进行中" ? "设为进行中" : "设为已完成";
-}
-
-export function toggleTaskActionLabel(status: TaskStatus) {
-  return status === "已完成" ? "恢复待办" : "标记完成";
-}
+export { statusActionLabel, toggleTaskActionLabel } from "../utils/taskState";
 
 export function TaskTable({
   onDelete,
@@ -83,7 +76,7 @@ export function TaskTable({
             <div className="mobile-task-meta"><StatusBadge status={task.status} /><PriorityBadge priority={task.priority} /><span>{task.category}</span><span>{formatDue(task)}</span></div>
             {openMenuTaskId === task.id && (
               <div className="mobile-quick-actions" onClick={(event) => event.stopPropagation()}>
-                {statusOptions.map((statusItem) => (
+                {TASK_STATUS_OPTIONS.map((statusItem) => (
                   <button key={statusItem} className={task.status === statusItem ? "is-active" : ""} type="button" onClick={() => { setOpenMenuTaskId(null); void onUpdateTaskStatus(task.id, statusItem); }}>{statusActionLabel(statusItem)}</button>
                 ))}
                 <button type="button" onClick={() => onOpenTask(task)}>查看详情</button>
@@ -114,7 +107,7 @@ function TaskRowActions({
       <button className={`row-menu-trigger ${isOpen ? "is-open" : ""}`} type="button" onClick={onToggleMenu} aria-expanded={isOpen} aria-haspopup="menu" aria-label="修改任务状态" title="修改任务状态"><MoreHorizontal size={16} /></button>
       {isOpen && (
         <div className="row-menu" role="menu" onClick={(event) => event.stopPropagation()}>
-          {statusOptions.map((statusItem) => (
+          {TASK_STATUS_OPTIONS.map((statusItem) => (
             <button key={statusItem} className={task.status === statusItem ? "is-active" : ""} type="button" role="menuitemradio" aria-checked={task.status === statusItem} onClick={() => void onChangeStatus(task.id, statusItem)}>
               <span className="row-menu-status"><StatusBadge status={statusItem} /></span>
               <span>{statusActionLabel(statusItem)}</span>

@@ -5,7 +5,6 @@ export const pagePaths: Record<PageKey, string> = {
   tasks: "/tasks",
   calendar: "/calendar",
   ai: "/ai",
-  settings: "/settings",
 };
 
 export function isKnownPagePath(pathname: string) {

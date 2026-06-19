@@ -7,7 +7,7 @@ import "./FloatingChat.css";
 import { useChatConversations } from "../../features/ai-chat/hooks/useChatConversations";
 import { useChatPanelResize } from "../../features/ai-chat/hooks/useChatPanelResize";
 import { DEFAULT_CONVERSATION_TITLE } from "../../features/ai-chat/constants";
-import type { ChatAttachment } from "./types";
+import type { ChatAttachment } from "../../features/ai-chat/types";
 
 const CLOSE_ANIMATION_MS = 200;
 
@@ -40,6 +40,7 @@ export default function FloatingChat({
     createConversation,
     executeDeleteConversation,
     isSending,
+    modelGroups,
     requestDeleteConversation,
     selectConversation,
     selectedModel,
@@ -218,6 +219,7 @@ export default function FloatingChat({
             disabled={isSending}
             input={composerInput}
             isFollowUpMode={isFollowUpMode}
+            modelGroups={modelGroups}
             onAttachmentsChange={setComposerAttachments}
             onFollowUpModeChange={setFollowUpMode}
             onInputChange={setComposerInput}

@@ -46,6 +46,22 @@ export interface ApiTask {
   updated_at: string;
 }
 
+export type ApiTaskSortBy = "created_at" | "due_time" | "priority";
+export type ApiSortOrder = "asc" | "desc";
+
+export interface ApiTaskPageParams {
+  page?: number;
+  pageSize?: number;
+  keyword?: string;
+  status?: ApiTaskStatus;
+  priority?: ApiPriority;
+  category?: string;
+  dueFrom?: string;
+  dueTo?: string;
+  sortBy?: ApiTaskSortBy;
+  sortOrder?: ApiSortOrder;
+}
+
 export interface ApiCategory {
   name: string;
   task_count: number;

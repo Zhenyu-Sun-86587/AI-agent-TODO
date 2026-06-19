@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import Header from "./Header";
 import MobileNav from "./MobileNav";
 import Sidebar from "./Sidebar";
-import type { LayoutProps } from "./types";
+import { mobilePrimaryNavKeys, mobileSecondaryNavKeys } from "../../app/router/navigation";
+import type { LayoutPanel, LayoutProps } from "./types";
 
 export default function Layout({
   activePage,
@@ -22,13 +23,14 @@ export default function Layout({
   userName,
 }: LayoutProps) {
   const statusLabel = apiState === "online" ? "API" : apiState === "loading" ? "同步中" : apiState === "offline" ? "离线" : "本地";
-  const [openPanel, setOpenPanel] = useState<"notifications" | "mobileMore" | "user" | null>(null);
+  const [openPanel, setOpenPanel] = useState<LayoutPanel>(null);
   const [isMobileMoreClosing, setMobileMoreClosing] = useState(false);
   const mobileMoreCloseTimer = useRef<number | null>(null);
   const sidebarUserRef = useRef<HTMLDivElement | null>(null);
-  const mobilePrimaryItems = navItems.filter((item) => item.key === "dashboard" || item.key === "all");
-  const mobileSecondaryItems = navItems.filter((item) => item.key === "ai" || item.key === "stats");
-  const mobileMoreItems = navItems.filter((item) => !["dashboard", "all", "ai", "stats"].includes(item.key));
+  const mobilePrimaryItems = navItems.filter((item) => mobilePrimaryNavKeys.includes(item.key));
+  const mobileSecondaryItems = navItems.filter((item) => mobileSecondaryNavKeys.includes(item.key));
+  const mobilePinnedKeys = [...mobilePrimaryNavKeys, ...mobileSecondaryNavKeys];
+  const mobileMoreItems = navItems.filter((item) => !mobilePinnedKeys.includes(item.key));
 
   useEffect(
     () => () => {

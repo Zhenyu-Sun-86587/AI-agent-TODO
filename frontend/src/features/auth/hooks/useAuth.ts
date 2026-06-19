@@ -82,7 +82,6 @@ export function useAuth({
   const authenticate = useCallback(async (nextSession: DemoSession) => {
     await onBeforeAuthenticated?.(nextSession);
     setSession(nextSession);
-    writeStoredJson(SESSION_STORAGE_KEY, nextSession);
     onAuthenticated(nextSession);
   }, [onAuthenticated, onBeforeAuthenticated]);
 
@@ -122,7 +121,7 @@ export function useAuth({
     }
   }, [authenticate, setApiMessage, setApiState]);
 
-  const useDemoSession = useCallback(async () => {
+  const loginWithDemoApi = useCallback(async () => {
     setApiState("loading");
     setApiMessage("正在登录演示账号...");
     try {
@@ -161,6 +160,6 @@ export function useAuth({
     session,
     setAuthMode,
     setSession,
-    useDemoSession,
+    loginWithDemoApi,
   };
 }

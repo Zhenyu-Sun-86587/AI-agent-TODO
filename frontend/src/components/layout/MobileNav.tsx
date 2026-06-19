@@ -10,12 +10,12 @@ export default function MobileNav({
   onCreateTask,
   onNavigate,
 }: {
-  activePage: string;
+  activePage: MinimalNavItem["key"];
   mobileMoreItems: MinimalNavItem[];
   mobilePrimaryItems: MinimalNavItem[];
   mobileSecondaryItems: MinimalNavItem[];
   onCreateTask: () => void;
-  onNavigate: (page: string) => void;
+  onNavigate: (page: MinimalNavItem["key"]) => void;
 }) {
   return (
     <>

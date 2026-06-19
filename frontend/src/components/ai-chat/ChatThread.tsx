@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import type { ChatMessage } from "./types";
+import type { ChatMessage } from "../../features/ai-chat/types";
 
 function formatFileSize(size: number) {
   if (!size) {

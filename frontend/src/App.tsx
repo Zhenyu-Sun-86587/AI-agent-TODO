@@ -1,28 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { LucideIcon } from "lucide-react";
-import { CalendarDays, Home, ListTodo, Sparkles } from "lucide-react";
 import { getPageFromPath, isKnownPagePath, pagePaths, pushAppPath } from "./app/router/routes";
 import type { PageKey } from "./app/types/common";
-import FloatingChat from "./components/ai-chat/FloatingChat";
-import Layout from "./Layout";
-import ToastViewport, { type ToastMessage, type ToastTone } from "./components/Toast";
-import ProfileModal from "./components/settings/ProfileModal";
-import SettingsModal from "./components/settings/SettingsModal";
+import AuthGate from "./components/layout/AuthGate";
+import WorkspaceShell from "./components/layout/WorkspaceShell";
+import { useToastQueue } from "./components/layout/useToastQueue";
 import { useAuth } from "./features/auth/hooks/useAuth";
 import { useDashboardData } from "./features/dashboard/hooks/useDashboardData";
 import type { ProfileState } from "./features/settings/types";
 import { useSettings } from "./features/settings/hooks/useSettings";
 import { CreateTaskModal, DeleteConfirmModal, EditTaskModal, TaskDetailDrawer } from "./features/tasks/components/TaskOverlays";
 import { useTasks } from "./features/tasks/hooks/useTasks";
-import AuthPage from "./pages/AuthPage";
 import WorkspacePageRenderer from "./pages/workspacePages";
-
-const navItems: Array<{ key: PageKey; label: string; icon: LucideIcon }> = [
-  { key: "dashboard", label: "仪表盘", icon: Home },
-  { key: "tasks", label: "任务中心", icon: ListTodo },
-  { key: "calendar", label: "日历", icon: CalendarDays },
-  { key: "ai", label: "智能助手", icon: Sparkles },
-];
 
 type AuthTransitionPhase = "auth-to-app" | "app-to-auth" | null;
 
@@ -43,30 +31,11 @@ export function App() {
   const [apiState, setApiState] = useState<"local" | "loading" | "online" | "offline">("local");
   const [apiMessage, setApiMessage] = useState("");
   const [activePage, setActivePage] = useState<PageKey>(() => getPageFromPath(window.location.pathname));
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [globalSearch, setGlobalSearch] = useState("");
-  const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [authTransitionPhase, setAuthTransitionPhase] = useState<AuthTransitionPhase>(null);
-  const toastIdRef = useRef(0);
   const resetTaskSelectionRef = useRef<() => void>(() => undefined);
   const setProfileRef = useRef<(profile: ProfileState) => void>(() => undefined);
-
-  const dismissToast = useCallback((id: number) => {
-    setToasts((currentToasts) => currentToasts.filter((toast) => toast.id !== id));
-  }, []);
-
-  const showToast = useCallback((title: string, message?: string, tone: ToastTone = "info") => {
-    toastIdRef.current += 1;
-    const id = toastIdRef.current;
-    setToasts((currentToasts) => {
-      if (currentToasts.some((toast) => toast.title === title && toast.message === message && toast.tone === tone)) {
-        return currentToasts;
-      }
-
-      return [...currentToasts.slice(-2), { id, message, title, tone }];
-    });
-  }, []);
+  const { dismissToast, showToast, toasts } = useToastQueue();
 
   const navigateTo = useCallback((pageKey: PageKey) => {
     setActivePage(pageKey);
@@ -97,7 +66,7 @@ export function App() {
     session,
     setAuthMode,
     setSession,
-    useDemoSession,
+    loginWithDemoApi,
   } = useAuth({
     onBeforeAuthenticated: handleBeforeAuthenticated,
     onAuthenticated: handleAuthenticated,
@@ -230,8 +199,6 @@ export function App() {
       return;
     }
 
-    setIsSettingsOpen(false);
-    setIsProfileOpen(false);
     setAuthTransitionPhase("app-to-auth");
     await waitForTransition(120);
     await logout();
@@ -249,116 +216,90 @@ export function App() {
       onEditTask={setEditingTask}
       onOpenTask={openTaskDetails}
       onPageChange={navigateTo}
-      onSaveProfile={saveProfile}
-      onSaveSettings={saveSettings}
       onSuggestTaskFields={suggestTaskFields}
-      onTestOpenAIKey={testOpenAIKey}
       onUpdateTaskStatus={updateTaskStatus}
       onToggleComplete={toggleComplete}
-      profile={profile}
       recommendedTasks={recommendedTasks}
       remoteStats={remoteStats}
-      settings={settings}
       taskVersion={taskVersion}
       token={activeToken}
       tasks={tasks}
     />
   );
 
-  if (!session) {
-    return (
-      <AuthPage
-        apiMessage={apiMessage}
-        transitionState={authTransitionPhase === "auth-to-app" ? "leaving" : authTransitionPhase === "app-to-auth" ? "returning" : "idle"}
-        mode={authMode}
-        onDemo={useDemoSession}
-        onLogin={loginWithApi}
-        onModeChange={setAuthMode}
-        onRegister={registerWithApi}
-      />
-    );
-  }
-
   return (
-    <Layout
-      activePage={activePage}
+    <AuthGate
       apiMessage={apiMessage}
-      apiState={apiState}
-      globalSearch={globalSearch}
-      isDark={isDark}
-      navItems={navItems}
-      onCreateTask={() => setCreateOpen(true)}
-      onLogout={handleLogout}
-      onNavigate={(pageKey) => navigateTo(pageKey as PageKey)}
-      onOpenProfile={() => setIsProfileOpen(true)}
-      onOpenSettings={() => {
-        setIsSettingsOpen(true);
-      }}
-      onSearchChange={setGlobalSearch}
-      onToggleTheme={() => setIsDark((value) => !value)}
-      transitionState={authTransitionPhase === "auth-to-app" ? "entering" : authTransitionPhase === "app-to-auth" ? "leaving" : "idle"}
-      userName={session.name}
+      isAuthenticated={Boolean(session)}
+      mode={authMode}
+      onDemoLogin={loginWithDemoApi}
+      onLogin={loginWithApi}
+      onModeChange={setAuthMode}
+      onRegister={registerWithApi}
+      transitionState={authTransitionPhase === "auth-to-app" ? "leaving" : authTransitionPhase === "app-to-auth" ? "returning" : "idle"}
     >
-      {page}
-      <TaskDetailDrawer
-        detailState={taskDetailState}
-        isApiMode={Boolean(activeToken)}
-        onClose={() => setSelectedTask(null)}
-        onDelete={requestDeleteTask}
-        onEdit={setEditingTask}
-        onToggleComplete={toggleComplete}
-        task={selectedTask}
-      />
-      {isCreateOpen && (
-        <CreateTaskModal
-          categories={visibleCategories}
-          isApiMode={Boolean(activeToken)}
-          onClose={() => setCreateOpen(false)}
-          onCreate={createTask}
-        />
-      )}
-      {editingTask && (
-        <EditTaskModal
-          categories={visibleCategories}
-          isApiMode={Boolean(activeToken)}
-          onClose={() => setEditingTask(null)}
-          onUpdate={(input) => updateTask(editingTask.id, input)}
-          task={editingTask}
-        />
-      )}
-      {deleteCandidate && (
-        <DeleteConfirmModal
-          onCancel={() => setDeleteCandidate(null)}
-          onConfirm={() => {
-            void deleteTask(deleteCandidate.id);
-          }}
-          task={deleteCandidate}
-        />
-      )}
-      {isSettingsOpen && (
-        <SettingsModal
+      {session ? (
+        <WorkspaceShell
+          activePage={activePage}
+          apiMessage={apiMessage}
+          apiState={apiState}
+          dismissToast={dismissToast}
+          globalSearch={globalSearch}
           isDark={isDark}
-          onClose={() => setIsSettingsOpen(false)}
-          onSave={saveSettings}
-          onTest={testOpenAIKey}
-          onToggleTheme={() => setIsDark((value) => !value)}
-          settings={settings}
-        />
-      )}
-      {isProfileOpen && (
-        <ProfileModal
-          onClose={() => setIsProfileOpen(false)}
+          onCreateTask={() => setCreateOpen(true)}
+          onLogout={handleLogout}
+          onNavigate={navigateTo}
           onSaveProfile={saveProfile}
+          onSaveSettings={saveSettings}
+          onSearchChange={setGlobalSearch}
+          onTaskChanged={handleChatTaskChanged}
+          onTestOpenAIKey={testOpenAIKey}
+          onToggleTheme={() => setIsDark((value) => !value)}
           profile={profile}
-        />
-      )}
-      <FloatingChat
-        initialModelId={settings.modelName || "deepseek-v4-pro"}
-        isBlocked={isSettingsOpen}
-        onTaskChanged={handleChatTaskChanged}
-        token={activeToken}
-      />
-      <ToastViewport items={toasts} onDismiss={dismissToast} />
-    </Layout>
+          settings={settings}
+          toasts={toasts}
+          token={activeToken}
+          transitionState={authTransitionPhase === "auth-to-app" ? "entering" : authTransitionPhase === "app-to-auth" ? "leaving" : "idle"}
+          userName={session.name}
+        >
+          {page}
+          <TaskDetailDrawer
+            detailState={taskDetailState}
+            isApiMode={Boolean(activeToken)}
+            onClose={() => setSelectedTask(null)}
+            onDelete={requestDeleteTask}
+            onEdit={setEditingTask}
+            onToggleComplete={toggleComplete}
+            task={selectedTask}
+          />
+          {isCreateOpen && (
+            <CreateTaskModal
+              categories={visibleCategories}
+              isApiMode={Boolean(activeToken)}
+              onClose={() => setCreateOpen(false)}
+              onCreate={createTask}
+            />
+          )}
+          {editingTask && (
+            <EditTaskModal
+              categories={visibleCategories}
+              isApiMode={Boolean(activeToken)}
+              onClose={() => setEditingTask(null)}
+              onUpdate={(input) => updateTask(editingTask.id, input)}
+              task={editingTask}
+            />
+          )}
+          {deleteCandidate && (
+            <DeleteConfirmModal
+              onCancel={() => setDeleteCandidate(null)}
+              onConfirm={() => {
+                void deleteTask(deleteCandidate.id);
+              }}
+              task={deleteCandidate}
+            />
+          )}
+        </WorkspaceShell>
+      ) : null}
+    </AuthGate>
   );
 }

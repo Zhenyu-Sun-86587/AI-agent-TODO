@@ -1,6 +1,6 @@
 import { Trash2 } from "lucide-react";
 import { forwardRef } from "react";
-import type { Conversation } from "./types";
+import type { Conversation } from "../../features/ai-chat/types";
 
 function formatUpdatedAt(value: string) {
   const date = new Date(value);

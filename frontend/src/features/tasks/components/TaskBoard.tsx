@@ -1,36 +1,35 @@
 import { useMemo, useState, type CSSProperties } from "react";
 import { MoreHorizontal, Plus, Search } from "lucide-react";
-import type { Task, TaskPriority, TaskStatus } from "../types";
+import {
+  API_TASK_STATUS_OPTIONS,
+  TASK_FILTER_ALL,
+  TASK_PRIORITY_OPTIONS,
+  TASK_STATUS_OPTIONS,
+  isTaskPriorityFilter,
+  type TaskPriorityFilter,
+} from "../constants";
+import type { Task, TaskStatus } from "../types";
 import { EmptyState } from "./TaskDisplay";
 import { KanbanTaskCard } from "./TaskCard";
 import { SelectField } from "./TaskFilters";
-
-const statusOptions: TaskStatus[] = ["待办", "进行中", "已完成"];
-const apiStatusOptions: TaskStatus[] = ["待办", "已完成"];
-const priorityOptions: TaskPriority[] = ["高", "中", "低"];
+import { filterTasks } from "../utils/taskQuery";
 
 export function TaskBoard({ categories, isApiMode, onCreateTask, onOpenTask, tasks }: { categories: string[]; isApiMode: boolean; onCreateTask: () => void; onOpenTask: (task: Task) => void; tasks: Task[]; }) {
   const [query, setQuery] = useState("");
-  const [priority, setPriority] = useState<TaskPriority | "全部">("全部");
-  const [category, setCategory] = useState("全部");
-  const filteredTasks = useMemo(() => tasks.filter((task) => {
-    const keyword = query.trim().toLowerCase();
-    const matchesKeyword = !keyword || [task.title, task.description, task.category, task.tags.join(" ")].some((field) => field.toLowerCase().includes(keyword));
-    const matchesPriority = priority === "全部" || task.priority === priority;
-    const matchesCategory = category === "全部" || task.category === category;
-    return matchesKeyword && matchesPriority && matchesCategory;
-  }), [category, priority, query, tasks]);
+  const [priority, setPriority] = useState<TaskPriorityFilter>(TASK_FILTER_ALL);
+  const [category, setCategory] = useState(TASK_FILTER_ALL);
+  const filteredTasks = useMemo(() => filterTasks(tasks, { category, priority, query }), [category, priority, query, tasks]);
 
   return (
     <main className="page-content">
       <div className="board-toolbar">
         <label className="filter-search"><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索任务" /></label>
-        <SelectField value={priority} onChange={(value) => setPriority(value as TaskPriority | "全部")}><option value="全部">全部优先级</option>{priorityOptions.map((item) => <option key={item} value={item}>{item}</option>)}</SelectField>
-        <SelectField value={category} onChange={setCategory}><option value="全部">全部分类</option>{categories.map((item) => <option key={item} value={item}>{item}</option>)}</SelectField>
+        <SelectField value={priority} onChange={(value) => { if (isTaskPriorityFilter(value)) setPriority(value); }}><option value={TASK_FILTER_ALL}>全部优先级</option>{TASK_PRIORITY_OPTIONS.map((item) => <option key={item} value={item}>{item}</option>)}</SelectField>
+        <SelectField value={category} onChange={setCategory}><option value={TASK_FILTER_ALL}>全部分类</option>{categories.map((item) => <option key={item} value={item}>{item}</option>)}</SelectField>
         <button className="primary-button create-task-button" type="button" onClick={onCreateTask}><Plus size={17} /><span className="create-task-button-label">新建任务</span></button>
       </div>
       <div className="kanban-board">
-        {(isApiMode ? apiStatusOptions : statusOptions).map((status, index) => (
+        {(isApiMode ? API_TASK_STATUS_OPTIONS : TASK_STATUS_OPTIONS).map((status, index) => (
           <TaskColumn key={status} columnIndex={index} onOpenTask={onOpenTask} status={status} tasks={filteredTasks.filter((task) => task.status === status)} />
         ))}
       </div>

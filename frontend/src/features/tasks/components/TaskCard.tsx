@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import { priorityToApi } from "../../../api/mappers";
+import { taskPriorityClassName } from "../../../lib/taskPresentation";
 import type { Task } from "../types";
 import { formatDue, PriorityBadge } from "./TaskDisplay";
 
@@ -14,7 +14,7 @@ export function KanbanTaskCard({
 }) {
   return (
     <button
-      className={`kanban-card priority-${priorityToApi(task.priority)} ${task.status === "已完成" ? "is-complete" : ""}`}
+      className={`kanban-card ${taskPriorityClassName(task.priority)} ${task.status === "已完成" ? "is-complete" : ""}`}
       key={task.id}
       style={{ "--stagger-index": index } as CSSProperties}
       type="button"

@@ -1,33 +1,21 @@
 import type { CSSProperties, ReactNode } from "react";
-import { Check, CheckCircle2, Clock3, Sparkles } from "lucide-react";
-import { OverviewCards } from "./features/dashboard/components/OverviewCards";
-import { RecommendedTasks } from "./features/dashboard/components/RecommendedTasks";
-
-export interface DashboardTask {
-  id: number;
-  title: string;
-  description: string;
-  status: string;
-  priority: string;
-  category: string;
-  dueDate: string;
-  dueTime: string;
-  aiReason: string;
-}
+import { Check, CheckCircle2, Clock3 } from "lucide-react";
+import { formatDue } from "../tasks/components/TaskDisplay";
+import type { Task } from "../tasks/types";
+import { OverviewCards } from "./components/OverviewCards";
+import { RecommendedTasks } from "./components/RecommendedTasks";
 
 export interface DashboardProps {
-  aiPriorityCount: number;
   completedToday: number;
-  onOpenTask: (task: DashboardTask) => void;
+  onOpenTask: (task: Task) => void;
   onPageChange: () => void;
   onToggleComplete: (taskId: number) => void;
   overdueCount: number;
-  recommendedTasks: DashboardTask[];
-  todayTasks: DashboardTask[];
+  recommendedTasks: Task[];
+  todayTasks: Task[];
 }
 
 export default function Dashboard({
-  aiPriorityCount,
   completedToday,
   onOpenTask,
   onPageChange,
@@ -110,13 +98,6 @@ export default function Dashboard({
       </section>
     </main>
   );
-}
-
-function formatDue(task: Pick<DashboardTask, "dueDate" | "dueTime">) {
-  if (!task.dueDate) {
-    return "未设置";
-  }
-  return task.dueTime ? `${task.dueDate} ${task.dueTime}` : task.dueDate;
 }
 
 function EmptyState({

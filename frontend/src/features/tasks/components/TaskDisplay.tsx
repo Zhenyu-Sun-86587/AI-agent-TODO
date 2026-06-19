@@ -1,6 +1,6 @@
 import { type ReactNode } from "react";
 import { FileText, Sparkles } from "lucide-react";
-import { priorityToApi } from "../../../api/mappers";
+import { taskPriorityClassName, taskStatusClassName } from "../../../lib/taskPresentation";
 import type { Task, TaskPriority, TaskStatus } from "../types";
 
 export function formatDue(task: Pick<Task, "dueDate" | "dueTime">) {
@@ -13,11 +13,11 @@ export function formatDue(task: Pick<Task, "dueDate" | "dueTime">) {
 
 export function PriorityBadge({ priority }: { priority: TaskPriority }) {
   const displayPriority = priority === "高" ? "High" : priority === "低" ? "Low" : "Medium";
-  return <span className={`priority-badge priority-${priorityToApi(priority)}`}>{displayPriority}</span>;
+  return <span className={`priority-badge ${taskPriorityClassName(priority)}`}>{displayPriority}</span>;
 }
 
 export function StatusBadge({ status }: { status: TaskStatus }) {
-  return <span className={`status-badge status-${status}`}>{status}</span>;
+  return <span className={`status-badge ${taskStatusClassName(status)}`}>{status}</span>;
 }
 
 export function Field({ children, label }: { children: ReactNode; label: string }) {

@@ -139,12 +139,39 @@ export function generateTaskFromPrompt(prompt: string): NewTaskInput {
   };
 }
 
-export function buildFrontendFallbackTask(prompt: string, reason: string) {
-  const task = generateTaskFromPrompt(prompt);
+export function taskTagsFromInput(input: NewTaskInput) {
+  return Array.from(
+    new Set(
+      input.tags
+        .split(",")
+        .map((tag) => tag.trim())
+        .filter(Boolean)
+        .concat(input.isAiCreated ? ["AI生成"] : []),
+    ),
+  );
+}
+
+export function createTaskFromInput(input: NewTaskInput, id: number): Task {
+  const normalizedInput = normalizeTaskInput(input);
   return {
-    ...task,
-    aiBackendMode: "frontend-fallback" as const,
-    aiReason: `${reason}，已使用前端规则生成预览。`,
+    id,
+    title: normalizedInput.title,
+    description: normalizedInput.description,
+    status: normalizedInput.status,
+    priority: normalizedInput.priority,
+    category: normalizedInput.category,
+    dueDate: normalizedInput.dueDate,
+    dueTime: normalizedInput.dueTime,
+    createdAt: dateFromToday(0),
+    completedAt: normalizedInput.status === "已完成" ? dateFromToday(0) : null,
+    tags: taskTagsFromInput(normalizedInput),
+    aiReason: normalizedInput.aiReason || "AI 将根据截止时间、优先级和任务上下文持续更新建议。",
+    estimatedTime: normalizedInput.estimatedTime || (normalizedInput.priority === "高" ? "2小时" : "1小时"),
+    aiCategory: normalizedInput.aiCategory || normalizedInput.category,
+    isAiCreated: Boolean(normalizedInput.isAiCreated),
+    confidence: normalizedInput.confidence,
+    rawDueText: normalizedInput.rawDueText,
+    sourceText: normalizedInput.sourceText,
   };
 }
 
@@ -179,10 +206,7 @@ export function mergeTaskInput(task: Task, input: NewTaskInput): Task {
     dueDate: input.dueDate,
     dueTime: input.dueTime,
     completedAt: input.status === "已完成" ? task.completedAt || dateFromToday(0) : null,
-    tags: input.tags
-      .split(",")
-      .map((tag) => tag.trim())
-      .filter(Boolean),
+    tags: taskTagsFromInput(input),
     aiReason: input.aiReason || task.aiReason,
     estimatedTime: input.estimatedTime || (input.priority === "高" ? "2小时" : "1小时"),
     aiCategory: input.aiCategory || input.category,

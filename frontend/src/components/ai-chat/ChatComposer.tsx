@@ -1,94 +1,19 @@
-import { ArrowUp, FilePlus2, X, ChevronDown, Check, Bot } from "lucide-react";
-import { useEffect, useRef, useState, type KeyboardEvent } from "react";
-import { CHAT_MODEL_GROUPS } from "./models";
-import { createId } from "./storage";
-import type { ChatAttachment, ChatSendOptions } from "./types";
+import { ArrowUp, FilePlus2, X } from "lucide-react";
+import { useRef, type KeyboardEvent } from "react";
+import type { ChatAttachment, ChatModelGroup, ChatSendOptions } from "../../features/ai-chat/types";
+import ModelSelector from "./ModelSelector";
+
+function createAttachmentId() {
+  return `attachment-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
 
 function toAttachment(file: File): ChatAttachment {
   return {
-    id: createId("attachment"),
+    id: createAttachmentId(),
     name: file.name,
     size: file.size,
     type: file.type,
   };
-}
-
-function getProviderLogo(provider: string) {
-  if (provider === "openai") {
-    return { alt: "GPT", provider, src: "/gpt-logo.png" };
-  }
-  if (provider === "deepseek") {
-    return { alt: "DeepSeek", provider, src: "/deepseek-logo.png" };
-  }
-  return null;
-}
-
-function ProviderLogo({ alt, className, provider, src }: { alt: string; className?: string; provider: string; src: string }) {
-  return <img alt={alt} className={`${className || ""} ai-model-provider-${provider}`.trim()} src={src} />;
-}
-
-function ModelSelector({ selectedModelId, onModelChange }: { selectedModelId: string; onModelChange: (id: string) => void }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isOpen]);
-
-  const selectedModel = CHAT_MODEL_GROUPS.flatMap(g => g.models).find(m => m.id === selectedModelId);
-  const selectedLogo = selectedModel ? getProviderLogo(selectedModel.provider) : null;
-
-  return (
-    <div className="ai-model-selector" ref={containerRef}>
-      <button 
-        type="button" 
-        className="ai-model-trigger" 
-        onClick={() => setIsOpen(!isOpen)}
-        aria-label="选择模型"
-      >
-        {selectedLogo ? <ProviderLogo {...selectedLogo} className="ai-model-icon" /> : <Bot size={14} className="ai-model-icon" />}
-        <span>{selectedModel?.label || "选择模型"}</span>
-        <ChevronDown size={14} />
-      </button>
-
-      {isOpen && (
-        <div className="ai-model-menu">
-          <div className="ai-model-menu-header">选择模型</div>
-          {CHAT_MODEL_GROUPS.map((group) => (
-            <div key={group.provider} className="ai-model-group">
-              <div className="ai-model-group-title">{group.label}</div>
-              {group.models.map((model) => (
-                <button
-                  key={model.id}
-                  type="button"
-                  className={`ai-model-item ${selectedModelId === model.id ? "active" : ""}`}
-                  onClick={() => {
-                    onModelChange(model.id);
-                    setIsOpen(false);
-                  }}
-                >
-                  {getProviderLogo(model.provider) ? (
-                    <ProviderLogo {...getProviderLogo(model.provider)!} className="ai-model-icon" />
-                  ) : (
-                    <Bot size={14} className="ai-model-icon" />
-                  )}
-                  <span>{model.label}</span>
-                  {selectedModelId === model.id && <Check size={14} className="ai-model-check" />}
-                </button>
-              ))}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
 }
 
 export default function ChatComposer({
@@ -101,12 +26,14 @@ export default function ChatComposer({
   onInputChange,
   onModelChange,
   onSend,
+  modelGroups,
   selectedModelId,
 }: {
   attachments: ChatAttachment[];
   disabled: boolean;
   input: string;
   isFollowUpMode: boolean;
+  modelGroups: ChatModelGroup[];
   onAttachmentsChange: (attachments: ChatAttachment[]) => void;
   onFollowUpModeChange: (enabled: boolean) => void;
   onInputChange: (value: string) => void;
@@ -203,8 +130,8 @@ export default function ChatComposer({
         >
           <span>追问模式</span>
         </button>
-        
-        <ModelSelector selectedModelId={selectedModelId} onModelChange={onModelChange} />
+
+        <ModelSelector groups={modelGroups} selectedModelId={selectedModelId} onModelChange={onModelChange} />
 
         <button className="ai-chat-send" type="button" onClick={submit} disabled={disabled || !canSend} aria-label="发送消息">
           <ArrowUp size={18} />

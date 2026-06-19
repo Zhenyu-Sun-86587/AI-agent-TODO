@@ -3,7 +3,7 @@ import { Sparkles } from "lucide-react";
 import { fetchAiLogs } from "../../../api/ai";
 import { asErrorMessage } from "../../../api/errors";
 import type { ApiAiLog } from "../../../api/types";
-import type { Task, TaskFieldSuggestion, TaskPriority } from "../../tasks/types";
+import type { Task, TaskFieldSuggestion } from "../../tasks/types";
 import { EmptyState, Field, formatDue, PriorityBadge } from "../../tasks/components/TaskDisplay";
 import { SelectField } from "../../tasks/components/TaskFilters";
 
@@ -141,7 +141,7 @@ function AILogsPanel({ isApiMode, onApiError, taskVersion, token }: { isApiMode:
 function AISuggestTool({ onSuggestTaskFields }: { onSuggestTaskFields: (title: string, description: string) => Promise<TaskFieldSuggestion> }) {
   const [title, setTitle] = useState("修复移动端弹窗遮挡问题");
   const [description, setDescription] = useState("检查 WebView 下底部导航和新建任务弹窗是否被安全区遮挡。");
-  const fallbackSuggestion = useMemo(() => ({ priority: "中" as TaskPriority, category: "前端开发", reason: "本地规则兜底", source: "前端规则兜底" }), []);
+  const fallbackSuggestion = useMemo<TaskFieldSuggestion>(() => ({ priority: "中", category: "前端开发", reason: "本地规则兜底", source: "前端规则兜底" }), []);
   const [suggestion, setSuggestion] = useState<TaskFieldSuggestion>(fallbackSuggestion);
   const [isLoading, setLoading] = useState(false);
   const [error, setError] = useState("");

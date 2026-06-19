@@ -1,4 +1,4 @@
-import type { ChatAttachment, ChatMessage, ChatPendingFollowUp, ChatTaskAction, Conversation } from "../../../components/ai-chat/types";
+import type { ChatAttachment, ChatMessage, Conversation } from "../types";
 import { readStoredString, writeStoredString } from "../../../lib/storage";
 import {
   CHAT_ACTIVE_CONVERSATION_STORAGE_KEY,
@@ -64,67 +64,6 @@ function normalizeMessage(value: unknown, index: number): ChatMessage | null {
   };
 }
 
-function normalizeTaskAction(value: unknown): ChatTaskAction | null {
-  if (!isRecord(value) || typeof value.kind !== "string") {
-    return null;
-  }
-  if (value.kind === "help") {
-    return { kind: "help" };
-  }
-  if (value.kind === "create-task" && typeof value.text === "string") {
-    return { kind: "create-task", text: value.text };
-  }
-  if (value.kind === "list-tasks") {
-    return {
-      category: typeof value.category === "string" ? value.category : undefined,
-      kind: "list-tasks",
-      priority: typeof value.priority === "string" ? value.priority : undefined,
-      query: typeof value.query === "string" ? value.query : undefined,
-      status: typeof value.status === "string" ? value.status : undefined,
-    };
-  }
-  if (value.kind === "show-task" && typeof value.target === "string") {
-    return { kind: "show-task", target: value.target };
-  }
-  if (value.kind === "update-task" && typeof value.target === "string" && typeof value.changesText === "string") {
-    return { changesText: value.changesText, kind: "update-task", target: value.target };
-  }
-  if (value.kind === "delete-task" && typeof value.target === "string") {
-    return { kind: "delete-task", target: value.target };
-  }
-  if (
-    value.kind === "set-task-status" &&
-    typeof value.target === "string" &&
-    (value.status === "待办" || value.status === "已完成")
-  ) {
-    return { kind: "set-task-status", status: value.status, target: value.target };
-  }
-  return null;
-}
-
-function normalizePendingFollowUp(value: unknown): ChatPendingFollowUp | undefined {
-  if (!isRecord(value) || typeof value.prompt !== "string") {
-    return undefined;
-  }
-  const action = normalizeTaskAction(value.action);
-  if (!action) {
-    return undefined;
-  }
-  const candidates = Array.isArray(value.candidates)
-    ? value.candidates.flatMap((candidate) => {
-        if (!isRecord(candidate) || typeof candidate.id !== "number" || typeof candidate.title !== "string") {
-          return [];
-        }
-        return [{ id: candidate.id, title: candidate.title }];
-      })
-    : undefined;
-  return {
-    action,
-    candidates: candidates?.length ? candidates : undefined,
-    prompt: value.prompt,
-  };
-}
-
 export function readConversations(): Conversation[] {
   const fallback = [createEmptyConversation()];
   const raw = readStoredString(CHAT_CONVERSATIONS_STORAGE_KEY);
@@ -153,7 +92,6 @@ export function readConversations(): Conversation[] {
           id: typeof value.id === "string" && value.id ? value.id : createId(`restored-${index}`),
           title: typeof value.title === "string" && value.title.trim() ? value.title.trim() : DEFAULT_CONVERSATION_TITLE,
           messages,
-          pendingFollowUp: normalizePendingFollowUp(value.pendingFollowUp),
           createdAt: typeof value.createdAt === "string" ? value.createdAt : now,
           updatedAt: typeof value.updatedAt === "string" ? value.updatedAt : now,
         },

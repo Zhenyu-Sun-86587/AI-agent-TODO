@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { sendChatMessage } from "../../../components/ai-chat/aiClient";
-import { DEFAULT_CHAT_MODEL_ID, getChatModel, isKnownChatModel } from "../../../components/ai-chat/models";
+import { sendChatMessage } from "../client";
+import { CHAT_MODEL_GROUPS, DEFAULT_CHAT_MODEL_ID, getChatModel, isKnownChatModel } from "../models";
 import type {
   ChatAttachment,
   ChatMessage,
   ChatSendOptions,
   Conversation,
-} from "../../../components/ai-chat/types";
+} from "../types";
 import { DEFAULT_CONVERSATION_TITLE } from "../constants";
 import {
   createEmptyConversation,
@@ -53,7 +53,7 @@ function isFreshEmptyConversation(conversation: Conversation | undefined) {
 export function useChatConversations(initialModelId: string | undefined, token?: string, onTaskChanged?: () => Promise<void> | void) {
   const [isSending, setSending] = useState(false);
   const [conversations, setConversations] = useState<Conversation[]>(() => readConversations());
-  const [activeConversationId, setActiveConversationId] = useState(() => getInitialActiveConversationId(readConversations()));
+  const [activeConversationId, setActiveConversationId] = useState(() => getInitialActiveConversationId(conversations));
   const [selectedModelId, setSelectedModelId] = useState(() => getInitialModelId(initialModelId));
   const [conversationToDelete, setConversationToDelete] = useState<string | null>(null);
 
@@ -86,9 +86,7 @@ export function useChatConversations(initialModelId: string | undefined, token?:
 
   const updateConversation = (conversationId: string, updater: (conversation: Conversation) => Conversation) => {
     setConversations((current) => {
-      const next = current.map((conversation) => (conversation.id === conversationId ? updater(conversation) : conversation));
-      writeConversations(next);
-      return next;
+      return current.map((conversation) => (conversation.id === conversationId ? updater(conversation) : conversation));
     });
   };
 
@@ -158,7 +156,6 @@ export function useChatConversations(initialModelId: string | undefined, token?:
       ...conversation,
       title: isFreshEmptyConversation(conversation) ? getConversationTitle(input, attachments) : conversation.title,
       messages: [...conversation.messages, userMessage],
-      pendingFollowUp: undefined,
       updatedAt: now,
     }));
 
@@ -176,7 +173,6 @@ export function useChatConversations(initialModelId: string | undefined, token?:
       updateConversation(conversationId, (conversation) => ({
         ...conversation,
         messages: [...conversation.messages, response.message],
-        pendingFollowUp: undefined,
         updatedAt: response.message.createdAt,
       }));
       if (response.taskChanged) {
@@ -212,6 +208,7 @@ export function useChatConversations(initialModelId: string | undefined, token?:
     createConversation,
     executeDeleteConversation,
     isSending,
+    modelGroups: CHAT_MODEL_GROUPS,
     requestDeleteConversation,
     selectConversation,
     selectedModel,

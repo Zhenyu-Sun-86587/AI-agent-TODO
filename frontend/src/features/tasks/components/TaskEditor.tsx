@@ -1,9 +1,12 @@
 import { useState, type FormEvent } from "react";
-import type { NewTaskInput, TaskPriority, TaskStatus } from "../types";
-
-const statusOptions: TaskStatus[] = ["待办", "进行中", "已完成"];
-const apiStatusOptions: TaskStatus[] = ["待办", "已完成"];
-const priorityOptions: TaskPriority[] = ["高", "中", "低"];
+import {
+  API_TASK_STATUS_OPTIONS,
+  TASK_PRIORITY_OPTIONS,
+  TASK_STATUS_OPTIONS,
+  isTaskPriority,
+  isTaskStatus,
+} from "../constants";
+import type { NewTaskInput } from "../types";
 
 export function TaskEditor({
   categories,
@@ -21,7 +24,7 @@ export function TaskEditor({
   submitLabel?: string;
 }) {
   const [validationError, setValidationError] = useState("");
-  const statusChoices = isApiMode ? apiStatusOptions : statusOptions;
+  const statusChoices = isApiMode ? API_TASK_STATUS_OPTIONS : TASK_STATUS_OPTIONS;
   const safeStatus = statusChoices.includes(form.status) ? form.status : "待办";
   const categoryOptions = Array.from(new Set([form.category, ...categories].filter(Boolean)));
   const fieldPrefix = submitLabel === "保存修改" ? "edit-task" : "create-task";
@@ -65,14 +68,24 @@ export function TaskEditor({
       <div className="form-grid">
         <div className="field-group">
           <label htmlFor={`${fieldPrefix}-status`}>状态</label>
-          <select id={`${fieldPrefix}-status`} value={safeStatus} onChange={(event) => onChange({ ...form, status: event.target.value as TaskStatus })}>
+          <select id={`${fieldPrefix}-status`} value={safeStatus} onChange={(event) => {
+            const nextStatus = event.target.value;
+            if (isTaskStatus(nextStatus)) {
+              onChange({ ...form, status: nextStatus });
+            }
+          }}>
             {statusChoices.map((item) => <option key={item}>{item}</option>)}
           </select>
         </div>
         <div className="field-group">
           <label htmlFor={`${fieldPrefix}-priority`}>优先级</label>
-          <select id={`${fieldPrefix}-priority`} value={form.priority} onChange={(event) => onChange({ ...form, priority: event.target.value as TaskPriority })}>
-            {priorityOptions.map((item) => <option key={item}>{item}</option>)}
+          <select id={`${fieldPrefix}-priority`} value={form.priority} onChange={(event) => {
+            const nextPriority = event.target.value;
+            if (isTaskPriority(nextPriority)) {
+              onChange({ ...form, priority: nextPriority });
+            }
+          }}>
+            {TASK_PRIORITY_OPTIONS.map((item) => <option key={item}>{item}</option>)}
           </select>
         </div>
       </div>

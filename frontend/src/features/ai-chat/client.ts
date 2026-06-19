@@ -1,6 +1,6 @@
 import { sendAiChat } from "../../api/ai";
+import { createId } from "./services/chatStorage";
 import type { ChatAttachment, ChatMessage, ChatModel } from "./types";
-import { createId } from "./storage";
 
 export type SendChatRequest = {
   conversationId: string;

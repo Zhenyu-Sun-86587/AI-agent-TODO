@@ -8,7 +8,7 @@ import { useAnimatedDismiss, useEscapeToClose } from "../hooks/useDismissAnimati
 export interface AuthPageProps {
   apiMessage: string;
   mode: "login" | "register";
-  onDemo: () => Promise<void>;
+  onDemoLogin: () => Promise<void>;
   onLogin: (account: string, password: string) => Promise<void>;
   onModeChange: (mode: "login" | "register") => void;
   onRegister: (username: string, email: string, password: string) => Promise<void>;
@@ -18,7 +18,7 @@ export interface AuthPageProps {
 export default function AuthPage({
   apiMessage,
   mode,
-  onDemo,
+  onDemoLogin,
   onLogin,
   onModeChange,
   onRegister,
@@ -76,7 +76,7 @@ export default function AuthPage({
     setError("");
     try {
       setSubmitting(true);
-      await onDemo();
+      await onDemoLogin();
     } catch (requestError) {
       setError(asErrorMessage(requestError));
     } finally {

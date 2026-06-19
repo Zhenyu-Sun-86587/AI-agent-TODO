@@ -1,8 +1,14 @@
 import { ChevronDown, Search } from "lucide-react";
 import type { ReactNode } from "react";
-import type { TaskPriority, TaskStatus } from "../types";
-
-const priorityOptions: TaskPriority[] = ["高", "中", "低"];
+import {
+  TASK_FILTER_ALL,
+  TASK_PRIORITY_OPTIONS,
+  isTaskPriorityFilter,
+  isTaskStatusFilter,
+  type TaskPriorityFilter,
+  type TaskStatusFilter,
+} from "../constants";
+import type { TaskStatus } from "../types";
 
 export function SelectField({
   children,
@@ -40,15 +46,15 @@ export function FilterBar({
   categories: string[];
   category: string;
   onCategoryChange: (value: string) => void;
-  onPriorityChange: (value: TaskPriority | "全部") => void;
+  onPriorityChange: (value: TaskPriorityFilter) => void;
   onQueryChange: (value: string) => void;
   onSortChange: (value: string) => void;
-  onStatusChange: (value: TaskStatus | "全部") => void;
-  priority: TaskPriority | "全部";
+  onStatusChange: (value: TaskStatusFilter) => void;
+  priority: TaskPriorityFilter;
   query: string;
   sort: string;
-  status: TaskStatus | "全部";
-  statusOptions: TaskStatus[];
+  status: TaskStatusFilter;
+  statusOptions: readonly TaskStatus[];
 }) {
   return (
     <section className="filter-bar">
@@ -56,16 +62,16 @@ export function FilterBar({
         <Search size={17} />
         <input value={query} onChange={(event) => onQueryChange(event.target.value)} placeholder="搜索任务..." />
       </label>
-      <SelectField value={status} onChange={(value) => onStatusChange(value as TaskStatus | "全部")}>
-        <option value="全部">全部状态</option>
+      <SelectField value={status} onChange={(value) => { if (isTaskStatusFilter(value)) onStatusChange(value); }}>
+        <option value={TASK_FILTER_ALL}>全部状态</option>
         {statusOptions.map((item) => <option key={item} value={item}>{item}</option>)}
       </SelectField>
-      <SelectField value={priority} onChange={(value) => onPriorityChange(value as TaskPriority | "全部")}>
-        <option value="全部">全部优先级</option>
-        {priorityOptions.map((item) => <option key={item} value={item}>{item}</option>)}
+      <SelectField value={priority} onChange={(value) => { if (isTaskPriorityFilter(value)) onPriorityChange(value); }}>
+        <option value={TASK_FILTER_ALL}>全部优先级</option>
+        {TASK_PRIORITY_OPTIONS.map((item) => <option key={item} value={item}>{item}</option>)}
       </SelectField>
       <SelectField value={category} onChange={onCategoryChange}>
-        <option value="全部">全部分类</option>
+        <option value={TASK_FILTER_ALL}>全部分类</option>
         {categories.map((item) => <option key={item} value={item}>{item}</option>)}
       </SelectField>
       <SelectField value={sort} onChange={onSortChange}>

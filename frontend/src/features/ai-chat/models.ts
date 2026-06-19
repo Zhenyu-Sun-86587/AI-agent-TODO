@@ -1,4 +1,4 @@
-import type { ChatModel, ModelProvider } from "./types";
+import type { ChatModel, ChatModelGroup } from "./types";
 
 export const DEFAULT_CHAT_MODEL_ID = "deepseek-v4-pro";
 
@@ -41,7 +41,7 @@ export const CHAT_MODELS: ChatModel[] = [
   },
 ];
 
-export const CHAT_MODEL_GROUPS: Array<{ label: string; provider: ModelProvider; models: ChatModel[] }> = [
+export const CHAT_MODEL_GROUPS: ChatModelGroup[] = [
   {
     label: "GPT",
     provider: "openai",
@@ -55,7 +55,11 @@ export const CHAT_MODEL_GROUPS: Array<{ label: string; provider: ModelProvider; 
 ];
 
 export function getChatModel(modelId: string | undefined): ChatModel {
-  return CHAT_MODELS.find((model) => model.id === modelId) || CHAT_MODELS.find((model) => model.id === DEFAULT_CHAT_MODEL_ID) || CHAT_MODELS[0]!;
+  return (
+    CHAT_MODELS.find((model) => model.id === modelId) ||
+    CHAT_MODELS.find((model) => model.id === DEFAULT_CHAT_MODEL_ID) ||
+    CHAT_MODELS[0]!
+  );
 }
 
 export function isKnownChatModel(modelId: string | undefined) {
