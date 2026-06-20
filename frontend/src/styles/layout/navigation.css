@@ -128,7 +128,7 @@
 }
 
 .sidebar-user-copy .user-name-text {
-  color: #ffffff;
+  color: var(--sidebar-user-name);
   font-size: 14px;
   font-weight: 750;
 }

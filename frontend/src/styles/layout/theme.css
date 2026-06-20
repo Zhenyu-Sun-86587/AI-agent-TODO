@@ -66,6 +66,7 @@ body,
   --text: var(--text-primary);
   --muted: var(--text-muted);
   --muted-strong: var(--text-secondary);
+  --sidebar-user-name: #172033;
   --line: var(--border-color);
   --line-strong: #c9d3dc;
   --task-card-bg: #e8eef6;
@@ -127,6 +128,7 @@ body,
   --text: var(--text-primary);
   --muted: var(--text-muted);
   --muted-strong: var(--text-secondary);
+  --sidebar-user-name: #ffffff;
   --line: var(--border-color);
   --line-strong: rgba(170, 185, 200, 0.28);
   --task-card-bg: #273342;

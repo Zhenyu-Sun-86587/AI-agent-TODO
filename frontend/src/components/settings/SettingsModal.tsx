@@ -163,19 +163,12 @@ export default function SettingsModal({
                       </div>
                     </label>
                     <label className="settings-field">
-                      <span>脱敏 Key</span>
+                      <span>Masked Key</span>
                       <div className="settings-readonly">
                         {settings.maskedKey || "未保存"}
                       </div>
                     </label>
-                    <label className="settings-field">
-                      <span>存储方式</span>
-                      <div className="settings-readonly">
-                        后端 /settings，本地模式使用 localStorage
-                      </div>
-                    </label>
                   </div>
-                  <p className="settings-help-text">保存会调用 /settings，测试会调用 /settings/test-openai-key。</p>
                 </aside>
               )}
             </div>

@@ -27,7 +27,7 @@ export function ModelSettings({
       <h3 className="settings-section-title">AI 配置</h3>
       <div className="settings-stack">
         <label className="settings-field">
-          <span>OpenAI API Key</span>
+          <span>API Key</span>
           <input
             value={draft.openaiApiKey}
             onChange={(event) => onDraftChange({ ...draft, openaiApiKey: event.target.value })}

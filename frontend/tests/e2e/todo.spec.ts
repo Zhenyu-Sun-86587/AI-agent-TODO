@@ -151,7 +151,7 @@ test("settings modal can save API key, show masked value and update model", asyn
   await page.getByRole("button", { name: "AI 配置" }).click();
 
   // 填入 API Key 并保存
-  const apiKeyInput = page.getByLabel("OpenAI API Key");
+  const apiKeyInput = page.getByLabel("API Key");
   await apiKeyInput.fill("sk-test-playwright-key-1234");
   await page.getByRole("button", { name: "保存设置" }).click();
   await expect(page.getByText(/已保存/)).toBeVisible();
