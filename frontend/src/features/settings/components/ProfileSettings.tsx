@@ -1,3 +1,4 @@
+import { ActionButton, Surface } from "../../../components/ui/primitives";
 import type { ProfileState } from "../types";
 
 export function ProfileSettings({
@@ -16,17 +17,17 @@ export function ProfileSettings({
   profileDraft: ProfileState;
 }) {
   return (
-    <form className="content-card settings-form" onSubmit={onSubmit}>
-      <label>
-        用户名
+    <Surface as="form" className="settings-form" onSubmit={onSubmit}>
+      <label className="settings-field">
+        <span>用户名</span>
         <input
           value={profileDraft.username}
           onChange={(event) => onChange({ ...profileDraft, username: event.target.value })}
           placeholder="请输入用户名"
         />
       </label>
-      <label>
-        邮箱
+      <label className="settings-field">
+        <span>邮箱</span>
         <input
           value={profileDraft.email}
           onChange={(event) => onChange({ ...profileDraft, email: event.target.value })}
@@ -34,11 +35,11 @@ export function ProfileSettings({
         />
       </label>
       <div className="settings-actions">
-        <button className="primary-button" type="submit" disabled={isSavingProfile}>
+        <ActionButton variant="primary" type="submit" disabled={isSavingProfile}>
           {isSavingProfile ? "保存中..." : "保存资料"}
-        </button>
+        </ActionButton>
       </div>
       {feedbackTone !== "idle" && <p className={`connection-result ${feedbackTone}`}>{feedback}</p>}
-    </form>
+    </Surface>
   );
 }

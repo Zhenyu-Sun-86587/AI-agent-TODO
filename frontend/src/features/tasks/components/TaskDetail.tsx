@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Sparkles, X } from "lucide-react";
 import { useAnimatedDismiss, useEscapeToClose } from "../../../hooks/useDismissAnimation";
+import { ActionButton } from "../../../components/ui/primitives";
 import type { Task, TaskDetailState } from "../types";
 import { AIReasonBlock, AITag, Field, formatDue, PriorityBadge, StatusBadge } from "./TaskDisplay";
 
@@ -79,11 +80,11 @@ export function TaskDetailDrawer({ detailState, isApiMode, onClose, onDelete, on
           <AIReasonBlock reason={task.aiReason || "该任务建议安排在今天下午完成，因为它优先级较高，并且会影响后续开发进度。"} source={task.isAiCreated ? "任务生成" : "任务分析"} />
         </section>
         <div className="drawer-actions">
-          <button className="ghost-button" type="button" onClick={() => onEdit(task)}>编辑任务</button>
-          <button className="primary-button" type="button" onClick={() => onToggleComplete(task.id)}>
+          <ActionButton onClick={() => onEdit(task)}>编辑任务</ActionButton>
+          <ActionButton variant="primary" onClick={() => onToggleComplete(task.id)}>
             {task.status === "已完成" ? "恢复待办" : "标记完成"}
-          </button>
-          <button className="danger-button" type="button" onClick={() => onDelete(task.id)}>删除任务</button>
+          </ActionButton>
+          <ActionButton variant="danger" onClick={() => onDelete(task.id)}>删除任务</ActionButton>
         </div>
       </aside>
     </>

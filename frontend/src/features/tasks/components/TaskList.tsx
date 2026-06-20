@@ -54,7 +54,7 @@ export function TaskTable({
                 <td><div className="table-title"><strong className={task.status === "已完成" ? "task-title-done" : ""}>{task.title}</strong>{task.description ? <span>{task.description}</span> : null}</div></td>
                 <td><StatusBadge status={task.status} /></td>
                 <td><PriorityBadge priority={task.priority} /></td>
-                <td><span style={{ color: "var(--text-secondary)", fontSize: "14px" }}>{task.category}</span></td>
+                <td><span className="task-table-category">{task.category}</span></td>
                 <td><span className="table-due">{formatDue(task)}</span></td>
                 <td className="task-actions-cell"><TaskRowActions isOpen={openMenuTaskId === task.id} onChangeStatus={onUpdateTaskStatus} onToggleMenu={(event) => { event.stopPropagation(); setOpenMenuTaskId((currentTaskId) => (currentTaskId === task.id ? null : task.id)); }} task={task} /></td>
               </tr>

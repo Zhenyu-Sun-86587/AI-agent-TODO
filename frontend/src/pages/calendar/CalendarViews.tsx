@@ -1,4 +1,5 @@
 import type { CSSProperties, RefObject } from "react";
+import { Surface } from "../../components/ui/primitives";
 import type { Task } from "../../features/tasks/types";
 import { EmptyState, formatDue, PriorityBadge } from "../../features/tasks/components/TaskDisplay";
 import { dateFromToday } from "../../lib/date";
@@ -67,7 +68,7 @@ export function OverdueTasksView({
   tasks: Task[];
 }) {
   return (
-    <section className="calendar-view-slot content-card overdue-list calendar-view-enter">
+    <Surface className="calendar-view-slot overdue-list calendar-view-enter">
       {tasks.length ? (
         tasks.map((task, index) => (
           <button key={task.id} style={motionStyle(index)} type="button" onClick={() => onOpenTask(task)}>
@@ -81,7 +82,7 @@ export function OverdueTasksView({
       ) : (
         <EmptyState title="没有逾期任务" description="当前所有未完成任务都还在截止时间内。" />
       )}
-    </section>
+    </Surface>
   );
 }
 
@@ -95,7 +96,7 @@ export function WeekTasksView({
   weekDays: CalendarWeekDay[];
 }) {
   return (
-    <section className="calendar-view-slot calendar-wrapper calendar-view-enter calendar-week-board" aria-label="本周任务">
+    <Surface className="calendar-view-slot calendar-view-enter calendar-week-board" padding="none" aria-label="本周任务">
       <div className="calendar-week-list">
         {weekDays.map((day, dayIndex) => {
           const dayTasks = tasksByDate.get(day.date) ?? [];
@@ -136,7 +137,7 @@ export function WeekTasksView({
           );
         })}
       </div>
-    </section>
+    </Surface>
   );
 }
 
@@ -150,7 +151,7 @@ export function MonthTasksView({
   onOpenTask: (task: Task) => void;
 }) {
   return (
-    <div className="calendar-view-slot calendar-wrapper calendar-view-enter">
+    <Surface as="div" className="calendar-view-slot calendar-view-enter" padding="none">
       <div className="calendar-header-row" aria-hidden="true">
         {weekLabels.map((label) => (
           <span className="calendar-header-cell" key={label}>{label}</span>
@@ -193,6 +194,6 @@ export function MonthTasksView({
           );
         })}
       </div>
-    </div>
+    </Surface>
   );
 }

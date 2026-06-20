@@ -1,5 +1,4 @@
-import { ChevronDown, Search } from "lucide-react";
-import type { ReactNode } from "react";
+import { SearchField, SelectField as UiSelectField } from "../../../components/ui/primitives";
 import {
   TASK_FILTER_ALL,
   TASK_PRIORITY_OPTIONS,
@@ -10,24 +9,7 @@ import {
 } from "../constants";
 import type { TaskStatus } from "../types";
 
-export function SelectField({
-  children,
-  value,
-  onChange,
-}: {
-  children: ReactNode;
-  value: string;
-  onChange: (value: string) => void;
-}) {
-  return (
-    <label className="filter-select">
-      <select value={value} onChange={(event) => onChange(event.target.value)}>
-        {children}
-      </select>
-      <ChevronDown aria-hidden="true" size={18} />
-    </label>
-  );
-}
+export const SelectField = UiSelectField;
 
 export function FilterBar({
   categories,
@@ -58,10 +40,7 @@ export function FilterBar({
 }) {
   return (
     <section className="filter-bar">
-      <label className="filter-search">
-        <Search size={17} />
-        <input value={query} onChange={(event) => onQueryChange(event.target.value)} placeholder="搜索任务..." />
-      </label>
+      <SearchField value={query} onChange={onQueryChange} placeholder="搜索任务..." />
       <SelectField value={status} onChange={(value) => { if (isTaskStatusFilter(value)) onStatusChange(value); }}>
         <option value={TASK_FILTER_ALL}>全部状态</option>
         {statusOptions.map((item) => <option key={item} value={item}>{item}</option>)}

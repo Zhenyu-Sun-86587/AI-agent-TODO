@@ -3,7 +3,6 @@ import { suggestTask } from "../../../api/ai";
 import { asErrorMessage, isAiConfigError } from "../../../api/errors";
 import { priorityFromApi } from "../../../api/mappers";
 import type { TaskFieldSuggestion } from "../types";
-import { generateTaskFromPrompt } from "../utils/generation";
 
 export function useTaskSuggestions({
   activeToken,
@@ -18,13 +17,10 @@ export function useTaskSuggestions({
 }) {
   const suggestTaskFields = useCallback(async (title: string, description: string): Promise<TaskFieldSuggestion> => {
     if (!activeToken) {
-      const suggestion = generateTaskFromPrompt(`${title}\n${description}`);
-      return {
-        priority: suggestion.priority,
-        category: suggestion.category,
-        reason: suggestion.aiReason || "本地规则已根据关键词推荐分类与优先级。",
-        source: "前端规则兜底",
-      };
+      const message = "请先登录或使用演示账号后再调用 /ai/suggest。";
+      setApiState("local");
+      setApiMessage(message);
+      throw new Error(message);
     }
 
     try {
@@ -41,15 +37,10 @@ export function useTaskSuggestions({
       };
     } catch (error) {
       if (isAiConfigError(error)) {
-        const suggestion = generateTaskFromPrompt(`${title}\n${description}`);
+        const message = asErrorMessage(error);
         setApiState("online");
-        setApiMessage(asErrorMessage(error));
-        return {
-          priority: suggestion.priority,
-          category: suggestion.category,
-          reason: "后端 AI Key 未配置，已使用前端规则推荐分类与优先级。",
-          source: "前端规则兜底",
-        };
+        setApiMessage(message);
+        throw error;
       }
       handleApiError(error);
       throw error;

@@ -1,4 +1,5 @@
 import { CalendarDays, CheckCircle2, Clock3, Sparkles } from "lucide-react";
+import { Surface, SurfaceHeader } from "../../../components/ui/primitives";
 import { StatsCard } from "../components/StatsCard";
 import { TaskTable } from "../components/TaskList";
 import type { Task, TaskStatus } from "../types";
@@ -34,13 +35,8 @@ export function TodayTasksPage({
         <StatsCard icon={Clock3} label="待处理" value={remaining} tone="purple" />
         <StatsCard icon={Sparkles} label="AI 重点" value={aiRecommended} tone="purple" />
       </section>
-      <section className="content-card table-card">
-        <div className="section-title">
-          <div>
-            <h2>今天的执行清单</h2>
-            <p>按截止时段排列，点击任务可打开详情抽屉。</p>
-          </div>
-        </div>
+      <Surface className="table-card">
+        <SurfaceHeader title="今天的执行清单" description="按截止时段排列，点击任务可打开详情抽屉。" />
         <TaskTable
           onDelete={onDelete}
           onEditTask={onEditTask}
@@ -49,7 +45,7 @@ export function TodayTasksPage({
           onToggleComplete={onToggleComplete}
           tasks={todayTasks}
         />
-      </section>
+      </Surface>
     </main>
   );
 }

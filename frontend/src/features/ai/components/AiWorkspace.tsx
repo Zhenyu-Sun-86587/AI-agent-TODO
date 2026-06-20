@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Sparkles } from "lucide-react";
+import { ActionButton, Surface, SurfaceHeader } from "../../../components/ui/primitives";
 import { fetchAiLogs } from "../../../api/ai";
 import { asErrorMessage } from "../../../api/errors";
 import type { ApiAiLog } from "../../../api/types";
@@ -9,16 +10,13 @@ import { SelectField } from "../../tasks/components/TaskFilters";
 
 export function AIAssistantCard({ onOpenTask, tasks }: { onOpenTask: (task: Task) => void; tasks: Task[] }) {
   return (
-    <section className="ai-card">
-      <div className="ai-card-header">
-        <span className="ai-card-mark" aria-hidden="true">
-          <Sparkles size={22} />
-        </span>
-        <div>
-          <h2>AI 智能建议</h2>
-          <p>根据截止时间、优先级和任务复杂度，AI 建议你优先完成以下任务。</p>
-        </div>
-      </div>
+    <Surface className="ai-card" variant="accent">
+      <SurfaceHeader
+        className="ai-card-header"
+        icon={<Sparkles size={22} />}
+        title="AI 智能建议"
+        description="根据截止时间、优先级和任务复杂度，AI 建议你优先完成以下任务。"
+      />
       <div className="ai-recommend-list">
         {tasks.length ? tasks.map((task, index) => (
           <button className="ai-recommend-item" key={task.id} style={{ "--stagger-index": index } as React.CSSProperties} type="button" onClick={() => onOpenTask(task)}>
@@ -35,7 +33,7 @@ export function AIAssistantCard({ onOpenTask, tasks }: { onOpenTask: (task: Task
           </button>
         )) : <EmptyState title="暂无 AI 推荐" description="所有任务都已完成，或者还没有可分析的待办任务。" />}
       </div>
-    </section>
+    </Surface>
   );
 }
 
@@ -109,13 +107,16 @@ function AILogsPanel({ isApiMode, onApiError, taskVersion, token }: { isApiMode:
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   return (
-    <section className="content-card ai-logs-panel">
-      <div className="section-title">
-        <div><h2>AI 调用记录</h2><p>来自 /ai/logs，用于确认解析、创建和推荐请求已由后端处理。</p></div>
-        <SelectField value={status} onChange={(value) => setStatus(value as typeof status)}>
-          <option value="全部">全部状态</option><option value="success">success</option><option value="mocked">mocked</option><option value="failed">failed</option>
-        </SelectField>
-      </div>
+    <Surface className="ai-logs-panel">
+      <SurfaceHeader
+        title="AI 调用记录"
+        description="来自 /ai/logs，用于确认解析、创建和推荐请求已由后端处理。"
+        action={(
+          <SelectField value={status} onChange={(value) => setStatus(value as typeof status)} width="168px">
+            <option value="全部">全部状态</option><option value="success">success</option><option value="mocked">mocked</option><option value="failed">failed</option>
+          </SelectField>
+        )}
+      />
       {!isApiMode ? <EmptyState title="本地演示模式无 AI 日志" description="登录后端账号后，这里会展示真实 /ai/logs 返回。" /> : isLoading ? <p className="table-state">正在读取 AI 日志...</p> : error ? <p className="form-error">{error}</p> : logs.length ? (
         <>
           <div className="ai-log-list">
@@ -128,21 +129,20 @@ function AILogsPanel({ isApiMode, onApiError, taskVersion, token }: { isApiMode:
             ))}
           </div>
           <div className="pagination-row">
-            <button className="ghost-button" type="button" onClick={() => setPage((value) => Math.max(1, value - 1))} disabled={page <= 1}>上一页</button>
+            <ActionButton onClick={() => setPage((value) => Math.max(1, value - 1))} disabled={page <= 1}>上一页</ActionButton>
             <span>第 {page} / {totalPages} 页</span>
-            <button className="ghost-button" type="button" onClick={() => setPage((value) => Math.min(totalPages, value + 1))} disabled={page >= totalPages}>下一页</button>
+            <ActionButton onClick={() => setPage((value) => Math.min(totalPages, value + 1))} disabled={page >= totalPages}>下一页</ActionButton>
           </div>
         </>
       ) : <EmptyState title="暂无 AI 调用记录" description="使用 AI 生成任务或获取字段建议后会出现记录。" />}
-    </section>
+    </Surface>
   );
 }
 
 function AISuggestTool({ onSuggestTaskFields }: { onSuggestTaskFields: (title: string, description: string) => Promise<TaskFieldSuggestion> }) {
   const [title, setTitle] = useState("修复移动端弹窗遮挡问题");
   const [description, setDescription] = useState("检查 WebView 下底部导航和新建任务弹窗是否被安全区遮挡。");
-  const fallbackSuggestion = useMemo<TaskFieldSuggestion>(() => ({ priority: "中", category: "前端开发", reason: "本地规则兜底", source: "前端规则兜底" }), []);
-  const [suggestion, setSuggestion] = useState<TaskFieldSuggestion>(fallbackSuggestion);
+  const [suggestion, setSuggestion] = useState<TaskFieldSuggestion | null>(null);
   const [isLoading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -159,24 +159,24 @@ function AISuggestTool({ onSuggestTaskFields }: { onSuggestTaskFields: (title: s
   };
 
   return (
-    <section className="content-card ai-suggest-tool">
-      <div className="section-title">
-        <div><h2>AI 推荐分类和优先级</h2><p>点击后调用 /ai/suggest；本地演示模式会使用前端规则兜底。</p></div>
-        <button className="ghost-button" type="button" onClick={requestSuggestion} disabled={isLoading}>{isLoading ? "分析中" : "获取建议"}</button>
-      </div>
+    <Surface className="ai-suggest-tool">
+      <SurfaceHeader
+        title="AI 推荐分类和优先级"
+        action={<ActionButton onClick={requestSuggestion} disabled={isLoading}>{isLoading ? "分析中" : "获取建议"}</ActionButton>}
+      />
       <div className="ai-suggest-grid">
         <label>任务描述<textarea value={description} onChange={(event) => setDescription(event.target.value)} rows={3} /></label>
         <div className="suggest-left-column">
           <label>任务标题<input value={title} onChange={(event) => setTitle(event.target.value)} /></label>
           <div className="suggest-result">
-            <Field label="推荐优先级"><PriorityBadge priority={suggestion.priority} /></Field>
-            <Field label="推荐分类">{suggestion.category}</Field>
-            <Field label="建议来源">{suggestion.source || "/ai/suggest"}</Field>
+            <Field label="推荐优先级">{suggestion ? <PriorityBadge priority={suggestion.priority} /> : "待获取"}</Field>
+            <Field label="推荐分类">{suggestion?.category || "待获取"}</Field>
+            <Field label="建议来源">{suggestion?.source || "待获取"}</Field>
           </div>
         </div>
       </div>
-      <p className="suggest-reason">{suggestion.reason}</p>
+      {suggestion && <p className="suggest-reason">{suggestion.reason}</p>}
       {error && <p className="form-error">{error}</p>}
-    </section>
+    </Surface>
   );
 }

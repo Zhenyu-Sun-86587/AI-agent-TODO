@@ -1,4 +1,5 @@
 import type { StatsRangeKey } from "../stats/taskStats";
+import { SelectField, Surface, SurfaceHeader } from "../../../components/ui/primitives";
 
 function createLinePath(points: Array<{ x: number; y: number }>) {
   return points.map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`).join(" ");
@@ -54,14 +55,12 @@ export function TrendLineChart({
           <h2>{title}</h2>
           <p>{subtitle}</p>
         </div>
-        <label className="trend-range-select">
-          <select value={selectValue} onChange={(event) => onSelectChange(event.target.value as StatsRangeKey)} aria-label="选择统计周期">
+        <SelectField className="trend-range-select" value={selectValue} onChange={(value) => onSelectChange(value as StatsRangeKey)} width="132px" ariaLabel="选择统计周期">
             <option value="currentWeek">本周</option>
             <option value="lastWeek">上周</option>
             <option value="currentMonth">本月</option>
             <option value="lastMonth">上月</option>
-          </select>
-        </label>
+        </SelectField>
       </div>
       <div className="trend-chart-body" role="img" aria-label={title}>
         <div className="trend-y-axis" aria-hidden="true">
@@ -124,13 +123,8 @@ export function DistributionBarChart({
   const axisMax = Math.max(1, axisTicks[axisTicks.length - 1] ?? maxValue);
 
   return (
-    <div className={`content-card distribution-card distribution-card-${variant}`}>
-      <div className="section-title stats-section-title">
-        <div>
-          <h2>{title}</h2>
-          <p>{subtitle}</p>
-        </div>
-      </div>
+    <Surface as="div" className={`distribution-card distribution-card-${variant}`}>
+      <SurfaceHeader className="stats-section-title" title={title} description={subtitle} />
       <div className="distribution-chart">
         <div className="distribution-bars">
           <div className="distribution-grid">
@@ -156,6 +150,6 @@ export function DistributionBarChart({
           <span />
         </div>
       </div>
-    </div>
+    </Surface>
   );
 }

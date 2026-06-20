@@ -1,5 +1,6 @@
 import { type ReactNode } from "react";
 import { FileText, Sparkles } from "lucide-react";
+import { EmptyState as UiEmptyState } from "../../../components/ui/primitives";
 import { taskPriorityClassName, taskStatusClassName } from "../../../lib/taskPresentation";
 import type { Task, TaskPriority, TaskStatus } from "../types";
 
@@ -53,11 +54,5 @@ export function AIReasonBlock({ reason, source }: { reason: string; source?: str
 }
 
 export function EmptyState({ description, title }: { description: string; title: string }) {
-  return (
-    <div className="empty-state">
-      <FileText size={26} />
-      <strong>{title}</strong>
-      <p>{description}</p>
-    </div>
-  );
+  return <UiEmptyState icon={<FileText size={26} />} title={title} description={description} />;
 }

@@ -6,6 +6,7 @@ import {
   isTaskPriority,
   isTaskStatus,
 } from "../constants";
+import { ActionButton } from "../../../components/ui/primitives";
 import type { NewTaskInput } from "../types";
 
 export function TaskEditor({
@@ -122,7 +123,7 @@ export function TaskEditor({
         <input id={`${fieldPrefix}-tags`} value={form.tags} onChange={(event) => onChange({ ...form, tags: event.target.value })} />
       </div>
       {validationError && <p className="form-error" id={`${fieldPrefix}-title-error`} role="alert">{validationError}</p>}
-      <button className="primary-button full" type="submit">{submitLabel}</button>
+      <ActionButton variant="primary" fullWidth type="submit">{submitLabel}</ActionButton>
     </form>
   );
 }

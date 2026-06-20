@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { X } from "lucide-react";
 import { useAnimatedDismiss, useEscapeToClose } from "../../../hooks/useDismissAnimation";
+import { ActionButton } from "../../../components/ui/primitives";
 import { createEmptyTask, taskToInput } from "../utils/generation";
 import type { NewTaskInput, Task } from "../types";
 export { TaskDetailDrawer } from "./TaskDetail";
@@ -30,8 +31,8 @@ export function DeleteConfirmModal({ onCancel, onConfirm, task }: { onCancel: ()
           {task.description && <span>{task.description}</span>}
         </div>
         <div className="preview-actions">
-          <button className="ghost-button" type="button" onClick={() => closeWithAnimation()}>取消</button>
-          <button className="danger-button" type="button" onClick={() => closeWithAnimation(onConfirm)}>确认删除</button>
+          <ActionButton onClick={() => closeWithAnimation()}>取消</ActionButton>
+          <ActionButton variant="danger" onClick={() => closeWithAnimation(onConfirm)}>确认删除</ActionButton>
         </div>
       </div>
     </div>

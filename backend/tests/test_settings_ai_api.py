@@ -1,5 +1,7 @@
 from conftest import auth_headers
 from app.core.config import settings
+from app.core.security import encrypt_secret
+from app.models.user import User
 
 
 def test_settings_get_update_and_delete_key(client):
@@ -103,6 +105,34 @@ def test_ai_chat_endpoint_uses_deepseek_model(client, monkeypatch):
     assert response.status_code == 200
     assert response.json()["data"]["content"] == "收到：test"
     assert response.json()["data"]["model_name"] == "deepseek-v4-pro"
+
+
+def test_demo_login_resets_ai_settings_to_current_default(client, db_session, monkeypatch):
+    monkeypatch.setattr(settings, "openai_api_key", "sk-env-secret-5678")
+    monkeypatch.setattr(settings, "openai_default_model", "deepseek-v4-pro")
+
+    response = client.post("/api/auth/demo")
+    assert response.status_code == 200
+    token = response.json()["data"]["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    demo_user = db_session.query(User).filter(User.email == "demo@aitodo.dev").one()
+    demo_user.setting.model_name = "gpt-4-turbo"
+    demo_user.setting.openai_api_key_encrypted = encrypt_secret("sk-old-demo-key-1234")
+    db_session.add(demo_user.setting)
+    db_session.commit()
+
+    response = client.post("/api/auth/demo")
+    assert response.status_code == 200
+
+    db_session.refresh(demo_user.setting)
+    assert demo_user.setting.model_name == "deepseek-v4-pro"
+    assert demo_user.setting.openai_api_key_encrypted is None
+
+    response = client.get("/api/settings", headers=headers)
+    data = response.json()["data"]
+    assert data["model_name"] == "deepseek-v4-pro"
+    assert data["openai_api_key_masked"] == "sk-****5678"
 
 
 def test_update_model_name_only_does_not_clear_key(client):

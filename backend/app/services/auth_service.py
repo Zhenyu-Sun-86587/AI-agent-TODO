@@ -68,7 +68,11 @@ class AuthService:
             self.db.add(user)
             self.db.flush()
 
-        if not user.setting:
+        if user.setting:
+            user.setting.model_name = settings.openai_default_model
+            user.setting.openai_api_key_encrypted = None
+            self.db.add(user.setting)
+        else:
             self.db.add(UserSetting(user_id=user.id, model_name=settings.openai_default_model))
 
         self.db.commit()

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { AlertCircle, CalendarDays, CheckCircle2, Clock3, ListTodo } from "lucide-react";
+import { Surface } from "../../../components/ui/primitives";
 import { buildDateRange } from "../../../api/mappers";
 import { fetchCategoryStats, fetchOverview, fetchPriorityStats, fetchTrendStats } from "../../../api/stats";
 import type { ApiCategoryStats, ApiPriorityStats, ApiStatsOverview } from "../../../api/types";
@@ -116,10 +117,10 @@ export function StatsPage({
         <StatsCard icon={CalendarDays} label="今日截止" value={todayDue} tone="blue" />
       </section>
       {!totalTasks ? (
-        <section className="content-card"><EmptyState title="暂无统计数据" description="创建任务后，这里会显示完成率、分布和趋势。" /></section>
+        <Surface><EmptyState title="暂无统计数据" description="创建任务后，这里会显示完成率、分布和趋势。" /></Surface>
       ) : (
         <section className="stats-panels">
-          <div className="content-card chart-card">
+          <Surface as="div" className="chart-card">
             <TrendLineChart
               title={rangeConfig.title}
               subtitle={rangeConfig.subtitle}
@@ -127,7 +128,7 @@ export function StatsPage({
               selectValue={range}
               onSelectChange={setRange}
             />
-          </div>
+          </Surface>
           <div className="stats-distribution-row">
             <DistributionBarChart
               title="分类分布"

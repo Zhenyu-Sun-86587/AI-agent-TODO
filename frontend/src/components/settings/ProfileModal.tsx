@@ -44,7 +44,7 @@ export default function ProfileModal({ onClose, onSaveProfile, overlayExitMs = 1
 
   return (
     <div className={`modal-backdrop ${isClosing ? "closing" : ""}`}>
-      <div className={`create-modal ${isClosing ? "closing" : ""}`} style={{ maxWidth: "500px", width: "90%" }}>
+      <div className={`create-modal profile-modal ${isClosing ? "closing" : ""}`}>
         <div className="drawer-header">
           <div>
             <p className="eyebrow">Profile</p>
@@ -54,7 +54,7 @@ export default function ProfileModal({ onClose, onSaveProfile, overlayExitMs = 1
             <X size={18} />
           </button>
         </div>
-        <div className="modal-content" style={{ padding: "0 24px 24px" }}>
+        <div className="modal-content profile-modal-content">
           <ProfileSettings
             feedback={feedback}
             feedbackTone={feedbackTone}

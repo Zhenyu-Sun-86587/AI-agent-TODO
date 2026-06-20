@@ -1,5 +1,6 @@
-import type { CSSProperties, ReactNode } from "react";
+import type { CSSProperties } from "react";
 import { Check, CheckCircle2, Clock3 } from "lucide-react";
+import { ActionButton, EmptyState, Surface, SurfaceHeader } from "../../components/ui/primitives";
 import { formatDue } from "../tasks/components/TaskDisplay";
 import type { Task } from "../tasks/types";
 import { OverviewCards } from "./components/OverviewCards";
@@ -46,13 +47,11 @@ export default function Dashboard({
       <section className="minimal-grid">
         <RecommendedTasks onOpenTask={onOpenTask} tasks={recommendedTasks} />
 
-        <article className="minimal-panel">
-          <div className="minimal-panel-title split">
-            <h2>今日任务</h2>
-            <button type="button" onClick={onPageChange}>
-              查看全部
-            </button>
-          </div>
+        <Surface as="article" variant="panel">
+          <SurfaceHeader
+            title="今日任务"
+            action={<ActionButton size="sm" onClick={onPageChange}>查看全部</ActionButton>}
+          />
           {visibleTasks.length ? (
             <div className="minimal-task-list">
               {visibleTasks.map((task, index) => {
@@ -94,26 +93,8 @@ export default function Dashboard({
               description="可以用顶部的按钮新建一个任务。"
             />
           )}
-        </article>
+        </Surface>
       </section>
     </main>
-  );
-}
-
-function EmptyState({
-  description,
-  icon,
-  title,
-}: {
-  description: string;
-  icon: ReactNode;
-  title: string;
-}) {
-  return (
-    <div className="minimal-empty">
-      <span>{icon}</span>
-      <strong>{title}</strong>
-      <p>{description}</p>
-    </div>
   );
 }

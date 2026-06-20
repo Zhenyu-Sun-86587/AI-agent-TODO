@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { SegmentedControl } from "../components/ui/primitives";
 import type { CalendarView } from "../app/types/common";
 import type { Task } from "../features/tasks/types";
 import { dateFromToday, formatLocalDate } from "../lib/date";
@@ -17,7 +18,6 @@ import {
   getSelectedDate,
   isDateInRange,
   isOverdue,
-  motionStyle,
   sortByPriorityThenDue,
 } from "./calendar/calendarUtils";
 import { useCalendarTasks } from "./calendar/useCalendarTasks";
@@ -138,13 +138,13 @@ export default function CalendarPage({
           />
           <div className="calendar-subtoolbar">
             <h2>{calendarTitle}</h2>
-            <section className="calendar-controls" aria-label="日历视图">
-              {calendarViews.map(({ key, label }, index) => (
-                <button className={view === key ? "active" : ""} key={key} style={motionStyle(index)} type="button" onClick={() => setView(key)}>
-                  {label}
-                </button>
-              ))}
-            </section>
+            <SegmentedControl
+              ariaLabel="日历视图"
+              className="calendar-controls"
+              items={calendarViews.map(({ key, label }) => ({ label, value: key }))}
+              value={view}
+              onChange={setView}
+            />
           </div>
           {isRemoteLoading && <p className="table-state">正在同步当前日历范围...</p>}
           {remoteError && <p className="form-error">{remoteError}</p>}

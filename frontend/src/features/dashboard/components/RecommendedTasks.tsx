@@ -1,25 +1,8 @@
-import type { CSSProperties, ReactNode } from "react";
+import type { CSSProperties } from "react";
 import { Clock3, FileText, Sparkles } from "lucide-react";
+import { EmptyState, Surface, SurfaceHeader } from "../../../components/ui/primitives";
 import { formatDue, PriorityBadge } from "../../tasks/components/TaskDisplay";
 import type { Task } from "../../tasks/types";
-
-function EmptyState({
-  description,
-  icon,
-  title,
-}: {
-  description: string;
-  icon: ReactNode;
-  title: string;
-}) {
-  return (
-    <div className="minimal-empty">
-      <span>{icon}</span>
-      <strong>{title}</strong>
-      <p>{description}</p>
-    </div>
-  );
-}
 
 export function RecommendedTasks({
   onOpenTask,
@@ -29,11 +12,8 @@ export function RecommendedTasks({
   tasks: Task[];
 }) {
   return (
-    <article className="minimal-panel minimal-ai-panel">
-      <div className="minimal-panel-title">
-        <Sparkles size={20} />
-        <h2>AI 智能建议</h2>
-      </div>
+    <Surface as="article" variant="panel">
+      <SurfaceHeader icon={<Sparkles size={20} />} title="AI 智能建议" />
       {tasks.length ? (
         <div className="minimal-recommend-list">
           {tasks.map((task, index) => (
@@ -66,6 +46,6 @@ export function RecommendedTasks({
           description="所有任务都已完成，或者还没有可分析的待办任务。"
         />
       )}
-    </article>
+    </Surface>
   );
 }

@@ -1,3 +1,4 @@
+import { Surface } from "../../components/ui/primitives";
 import { EmptyState, PriorityBadge } from "../../features/tasks/components/TaskDisplay";
 import type { Task } from "../../features/tasks/types";
 import { motionStyle } from "./calendarUtils";
@@ -10,7 +11,7 @@ export function PendingSchedulePanel({
   tasks: Task[];
 }) {
   return (
-    <aside className="calendar-pending-panel">
+    <Surface as="aside" className="calendar-pending-panel">
       <h2>待排程任务</h2>
       <div className="calendar-pending-list">
         {tasks.length ? (
@@ -27,6 +28,6 @@ export function PendingSchedulePanel({
           <EmptyState title="没有未设时段任务" description="带具体时间的今日任务会被放进左侧时间轴。" />
         )}
       </div>
-    </aside>
+    </Surface>
   );
 }

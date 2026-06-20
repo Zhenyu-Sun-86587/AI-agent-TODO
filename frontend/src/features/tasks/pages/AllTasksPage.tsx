@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Surface } from "../../../components/ui/primitives";
 import { mapApiTask } from "../../../api/mappers";
 import { fetchTasksPage } from "../../../api/tasks";
 import { priorityToApiCode, statusToApiCode } from "../../../lib/taskPresentation";
@@ -115,7 +116,7 @@ export function AllTasksPage({
 
   return (
     <main className="page-content">
-      <div className="content-card table-card">
+      <Surface as="div" className="table-card">
         <FilterBar
           categories={categories}
           category={category}
@@ -147,7 +148,7 @@ export function AllTasksPage({
             <button disabled={currentPage >= pageCount} type="button" onClick={() => setPage(currentPage + 1)}>下一页</button>
           </div>
         </footer>
-      </div>
+      </Surface>
     </main>
   );
 }
