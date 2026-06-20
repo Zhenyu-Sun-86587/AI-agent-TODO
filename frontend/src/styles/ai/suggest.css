@@ -1,0 +1,76 @@
+.suggest-left-column {
+  display: grid;
+  gap: 16px;
+}
+
+.ai-suggest-grid input,
+.ai-suggest-grid textarea,
+.settings-form input {
+  width: 100%;
+  min-height: 42px;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+  outline: none;
+}
+
+.ai-suggest-grid textarea {
+  resize: vertical;
+}
+
+.ai-suggest-grid > label {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: stretch;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.ai-suggest-grid > label textarea {
+  height: 100%;
+  min-height: 0;
+}
+
+.suggest-left-column {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.ai-suggest-grid textarea {
+  transition:
+    background-color var(--motion-fast) var(--ease-out),
+    border-color var(--motion-fast) var(--ease-out),
+    box-shadow var(--motion-fast) var(--ease-out);
+}
+
+.ai-suggest-grid textarea:focus {
+  border-color: color-mix(in srgb, var(--purple) 46%, var(--primary));
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15);
+}
+
+.suggest-result {
+  display: grid;
+  gap: 16px;
+}
+
+.suggest-result .priority-badge.priority-high {
+  border-color: color-mix(in srgb, var(--red) 48%, transparent);
+  background: color-mix(in srgb, var(--red) 18%, var(--surface));
+  color: var(--red);
+  font-weight: 800;
+}
+
+.suggest-result .priority-badge.priority-medium {
+  border-color: color-mix(in srgb, var(--orange) 52%, transparent);
+  background: color-mix(in srgb, var(--orange) 22%, var(--surface));
+  color: var(--orange);
+  font-weight: 800;
+}
+
+.suggest-result .priority-badge.priority-low {
+  border-color: color-mix(in srgb, var(--green) 46%, transparent);
+  background: color-mix(in srgb, var(--green) 18%, var(--surface));
+  color: var(--green);
+  font-weight: 800;
+}

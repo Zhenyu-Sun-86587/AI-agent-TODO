@@ -1,0 +1,39 @@
+.stats-card > span {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: var(--radius-md);
+  background: var(--surface-soft);
+}
+
+.stats-card.blue > span {
+  background: var(--blue-soft);
+  color: var(--blue);
+}
+
+.stats-card.green > span {
+  background: var(--green-soft);
+  color: var(--green);
+}
+
+.stats-card.red > span {
+  background: var(--red-soft);
+  color: var(--red);
+}
+
+.stats-card.purple > span {
+  background: #f0edff;
+  color: var(--purple);
+}
+
+.stats-card p {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.stats-card strong {
+  color: var(--text);
+  font-size: 26px;
+}

@@ -1,0 +1,114 @@
+@import "./table-base.css";
+@import "./table-title.css";
+@import "./row-menu.css";
+@import "./table-footer.css";
+
+.task-table-wrap {
+  border-color: var(--line);
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+}
+
+.task-table {
+  min-width: 760px;
+  background: var(--surface);
+}
+
+.task-table th,
+.task-table td {
+  padding: 10px 12px;
+  border-bottom-color: var(--line);
+}
+
+.task-table th:nth-child(2),
+.task-table td:nth-child(2) {
+  width: 178px;
+}
+
+.task-table th:nth-child(3),
+.task-table td:nth-child(3) {
+  width: 106px;
+}
+
+.task-table th:nth-child(4),
+.task-table td:nth-child(4) {
+  width: 132px;
+}
+
+.task-table .task-actions-header,
+.task-table .task-actions-cell {
+  width: 80px;
+  text-align: center;
+}
+
+.task-table .task-actions-cell {
+  padding-inline: 8px;
+}
+
+.task-table th:nth-child(n + 2),
+.task-table td:nth-child(n + 2) {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: nowrap;
+  text-align: center;
+}
+
+.task-table td:nth-child(n + 2) .status-badge,
+.task-table td:nth-child(n + 2) .priority-badge,
+.task-table td:nth-child(n + 2) .table-due {
+  justify-self: center;
+}
+
+.task-table th {
+  background: var(--surface-soft);
+  color: var(--muted-strong);
+  font-size: 12px;
+}
+
+.task-table tbody tr {
+  cursor: pointer;
+}
+
+.task-table tbody tr:hover {
+  background: color-mix(in srgb, var(--surface-soft) 70%, var(--primary-soft));
+}
+
+.table-title {
+  gap: 5px;
+}
+
+.table-due {
+  gap: 5px;
+  color: var(--muted-strong);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.row-actions {
+  justify-content: flex-end;
+  align-items: center;
+  gap: 6px;
+}
+
+.task-actions {
+  justify-content: center;
+}
+
+.row-menu-trigger {
+  width: 34px;
+  height: 34px;
+  box-shadow: none;
+}
+
+.row-menu button {
+  border-radius: var(--radius-sm);
+}
+
+.task-table-row .status-cell span,
+.minimal-task-row .status-cell span {
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: rgba(255,255,255,0.1);
+  font-size: 12px;
+  font-weight: 600;
+}

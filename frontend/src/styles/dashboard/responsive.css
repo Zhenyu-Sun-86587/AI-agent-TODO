@@ -1,0 +1,37 @@
+@media (max-width: 900px) {
+  .minimal-dashboard {
+      gap: 14px;
+      margin-top: 4px;
+    }
+
+
+  .minimal-grid {
+      grid-template-columns: 1fr;
+    }
+
+  .focus-hero {
+      align-items: flex-start;
+      flex-direction: column;
+      padding: 28px;
+    }
+
+  .focus-metrics {
+      width: 100%;
+    }
+}
+
+@media (max-width: 460px) {
+
+
+  .minimal-shell-light .focus-hero {
+      padding: 24px;
+    }
+
+  .minimal-shell-light .focus-greeting h1 {
+      font-size: 28px;
+    }
+
+  .focus-metrics {
+      grid-template-columns: 1fr;
+    }
+}

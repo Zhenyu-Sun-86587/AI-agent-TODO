@@ -1,0 +1,32 @@
+.auth-form .ghost-button {
+  position: relative;
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 15px;
+  font-weight: 500;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(230, 242, 255, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+  overflow: hidden;
+}
+
+.auth-form .ghost-button:hover:not(:disabled) {
+  border-color: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.auth-endpoint {
+  color: rgba(195, 221, 252, 0.54);
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+}

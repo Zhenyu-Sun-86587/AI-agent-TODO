@@ -1,0 +1,20 @@
+.stats-card {
+  height: 88px;
+  min-height: 88px;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 14px 16px;
+}
+
+.stats-card > span {
+  width: 40px;
+  height: 40px;
+}
+
+.stats-card strong {
+  display: block;
+  margin-top: 2px;
+  line-height: 1.1;
+  animation: numberFadeUp var(--motion-base) var(--ease-out) both;
+}

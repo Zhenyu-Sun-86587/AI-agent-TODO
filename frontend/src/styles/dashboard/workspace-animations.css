@@ -1,0 +1,65 @@
+@keyframes workspaceShellEnter {
+  0% {
+    opacity: 0.96;
+    transform: translateY(6px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes workspaceShellLeave {
+  0% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0.98;
+    transform: translateY(4px);
+  }
+}
+
+@keyframes workspaceSidebarEnter {
+  0% {
+    opacity: 0.96;
+    transform: translateX(-4px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes workspaceSidebarLeave {
+  0% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  100% {
+    opacity: 0.98;
+    transform: translateX(-3px);
+  }
+}
+
+@keyframes workspaceContentEnter {
+  0% {
+    opacity: 0.96;
+    transform: translateY(6px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes workspaceContentLeave {
+  0% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0.98;
+    transform: translateY(4px);
+  }
+}

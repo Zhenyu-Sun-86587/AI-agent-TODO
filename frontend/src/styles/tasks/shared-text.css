@@ -1,0 +1,27 @@
+.minimal-recommend-list strong,
+.minimal-task-row strong,
+.ai-recommend-list strong,
+.kanban-card strong,
+.mobile-task-title strong,
+.table-title strong {
+  color: var(--text);
+}
+
+.minimal-recommend-list p,
+.minimal-task-row p,
+.ai-recommend-list p,
+.ai-recommend-meta,
+.mobile-task-card p,
+.mobile-task-meta,
+.task-table-category,
+.table-title span,
+.drawer-description,
+.section-title p,
+.page-heading p {
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.task-table-category {
+  font-size: 14px;
+}

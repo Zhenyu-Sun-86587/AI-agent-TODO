@@ -1,0 +1,39 @@
+/* Calendar theme primitives. */
+
+.minimal-shell-dark .ui-surface,
+.minimal-shell-dark .stats-card,
+.minimal-shell-dark .task-column,
+.minimal-shell-dark .calendar-day,
+.minimal-shell-dark .today-timeline,
+.minimal-shell-dark .overdue-list,
+.minimal-shell-dark .drawer,
+.minimal-shell-dark .create-modal {
+  border-color: rgba(148, 163, 184, 0.18);
+  background: #1e293b;
+  color: #e2e8f0;
+  box-shadow: 0 18px 38px rgba(2, 6, 23, 0.22);
+}
+
+.minimal-shell .calendar-grid,
+.minimal-shell .timeline-hour {
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+.minimal-shell-dark .calendar-grid {
+  background: rgba(148, 163, 184, 0.18);
+}
+
+.minimal-shell-light .ui-surface,
+.minimal-shell-light .stats-card,
+.minimal-shell-light .task-column,
+.minimal-shell-light .today-timeline,
+.minimal-shell-light .overdue-list,
+.minimal-shell-light .drawer,
+.minimal-shell-light .create-modal {
+  box-shadow: var(--shadow-soft);
+}
+
+.minimal-shell-light .calendar-grid,
+.minimal-shell-light .timeline-hour {
+  border-color: #e4e7ec;
+}

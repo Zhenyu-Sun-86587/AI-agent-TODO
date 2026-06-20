@@ -1,0 +1,31 @@
+.distribution-bar.bar-high {
+  background: linear-gradient(90deg, var(--red), #f43f5e);
+}
+
+.distribution-bar.bar-medium {
+  background: linear-gradient(90deg, var(--orange), #f59e0b);
+}
+
+.distribution-bar.bar-low {
+  background: linear-gradient(90deg, var(--blue), #3b82f6);
+}
+
+.distribution-bar.bar-cat-0 {
+  background: linear-gradient(90deg, var(--primary), var(--primary-dark));
+}
+
+.distribution-bar.bar-cat-1 {
+  background: linear-gradient(90deg, var(--green), #10b981);
+}
+
+.distribution-bar.bar-cat-2 {
+  background: linear-gradient(90deg, var(--purple), #a855f7);
+}
+
+.distribution-bar.bar-cat-3 {
+  background: linear-gradient(90deg, #f472b6, #ec4899);
+}
+
+.distribution-bar.bar-cat-4 {
+  background: linear-gradient(90deg, #2dd4bf, #14b8a6);
+}

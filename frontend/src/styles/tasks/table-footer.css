@@ -1,0 +1,23 @@
+.table-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 14px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.table-footer div {
+  display: flex;
+  gap: 8px;
+}
+
+.table-footer button {
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--text);
+}

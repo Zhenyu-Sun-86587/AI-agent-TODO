@@ -1,0 +1,41 @@
+@keyframes calendarViewEnter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes calendarItemEnter {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes calendarTaskSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(7px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes calendarTodayPulse {
+  0%, 100% {
+    box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--primary) 34%, transparent);
+  }
+  50% {
+    box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--primary) 48%, transparent), 0 0 0 5px color-mix(in srgb, var(--primary) 8%, transparent);
+  }
+}

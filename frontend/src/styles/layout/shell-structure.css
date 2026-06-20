@@ -1,0 +1,22 @@
+.minimal-shell {
+  height: 100vh;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  background: var(--bg);
+  color: var(--text);
+  background-image: radial-gradient(circle at 15% 50%, rgba(99, 102, 241, 0.05), transparent 40%),
+                    radial-gradient(circle at 85% 30%, rgba(168, 85, 247, 0.05), transparent 40%);
+}
+
+.minimal-sidebar {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--sidebar);
+  backdrop-filter: var(--backdrop-blur);
+  -webkit-backdrop-filter: var(--backdrop-blur);
+  border-right: 1px solid var(--line);
+  box-shadow: 1px 0 20px rgba(0,0,0,0.2);
+  z-index: 10;
+}

@@ -1,0 +1,50 @@
+.minimal-task-row {
+  grid-template-columns: minmax(auto, 60px) minmax(0, 1fr) auto auto;
+  cursor: pointer;
+}
+
+.minimal-task-row > button {
+  min-width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: all var(--motion-fast) var(--ease-out);
+}
+
+.minimal-task-row > button.done {
+  border-color: transparent;
+  background: #22c55e;
+  animation: checkPop 220ms var(--ease-smooth) both;
+}
+
+.minimal-task-row.is-complete {
+  opacity: 0.72;
+}
+
+.minimal-task-row.is-complete strong {
+  text-decoration: line-through;
+}
+
+.minimal-task-row.is-high-priority {
+  border-color: color-mix(in srgb, var(--orange) 36%, rgba(148, 163, 184, 0.16));
+}
+
+.minimal-task-row small {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 7px;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 800;
+}

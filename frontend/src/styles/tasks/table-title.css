@@ -1,0 +1,33 @@
+.table-title {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+
+.table-title strong,
+.table-title span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.table-title strong {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.table-title span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+
+.table-due {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+}

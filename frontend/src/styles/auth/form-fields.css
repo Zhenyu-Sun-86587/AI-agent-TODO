@@ -1,0 +1,52 @@
+.auth-form {
+  display: grid;
+  gap: 14px;
+}
+
+.auth-form label {
+  display: grid;
+  gap: 8px;
+  color: #edf6ff;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.auth-label-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: rgba(230, 242, 255, 0.88);
+}
+
+.auth-label-text svg {
+  color: #9ccaff;
+}
+
+.auth-form input {
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 15px;
+  border: 1px solid rgba(173, 211, 255, 0.26);
+  border-radius: 12px;
+  background: rgba(4, 13, 30, 0.66);
+  color: #ffffff;
+  outline: none;
+  font: inherit;
+  font-size: 15px;
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.auth-form input::placeholder {
+  color: rgba(188, 212, 241, 0.46);
+}
+
+.auth-form input:focus {
+  border-color: rgba(144, 199, 255, 0.88);
+  background: rgba(8, 22, 50, 0.86);
+  box-shadow:
+    0 0 0 3px rgba(65, 139, 255, 0.2),
+    0 0 18px rgba(65, 139, 255, 0.22);
+}

@@ -1,0 +1,113 @@
+.distribution-chart {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 14px;
+  padding-top: 8px;
+  min-height: 0;
+}
+
+.distribution-card {
+  --distribution-label-width: 88px;
+  --distribution-value-width: 32px;
+  --distribution-row-gap: 12px;
+}
+
+.distribution-bars {
+  position: relative;
+  display: grid;
+  gap: inherit;
+  align-content: center;
+  min-height: 0;
+}
+
+.distribution-grid {
+  position: absolute;
+  inset: 0 var(--distribution-value-width) 0 var(--distribution-label-width);
+  margin-inline: var(--distribution-row-gap);
+  pointer-events: none;
+}
+
+.distribution-grid-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--line);
+}
+
+.distribution-row {
+  display: grid;
+  grid-template-columns: var(--distribution-label-width) minmax(0, 1fr) var(--distribution-value-width);
+  align-items: center;
+  gap: var(--distribution-row-gap);
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.distribution-label {
+  color: var(--text);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.distribution-bar-shell {
+  position: relative;
+  height: 26px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: rgba(148, 163, 184, 0.08);
+}
+
+.distribution-bar {
+  display: block;
+  height: 100%;
+  border-radius: 8px;
+  background: linear-gradient(90deg, #78a6ff, #6f95f0);
+  transform-origin: left;
+  animation: progressGrow var(--motion-slow) var(--ease-out) both;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.distribution-value {
+  color: var(--text);
+  text-align: right;
+}
+
+.distribution-axis {
+  display: grid;
+  grid-template-columns: var(--distribution-label-width) minmax(0, 1fr) var(--distribution-value-width);
+  align-items: center;
+  gap: var(--distribution-row-gap);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.distribution-axis-track {
+  display: flex;
+  justify-content: space-between;
+  min-width: 0;
+  line-height: 1;
+  overflow: hidden;
+}
+
+.distribution-axis-track span {
+  min-width: 0;
+  flex: 0 1 auto;
+  text-align: center;
+}
+
+.distribution-axis-track span:first-child {
+  text-align: left;
+}
+
+.distribution-axis-track span:last-child {
+  text-align: right;
+}
+
+.distribution-axis > span {
+  visibility: hidden;
+}

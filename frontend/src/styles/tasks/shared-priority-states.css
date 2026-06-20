@@ -1,0 +1,27 @@
+.minimal-task-row.is-high-priority,
+.task-table-row.is-high-priority,
+.mobile-task-card.is-high-priority,
+.kanban-card.is-high-priority {
+  border-color: color-mix(in srgb, var(--orange) 44%, var(--line));
+  box-shadow: inset 3px 0 0 var(--orange);
+}
+
+.mobile-task-card.is-high-priority,
+.kanban-card.is-high-priority {
+  border-color: var(--task-card-border);
+  background: var(--task-card-surface);
+  box-shadow: inset 3px 0 0 var(--orange), var(--task-card-shadow);
+}
+
+.minimal-shell .mobile-task-card.is-high-priority,
+.minimal-shell .kanban-card.is-high-priority {
+  border-color: var(--task-card-border);
+  background: var(--task-card-surface);
+  box-shadow: inset 3px 0 0 var(--orange), var(--task-card-shadow);
+}
+
+.minimal-task-row.is-complete,
+.task-table-row.is-complete,
+.mobile-task-card.is-complete {
+  opacity: 0.72;
+}

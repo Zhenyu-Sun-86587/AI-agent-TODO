@@ -1,0 +1,324 @@
+/* Redesign layer: restrained, task-focused workspace UI. */
+
+body,
+.minimal-shell {
+  font-family: -apple-system, "SF Pro Text", "PingFang SC", "Noto Sans SC", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.minimal-shell {
+  grid-template-columns: 248px minmax(0, 1fr);
+  background: var(--bg);
+  color: var(--text);
+}
+
+.minimal-shell.workspace-entering {
+  animation: workspaceShellEnter 180ms ease-out both;
+}
+
+.minimal-shell.workspace-entering .minimal-sidebar {
+  animation: workspaceSidebarEnter 180ms ease-out both;
+}
+
+.minimal-shell.workspace-entering .minimal-workspace {
+  animation: workspaceContentEnter 180ms ease-out both;
+}
+
+.minimal-shell.workspace-leaving {
+  pointer-events: none;
+  animation: workspaceShellLeave 120ms ease-out both;
+}
+
+.minimal-shell.workspace-leaving .minimal-sidebar {
+  animation: workspaceSidebarLeave 120ms ease-out both;
+}
+
+.minimal-shell.workspace-leaving .minimal-workspace {
+  animation: workspaceContentLeave 120ms ease-out both;
+}
+
+.minimal-shell-light {
+  --bg-main: #f4f6f8;
+  --bg-subtle: #eef2f6;
+  --surface-card: #ffffff;
+  --surface-elevated: #ffffff;
+  --text-primary: #17212b;
+  --text-secondary: #46525f;
+  --text-muted: #66727f;
+  --border-color: #dde4eb;
+  --border-subtle: #eaf0f5;
+  --accent: #2563eb;
+  --accent-soft: #e8f0ff;
+  --danger: #dc2626;
+  --warning: #d97706;
+  --success: #0f8f63;
+  --red-soft: #fee2e2;
+  --orange-soft: #fef3c7;
+  --green-soft: #dcfce7;
+  --shadow-sm: 0 8px 22px rgba(16, 24, 40, 0.06);
+  --shadow-md: 0 16px 34px rgba(16, 24, 40, 0.08);
+  --bg: var(--bg-main);
+  --surface: var(--surface-card);
+  --surface-soft: #f7f9fb;
+  --surface-raised: var(--surface-elevated);
+  --sidebar: #16202a;
+  --text: var(--text-primary);
+  --muted: var(--text-muted);
+  --muted-strong: var(--text-secondary);
+  --line: var(--border-color);
+  --line-strong: #c9d3dc;
+  --task-card-bg: #e8eef6;
+  --task-card-surface: var(--task-card-bg);
+  --task-card-hover-bg: #dfe8f2;
+  --task-card-border: #aebdce;
+  --task-card-shadow: 0 14px 32px rgba(52, 64, 84, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.78);
+  --calendar-week-bg: #ffffff;
+  --calendar-week-band: #f2f6fb;
+  --calendar-week-day-bg: #fbfcfe;
+  --calendar-week-task-bg: #ffffff;
+  --calendar-week-task-hover: #eef4ff;
+  --calendar-week-task-border: #d6e0ec;
+  --calendar-week-time-bg: #e8f0ff;
+  --calendar-week-time-text: #1d4ed8;
+  --calendar-week-focus: #2563eb;
+  --calendar-week-calm: #0f8f63;
+  --calendar-week-urgent: #b45309;
+  --calendar-week-done: #66727f;
+  --primary: var(--accent);
+  --primary-dark: #1d4ed8;
+  --primary-soft: var(--accent-soft);
+  --purple: #6d5bd0;
+  --blue: #2563eb;
+  --green: var(--success);
+  --orange: var(--warning);
+  --red: var(--danger);
+  --shadow: var(--shadow-md);
+  --shadow-soft: var(--shadow-sm);
+  background: var(--bg);
+  color: var(--text);
+}
+
+.minimal-shell-dark {
+  --bg-main: #111820;
+  --bg-subtle: #16202a;
+  --surface-card: #17212b;
+  --surface-elevated: #1b2631;
+  --text-primary: #edf2f7;
+  --text-secondary: #c2cbd4;
+  --text-muted: #a1adba;
+  --border-color: rgba(170, 185, 200, 0.18);
+  --border-subtle: rgba(170, 185, 200, 0.12);
+  --accent: #78a5ff;
+  --accent-soft: rgba(120, 165, 255, 0.16);
+  --danger: #ff8585;
+  --warning: #f2b75c;
+  --success: #61d69f;
+  --red-soft: rgba(255, 133, 133, 0.14);
+  --orange-soft: rgba(242, 183, 92, 0.16);
+  --green-soft: rgba(97, 214, 159, 0.14);
+  --shadow-sm: 0 10px 24px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 18px 38px rgba(0, 0, 0, 0.26);
+  --bg: var(--bg-main);
+  --surface: var(--surface-card);
+  --surface-soft: #1e2a35;
+  --surface-raised: var(--surface-elevated);
+  --sidebar: #0d141b;
+  --text: var(--text-primary);
+  --muted: var(--text-muted);
+  --muted-strong: var(--text-secondary);
+  --line: var(--border-color);
+  --line-strong: rgba(170, 185, 200, 0.28);
+  --task-card-bg: #273342;
+  --task-card-surface: var(--task-card-bg);
+  --task-card-hover-bg: #2c3a4a;
+  --task-card-border: rgba(190, 204, 218, 0.28);
+  --task-card-shadow: 0 14px 30px rgba(0, 0, 0, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.09);
+  --calendar-week-bg: #17212b;
+  --calendar-week-band: #1c2935;
+  --calendar-week-day-bg: #1b2631;
+  --calendar-week-task-bg: #22303d;
+  --calendar-week-task-hover: #273848;
+  --calendar-week-task-border: rgba(190, 204, 218, 0.18);
+  --calendar-week-time-bg: rgba(120, 165, 255, 0.16);
+  --calendar-week-time-text: #b6ccff;
+  --calendar-week-focus: #78a5ff;
+  --calendar-week-calm: #61d69f;
+  --calendar-week-urgent: #f2b75c;
+  --calendar-week-done: #a1adba;
+  --primary: var(--accent);
+  --primary-dark: #9bbdff;
+  --primary-soft: var(--accent-soft);
+  --purple: #b6a6ff;
+  --blue: #78a5ff;
+  --green: var(--success);
+  --orange: var(--warning);
+  --red: var(--danger);
+  --shadow: var(--shadow-md);
+  --shadow-soft: var(--shadow-sm);
+  --focus-ring: 0 0 0 3px rgba(120, 165, 255, 0.22);
+  background: var(--bg);
+  color: var(--text);
+}
+
+.minimal-user:hover {
+  background: #243247;
+}
+
+.minimal-shell .page-content {
+  gap: 24px;
+  padding: 0;
+}
+
+.minimal-shell .page-heading,
+.minimal-shell .section-title {
+  color: #e2e8f0;
+}
+
+.minimal-shell .page-heading h1,
+.minimal-shell .section-title h2,
+.minimal-shell .drawer-header h2 {
+  color: #f8fafc;
+}
+
+.minimal-shell .page-heading p,
+.minimal-shell .section-title p,
+.minimal-shell .drawer-description,
+.minimal-shell .empty-state p {
+  color: #64748b;
+}
+
+.minimal-shell .ai-recommend-list strong,
+.minimal-shell .kanban-card strong,
+.minimal-shell .drawer-field strong,
+.minimal-shell .empty-state strong {
+  color: #f8fafc;
+}
+
+.minimal-shell input,
+.minimal-shell textarea,
+.minimal-shell select {
+  border-color: rgba(148, 163, 184, 0.2);
+  background: #243247;
+  color: #e2e8f0;
+}
+
+.minimal-shell .minimal-search input {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
+.minimal-shell .icon-button {
+  border-color: rgba(148, 163, 184, 0.2);
+  background: #243247;
+  color: #e2e8f0;
+}
+
+.minimal-shell-light {
+  background: #f5f7fb;
+  color: #172033;
+}
+
+.minimal-shell-dark .minimal-sidebar {
+  border-right-color: rgba(148, 163, 184, 0.16);
+  background: #0f172a;
+}
+
+.minimal-shell-dark .minimal-nav-item {
+  color: #94a3b8;
+}
+
+.minimal-shell-dark .minimal-nav-item:hover {
+  background: rgba(148, 163, 184, 0.08);
+  color: #e2e8f0;
+}
+
+.minimal-shell-dark .minimal-nav-item.active {
+  background: rgba(129, 140, 248, 0.16);
+  color: #c7d2fe;
+}
+
+.minimal-shell-dark .minimal-mobile-nav {
+  border-top-color: rgba(148, 163, 184, 0.16);
+  background: rgba(15, 23, 42, 0.96);
+}
+
+.minimal-shell-light .minimal-sidebar {
+  border-right-color: #e4e7ec;
+  background: #ffffff;
+}
+
+.minimal-shell-light .minimal-brand strong,
+.minimal-shell-light .minimal-recommend-list strong,
+.minimal-shell-light .ai-recommend-list strong,
+.minimal-shell-light .minimal-task-row strong,
+.minimal-shell-light .page-heading h1,
+.minimal-shell-light .section-title h2,
+.minimal-shell-light .drawer-header h2,
+.minimal-shell-light .kanban-card strong,
+.minimal-shell-light .drawer-field strong,
+.minimal-shell-light .empty-state strong,
+.minimal-shell-light .user-name-text,
+.minimal-shell-light .ai-reason-header strong {
+  color: #172033;
+}
+
+.minimal-shell-light .minimal-nav-item {
+  color: #667085;
+}
+
+.minimal-shell-light .minimal-nav-item:hover {
+  background: #f8fafc;
+  color: #172033;
+}
+
+.minimal-shell-light .minimal-nav-item.active {
+  background: #eef2ff;
+  color: #4f46e5;
+}
+
+.minimal-shell-light .minimal-search input,
+.minimal-shell-light input,
+.minimal-shell-light textarea,
+.minimal-shell-light select,
+.minimal-shell-light .ai-suggest-grid input,
+.minimal-shell-light .ai-suggest-grid textarea,
+.minimal-shell-light .settings-form input {
+  border-color: #e4e7ec;
+  background: #ffffff;
+  color: #172033;
+  box-shadow: none;
+}
+
+.minimal-shell-light .minimal-search input::placeholder {
+  color: #98a2b3;
+}
+
+.minimal-shell-light .minimal-search input {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
+.minimal-shell-light .minimal-icon,
+.minimal-shell-light .icon-button,
+.minimal-shell-light .mobile-card-more,
+.minimal-shell-light .mobile-quick-actions button {
+  border-color: #e4e7ec;
+  background: #ffffff;
+  color: #667085;
+}
+
+.minimal-shell-light .minimal-icon:hover {
+  color: #172033;
+}
+
+.minimal-shell-light .minimal-popover {
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
+}
+
+.minimal-shell-light .minimal-mobile-nav {
+  border-top-color: #e4e7ec;
+  background: rgba(255, 255, 255, 0.96);
+}

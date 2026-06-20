@@ -1,0 +1,60 @@
+.chart-card {
+  display: grid;
+  gap: 0;
+}
+
+.stats-panels {
+  display: grid;
+  gap: 16px;
+}
+
+.stats-distribution-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.stats-page-content {
+  height: clamp(500px, calc(100vh - 207px), 638px);
+  gap: 14px;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.stats-page-content .stats-grid {
+  gap: 12px;
+}
+
+.stats-page-content .stats-card {
+  height: clamp(82px, 9vh, 94px);
+  min-height: 82px;
+  padding: 14px 16px;
+}
+
+.stats-page-content .stats-card > span {
+  width: 40px;
+  height: 40px;
+}
+
+.stats-page-content .stats-card strong {
+  font-size: 28px;
+  line-height: 1;
+}
+
+.stats-page-content .stats-panels {
+  display: grid;
+  grid-template-rows: minmax(0, 1.42fr) minmax(0, 0.95fr);
+  gap: 14px;
+  min-height: 0;
+}
+
+.stats-page-content .ui-surface {
+  padding: 16px 18px;
+}
+
+.stats-page-content .chart-card {
+  padding: 0;
+}
+
+.stats-page-content .chart-card:hover {
+  transform: translateY(-1px);
+}

@@ -1,0 +1,69 @@
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 130;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(15, 23, 42, 0.42);
+  backdrop-filter: blur(3px);
+  animation: fadeIn var(--motion-fast) var(--ease-out) forwards;
+}
+
+.drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 110;
+  border: 0;
+  background: rgba(15, 23, 42, 0.42);
+  backdrop-filter: blur(3px);
+  animation: fadeIn var(--duration-base) var(--ease-quick) forwards;
+}
+
+.drawer-backdrop.entering {
+  animation: fadeIn var(--duration-base) var(--ease-quick) forwards;
+}
+
+.drawer-backdrop.closing {
+  animation: fadeOut var(--motion-fast) var(--ease-out) forwards;
+}
+
+.create-modal {
+  width: min(620px, 100%);
+  max-height: calc(100vh - 36px);
+  display: grid;
+  gap: 14px;
+  padding: 22px;
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
+  overflow: auto;
+  animation: modalScaleIn var(--motion-base) var(--ease-out) forwards;
+}
+
+.create-modal.closing {
+  animation: modalScaleOut var(--motion-fast) var(--ease-out) forwards;
+}
+
+.confirm-modal {
+  width: min(440px, 100%);
+}
+
+.confirm-target {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface-soft);
+}
+
+.confirm-target strong {
+  overflow-wrap: anywhere;
+}
+
+.confirm-target span {
+  color: var(--muted);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}

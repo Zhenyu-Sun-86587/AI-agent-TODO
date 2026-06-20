@@ -1,0 +1,73 @@
+.distribution-card {
+  display: grid;
+  align-content: start;
+  gap: 16px;
+}
+
+.stats-page-content .distribution-card {
+  gap: 8px;
+  min-height: 0;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.stats-page-content .stats-section-title {
+  margin-bottom: 0;
+}
+
+.stats-page-content .stats-section-title h2 {
+  font-size: 18px;
+}
+
+.stats-page-content .stats-section-title p {
+  display: none;
+}
+
+.stats-page-content .distribution-chart {
+  gap: 12px;
+  padding-top: 4px;
+}
+
+.stats-page-content .distribution-card {
+  --distribution-label-width: 78px;
+  --distribution-value-width: 28px;
+  --distribution-row-gap: 10px;
+}
+
+.stats-page-content .distribution-card-category {
+  --distribution-label-width: 94px;
+  --distribution-value-width: 44px;
+  --distribution-row-gap: 8px;
+}
+
+.stats-page-content .distribution-card-category .distribution-chart {
+  gap: 8px;
+  padding-top: 2px;
+}
+
+.stats-page-content .distribution-card-category .distribution-bars {
+  gap: 8px;
+}
+
+.stats-page-content .distribution-card-category .distribution-bar-shell {
+  height: clamp(20px, 3vh, 24px);
+}
+
+.stats-page-content .distribution-card-category .distribution-row {
+  line-height: 1.25;
+}
+
+.stats-page-content .distribution-card-category .distribution-axis {
+  font-size: 12px;
+}
+
+.stats-page-content .distribution-row {
+  font-size: 13px;
+}
+
+.stats-page-content .distribution-bar-shell {
+  height: clamp(22px, 3.4vh, 30px);
+}
+
+.stats-page-content .distribution-axis {
+  font-size: 12px;
+}

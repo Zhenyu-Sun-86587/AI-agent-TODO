@@ -1,0 +1,86 @@
+:root {
+  color-scheme: dark light;
+  font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  
+  /* Accent Colors */
+  --primary: #6366f1;
+  --primary-dark: #4f46e5;
+  --purple: #a855f7;
+  --blue: #3b82f6;
+  --green: #10b981;
+  --orange: #f59e0b;
+  --red: #ef4444;
+
+  /* Shape */
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-xl: 14px;
+  --radius-2xl: 18px;
+  --radius-pill: 999px;
+
+  /* Spacing */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+
+  /* Controls */
+  --control-height-sm: 34px;
+  --control-height-md: 40px;
+  --control-height-lg: 42px;
+  --control-padding-x: 12px;
+  --control-icon-size: 40px;
+  
+  /* Motions */
+  --motion-fast: 160ms;
+  --motion-base: 250ms;
+  --motion-slow: 400ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+  --duration-fast: var(--motion-fast);
+  --duration-base: var(--motion-base);
+  --ease-quick: var(--ease-out);
+  --ease-modal: cubic-bezier(0.2, 0.8, 0.2, 1);
+  
+  font-synthesis: none;
+  line-height: 1.6;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+.minimal-shell-dark {
+  --bg: #050505;
+  --surface: rgba(255, 255, 255, 0.03);
+  --surface-soft: rgba(255, 255, 255, 0.05);
+  --sidebar: rgba(10, 10, 10, 0.6);
+  --text: #f3f4f6;
+  --muted: #8b949e;
+  --line: rgba(255, 255, 255, 0.08);
+  --line-strong: rgba(255, 255, 255, 0.15);
+  --primary-soft: rgba(99, 102, 241, 0.15);
+  --shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.5);
+  --shadow-soft: 0 10px 20px rgba(0, 0, 0, 0.2);
+  --focus-ring: 0 0 0 3px rgba(99, 102, 241, 0.3);
+  --backdrop-blur: blur(24px) saturate(150%);
+  color-scheme: dark;
+}
+
+.minimal-shell-light {
+  --bg: #f8fafc;
+  --surface: rgba(255, 255, 255, 1);
+  --surface-soft: rgba(241, 245, 249, 1);
+  --sidebar: rgba(255, 255, 255, 0.8);
+  --text: #0f172a;
+  --muted: #64748b;
+  --line: rgba(0, 0, 0, 0.08);
+  --line-strong: rgba(0, 0, 0, 0.15);
+  --primary-soft: rgba(99, 102, 241, 0.1);
+  --shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.1);
+  --shadow-soft: 0 10px 20px rgba(0, 0, 0, 0.05);
+  --focus-ring: 0 0 0 3px rgba(99, 102, 241, 0.2);
+  --backdrop-blur: blur(24px) saturate(150%);
+  color-scheme: light;
+}

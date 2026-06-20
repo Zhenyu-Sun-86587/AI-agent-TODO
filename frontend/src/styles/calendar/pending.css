@@ -1,0 +1,74 @@
+.calendar-pending-panel {
+  min-height: 0;
+  padding: 20px;
+}
+
+.calendar-pending-panel h2 {
+  margin: 0 0 18px;
+  color: var(--text);
+  font-size: 21px;
+  line-height: 1.2;
+  font-weight: 760;
+}
+
+.calendar-pending-list {
+  min-height: 0;
+  max-height: calc(100% - 48px);
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  overflow-y: auto;
+}
+
+.calendar-pending-list button {
+  min-width: 0;
+  min-height: var(--calendar-task-card-min-height);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 10px;
+  padding: var(--calendar-task-card-padding);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  text-align: left;
+  font-size: 16px;
+  font-weight: 800;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
+  transition:
+    background-color var(--motion-fast) var(--ease-out),
+    border-color var(--motion-fast) var(--ease-out),
+    box-shadow var(--motion-fast) var(--ease-out),
+    transform var(--motion-fast) var(--ease-out);
+  animation: calendarItemEnter var(--motion-base) var(--ease-out) both;
+  animation-delay: calc(var(--stagger-index, 0) * 32ms);
+}
+
+.calendar-pending-list button > span {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.calendar-pending-list button strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.calendar-pending-list button small {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.calendar-pending-list .priority-badge {
+  justify-self: end;
+}
+
+.calendar-pending-list button:hover {
+  border-color: color-mix(in srgb, var(--primary) 38%, var(--line));
+  transform: translateY(-1px);
+}

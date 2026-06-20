@@ -1,0 +1,60 @@
+.ai-card:hover {
+  border-color: color-mix(in srgb, var(--primary) 24%, var(--line));
+}
+
+.ai-card {
+  position: relative;
+  overflow: hidden;
+  padding: 20px;
+  background:
+    radial-gradient(circle at top right, rgba(124, 58, 237, 0.2), transparent 34%),
+    linear-gradient(135deg, rgba(79, 70, 229, 0.12), rgba(124, 58, 237, 0.12)),
+    var(--surface);
+}
+
+.ai-card.ui-surface-accent {
+  background:
+    radial-gradient(circle at top right, rgba(124, 58, 237, 0.2), transparent 34%),
+    linear-gradient(135deg, rgba(79, 70, 229, 0.12), rgba(124, 58, 237, 0.12)),
+    var(--surface);
+}
+
+.ai-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 88% 4%, rgba(79, 70, 229, 0.16), transparent 48%);
+  opacity: 0.72;
+  pointer-events: none;
+  animation: aiGlow 4200ms ease-in-out infinite alternate;
+}
+
+.ai-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+.ai-card-header {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.ai-card-header > span {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--primary), var(--purple));
+  color: #ffffff;
+}
+
+.ai-card-mark {
+  box-shadow: 0 10px 24px rgba(99, 102, 241, 0.28);
+}
+
+.ai-card-mark svg {
+  color: #ffffff;
+}

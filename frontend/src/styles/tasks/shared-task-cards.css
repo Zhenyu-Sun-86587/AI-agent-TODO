@@ -1,0 +1,27 @@
+.kanban-card,
+.mobile-task-card {
+  border-color: var(--task-card-border);
+  background: var(--task-card-surface);
+  box-shadow: var(--task-card-shadow);
+}
+
+.minimal-shell .kanban-card,
+.minimal-shell .mobile-task-card {
+  border-color: var(--task-card-border);
+  background: var(--task-card-surface);
+  box-shadow: var(--task-card-shadow);
+}
+
+.kanban-card:hover,
+.mobile-task-card:hover {
+  border-color: var(--line-strong);
+  background: var(--task-card-hover-bg);
+  box-shadow: var(--shadow-soft), var(--task-card-shadow);
+}
+
+.minimal-shell .kanban-card:hover,
+.minimal-shell .mobile-task-card:hover {
+  border-color: var(--line-strong);
+  background: var(--task-card-hover-bg);
+  box-shadow: var(--shadow-soft), var(--task-card-shadow);
+}

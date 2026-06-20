@@ -1,0 +1,77 @@
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button,
+.primary-button,
+.ghost-button,
+.danger-button,
+.icon-button,
+.table-footer button,
+.calendar-controls button,
+.mobile-card-more,
+.mobile-quick-actions button {
+  transition:
+    background-color var(--motion-fast) var(--ease-out),
+    border-color var(--motion-fast) var(--ease-out),
+    color var(--motion-fast) var(--ease-out),
+    box-shadow var(--motion-fast) var(--ease-out),
+    opacity var(--motion-fast) var(--ease-out),
+    transform var(--motion-fast) var(--ease-out);
+}
+
+button:active:not(:disabled),
+.primary-button:active:not(:disabled),
+.ghost-button:active:not(:disabled),
+.danger-button:active:not(:disabled),
+.icon-button:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+.filter-search:focus-within,
+.minimal-search:focus-within {
+  outline: none;
+  border-color: color-mix(in srgb, var(--primary) 58%, var(--line));
+  box-shadow: var(--focus-ring);
+}
+
+input,
+textarea,
+select {
+  transition:
+    background-color var(--motion-fast) var(--ease-out),
+    border-color var(--motion-fast) var(--ease-out),
+    box-shadow var(--motion-fast) var(--ease-out),
+    color var(--motion-fast) var(--ease-out);
+}
+
+input[aria-invalid="true"],
+textarea[aria-invalid="true"] {
+  border-color: color-mix(in srgb, var(--red) 58%, var(--line));
+}
+
+button:disabled,
+select:disabled,
+input:disabled,
+textarea:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}

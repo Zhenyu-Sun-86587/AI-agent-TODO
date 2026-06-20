@@ -1,0 +1,150 @@
+.minimal-sidebar {
+  position: sticky;
+  top: 0;
+  min-height: 100vh;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--sidebar);
+  color: #d7dee7;
+}
+
+.minimal-brand {
+  min-height: 72px;
+  padding: 0 22px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.minimal-brand > span {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  background: #f7c948;
+  color: #17212b;
+  box-shadow: none;
+}
+
+.minimal-brand strong {
+  color: #ffffff;
+  font-size: 15px;
+}
+
+.minimal-brand small {
+  color: #9aa8b6;
+  letter-spacing: 0.04em;
+}
+
+.minimal-nav {
+  gap: 3px;
+  padding: 18px 12px;
+}
+
+.minimal-nav-item {
+  min-height: 42px;
+  border-radius: var(--radius-md);
+  color: #aab6c2;
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.minimal-nav-item::before {
+  left: -12px;
+  width: 3px;
+  height: 54%;
+  background: #f7c948;
+}
+
+.minimal-nav-item:hover {
+  background: rgba(255, 255, 255, 0.07);
+  color: #ffffff;
+  transform: none;
+}
+
+.minimal-nav-item:hover svg {
+  transform: none;
+}
+
+.minimal-nav-item.active {
+  background: rgba(255, 255, 255, 0.11);
+  color: #ffffff;
+  font-weight: 800;
+}
+
+.minimal-sidebar-bottom {
+  margin-top: auto;
+  padding: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.minimal-sidebar-user {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.user-profile-btn {
+  min-width: 0;
+  min-height: 44px;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+
+.user-profile-btn:hover,
+.user-profile-btn[aria-expanded="true"] {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.sidebar-user-avatar {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #ffffff;
+  font-weight: 800;
+}
+
+.sidebar-user-copy {
+  min-width: 0;
+  display: grid;
+  gap: 1px;
+}
+
+.sidebar-user-copy span {
+  overflow: hidden;
+  color: #9aa8b6;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar-user-copy .user-name-text {
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 750;
+}
+
+.sidebar-settings-btn {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+}
+
+.sidebar-user-menu {
+  top: auto;
+  right: auto;
+  bottom: calc(100% + 8px);
+  left: 0;
+  z-index: 160;
+  width: 100%;
+  transform-origin: bottom left;
+}

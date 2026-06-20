@@ -1,0 +1,46 @@
+.minimal-popover {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 140;
+  width: 220px;
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 12px;
+  background: #1e293b;
+  color: #cbd5e1;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.28);
+  transform-origin: top right;
+  animation: menuScaleIn 140ms var(--ease-out) both;
+}
+
+.minimal-popover.closing {
+  animation: menuScaleOut var(--motion-fast) var(--ease-out) both;
+}
+
+.minimal-popover strong {
+  color: #f8fafc;
+}
+
+.minimal-popover p {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.minimal-popover button {
+  min-height: 34px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 10px;
+  background: #0f172a;
+  color: #e2e8f0;
+  font-weight: 900;
+}
+
+.minimal-page {
+  flex: 1;
+  min-width: 0;
+  overflow: auto;
+  padding: 24px 32px 32px;
+}

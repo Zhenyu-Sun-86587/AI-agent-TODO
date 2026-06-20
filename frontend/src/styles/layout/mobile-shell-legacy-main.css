@@ -1,0 +1,188 @@
+@media (max-width: 900px) {
+  .minimal-shell {
+      display: block;
+      padding-bottom: calc(78px + env(safe-area-inset-bottom));
+    }
+
+  .minimal-sidebar {
+      min-height: auto;
+      border-right: 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+  .minimal-brand {
+      min-height: 58px;
+      padding-inline: 16px;
+    }
+
+  .minimal-nav {
+      display: none;
+    }
+
+  .minimal-nav p {
+      display: none;
+    }
+
+  .minimal-nav-item {
+      width: auto;
+      flex: 0 0 auto;
+      padding-inline: 12px;
+      white-space: nowrap;
+    }
+
+  .minimal-header {
+      min-height: auto;
+      flex-wrap: wrap;
+      padding: 14px 16px;
+    }
+
+  .minimal-search {
+      width: 100%;
+      order: 2;
+    }
+
+  .minimal-actions {
+      width: 100%;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+  .minimal-primary {
+      padding-inline: 12px;
+    }
+
+  .minimal-icon {
+      display: none;
+    }
+
+  .minimal-mobile-more {
+      display: inline-flex;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      background: #1e293b;
+      color: #cbd5e1;
+    }
+
+  .minimal-mobile-more-panel {
+      z-index: 140;
+      width: 190px;
+    }
+
+  .minimal-shell-light .minimal-theme-toggle {
+      border-color: #e4e7ec;
+      background: #ffffff;
+      color: #667085;
+    }
+
+  .minimal-shell-light .minimal-mobile-more,
+    .minimal-shell-light .minimal-mobile-more-nav button {
+      border-color: #e4e7ec;
+      background: #ffffff;
+      color: #667085;
+    }
+
+  .minimal-shell-light .minimal-mobile-more-nav button.active {
+      border-color: #c7d2fe;
+      background: #eef2ff;
+      color: #4f46e5;
+    }
+
+  .minimal-action-wrap:has(.minimal-icon):not(.minimal-mobile-more-wrap) {
+      display: none;
+    }
+
+  .minimal-user {
+      max-width: 104px;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+
+  .minimal-page {
+      padding: 18px 16px 28px;
+    }
+
+  .minimal-mobile-more-nav {
+      display: flex;
+      gap: 8px;
+      padding: 0 16px 12px;
+      overflow-x: auto;
+    }
+
+  .minimal-mobile-more-nav button {
+      min-height: 34px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      flex: 0 0 auto;
+      padding: 0 10px;
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      border-radius: 999px;
+      background: #1e293b;
+      color: #cbd5e1;
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+  .minimal-mobile-more-nav button.active {
+      border-color: rgba(129, 140, 248, 0.36);
+      background: rgba(129, 140, 248, 0.16);
+      color: #c7d2fe;
+    }
+
+  .minimal-mobile-nav {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 80;
+      min-height: calc(68px + env(safe-area-inset-bottom));
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 4px;
+      padding: 8px 12px calc(8px + env(safe-area-inset-bottom));
+      overflow: hidden;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      background: rgba(9, 9, 11, 0.96);
+      backdrop-filter: blur(18px);
+    }
+
+  .minimal-mobile-menu-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 70;
+      border: 0;
+      background: rgba(15, 23, 42, 0.28);
+      backdrop-filter: blur(2px);
+      animation: fadeIn var(--motion-fast) var(--ease-out) both;
+    }
+
+  .minimal-mobile-menu-backdrop.closing {
+      animation: fadeOut var(--motion-fast) var(--ease-out) both;
+    }
+
+  .minimal-mobile-nav .minimal-nav-item {
+      min-height: 52px;
+      flex-direction: column;
+      gap: 4px;
+      padding: 6px 4px;
+      justify-content: center;
+      font-size: 11px;
+    }
+
+  .minimal-mobile-nav .mobile-create-action {
+      min-height: 52px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 4px;
+      border: 0;
+      border-radius: 14px;
+      background: var(--primary);
+      color: #ffffff;
+      font-size: 11px;
+      font-weight: 900;
+      box-shadow: 0 10px 22px rgba(79, 70, 229, 0.28);
+    }
+
+
+}

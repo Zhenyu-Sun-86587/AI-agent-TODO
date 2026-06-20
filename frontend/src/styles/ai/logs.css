@@ -1,0 +1,70 @@
+.ai-logs-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.ai-logs-panel .ui-select-field {
+  width: 150px;
+  flex: 0 0 150px;
+  font-weight: 800;
+}
+
+.ai-log-list {
+  display: grid;
+  gap: 10px;
+}
+
+.ai-log-row {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr) 150px;
+  gap: 12px;
+  align-items: start;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface-soft);
+}
+
+.ai-log-row > div {
+  min-width: 0;
+}
+
+.ai-log-row strong {
+  display: block;
+  overflow: hidden;
+  color: var(--text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ai-log-row p,
+.ai-log-row small {
+  margin-top: 4px;
+  color: var(--muted);
+}
+
+.ai-log-status {
+  min-height: 28px;
+  display: inline-grid;
+  place-items: center;
+  justify-self: start;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.ai-log-status.success {
+  background: #dcfce7;
+  color: var(--green);
+}
+
+.ai-log-status.mocked {
+  background: #ede9fe;
+  color: var(--primary);
+}
+
+.ai-log-status.failed {
+  background: #fee2e2;
+  color: var(--red);
+}

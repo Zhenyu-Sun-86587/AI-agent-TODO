@@ -1,0 +1,86 @@
+.toast-viewport {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  z-index: 180;
+  width: min(360px, calc(100vw - 32px));
+  display: grid;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.toast {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) 30px;
+  gap: 10px;
+  align-items: start;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow);
+  pointer-events: auto;
+  animation: toastSlideIn var(--motion-base) var(--ease-out) both;
+}
+
+.toast-icon,
+.toast button {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-md);
+}
+
+.toast-icon {
+  background: var(--surface-soft);
+}
+
+.toast strong {
+  display: block;
+  font-size: 14px;
+}
+
+.toast p {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.toast button {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+}
+
+.toast button:hover {
+  background: var(--surface-soft);
+  color: var(--text);
+}
+
+.toast-success .toast-icon {
+  background: #dcfce7;
+  color: var(--green);
+}
+
+.toast-error .toast-icon {
+  background: #fee2e2;
+  color: var(--red);
+}
+
+.toast-info .toast-icon {
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+
+@keyframes toastSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}

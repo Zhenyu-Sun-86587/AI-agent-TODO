@@ -1,0 +1,37 @@
+.minimal-popover,
+.row-menu {
+  border-color: var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow);
+}
+
+.minimal-popover strong,
+.minimal-popover button {
+  color: var(--text);
+}
+
+.minimal-popover p {
+  color: var(--muted);
+}
+
+.minimal-popover button {
+  border-color: var(--line);
+  background: var(--surface-soft);
+}
+
+.minimal-page {
+  padding: 28px 32px 40px;
+}
+
+.minimal-dashboard,
+.minimal-shell .page-content {
+  max-width: 1240px;
+  margin-inline: auto;
+}
+
+.minimal-shell .page-content {
+  width: 100%;
+  gap: 18px;
+}

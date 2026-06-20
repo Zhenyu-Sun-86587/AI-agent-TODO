@@ -1,0 +1,120 @@
+@media (max-width: 1180px) {
+  .filter-bar,
+  .board-toolbar {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .kanban-board {
+      grid-template-columns: 1fr;
+    }
+
+  .stats-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+  .stats-distribution-row {
+      grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 820px) {
+  .stats-grid,
+.filter-bar,
+.board-toolbar,
+.drawer-fields,
+.ai-analysis-grid,
+.form-grid {
+      grid-template-columns: 1fr;
+    }
+
+  .trend-bars {
+      height: 220px;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 34px;
+    }
+
+  .trend-bars span {
+      min-width: 28px;
+    }
+
+  .desktop-table-wrapper {
+    display: none;
+  }
+
+  .mobile-card-list {
+    display: grid;
+    gap: 12px;
+  }
+
+  .mobile-task-card {
+    padding: 14px;
+  }
+
+  .mobile-task-card-header,
+  .mobile-task-title,
+  .mobile-task-meta,
+  .mobile-quick-actions {
+    min-width: 0;
+  }
+
+  .mobile-task-title strong,
+  .mobile-task-card p {
+    overflow-wrap: anywhere;
+  }
+
+  .trend-chart-shell {
+    padding: 12px 10px 10px;
+  }
+
+  .distribution-card {
+    --distribution-label-width: 70px;
+    --distribution-value-width: 24px;
+    --distribution-row-gap: 8px;
+  }
+
+  .distribution-card-category {
+    --distribution-label-width: 76px;
+    --distribution-value-width: 28px;
+  }
+
+  .distribution-card-category .distribution-bar-shell {
+    height: 20px;
+  }
+
+  .distribution-bar-shell {
+    height: 22px;
+  }
+}
+
+@media (max-width: 460px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .chart-legend {
+    justify-content: flex-start;
+    gap: 12px;
+  }
+
+  .distribution-card {
+    --distribution-label-width: 58px;
+    --distribution-value-width: 22px;
+    --distribution-row-gap: 8px;
+  }
+
+  .distribution-card-category {
+    --distribution-label-width: 66px;
+    --distribution-value-width: 26px;
+  }
+
+  .distribution-card-category .distribution-bar-shell {
+    height: 19px;
+  }
+
+  .distribution-label,
+  .distribution-value,
+  .chart-axis-label {
+    font-size: 11px;
+  }
+}

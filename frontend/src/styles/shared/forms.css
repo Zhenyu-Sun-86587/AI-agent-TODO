@@ -1,0 +1,80 @@
+.ui-form-stack,
+.settings-form,
+.settings-section {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.ui-field,
+.settings-field,
+.settings-form label,
+.manual-task-form label {
+  display: grid;
+  gap: var(--space-2);
+  color: var(--text);
+  font-weight: 700;
+}
+
+.ui-field span,
+.settings-field span,
+.settings-form label > span,
+.manual-task-form label > span {
+  color: var(--muted-strong);
+  font-size: 14px;
+}
+
+.ui-field input,
+.ui-field textarea,
+.ui-field select,
+.settings-form input,
+.settings-readonly,
+.create-modal input,
+.create-modal textarea,
+.create-modal select,
+.ai-suggest-grid input,
+.ai-suggest-grid textarea {
+  width: 100%;
+  min-height: var(--control-height-lg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text);
+  outline: none;
+}
+
+.ui-field input,
+.ui-field select,
+.settings-form input,
+.settings-readonly,
+.create-modal input,
+.create-modal select,
+.ai-suggest-grid input {
+  padding: 0 var(--control-padding-x);
+}
+
+.ui-field textarea,
+.create-modal textarea,
+.ai-suggest-grid textarea {
+  padding: 9px var(--control-padding-x);
+}
+
+.settings-readonly {
+  max-width: 400px;
+  display: flex;
+  align-items: center;
+  background: var(--surface-soft);
+  font-weight: 600;
+}
+
+.ui-field input:focus,
+.ui-field textarea:focus,
+.ui-field select:focus,
+.settings-form input:focus,
+.create-modal input:focus,
+.create-modal textarea:focus,
+.create-modal select:focus,
+.ai-suggest-grid input:focus,
+.ai-suggest-grid textarea:focus {
+  border-color: color-mix(in srgb, var(--primary) 58%, var(--line));
+  box-shadow: var(--focus-ring);
+}

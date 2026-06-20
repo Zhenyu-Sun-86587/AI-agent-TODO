@@ -1,0 +1,21 @@
+.auth-title {
+  display: grid;
+  gap: 8px;
+  text-align: center;
+}
+
+.auth-title h2 {
+  margin: 0;
+  color: #ffffff;
+  font-size: 30px;
+  font-weight: 900;
+  line-height: 1.15;
+  letter-spacing: 0;
+  text-shadow: 0 0 20px rgba(143, 197, 255, 0.52);
+}
+
+.auth-title p:not(.eyebrow) {
+  color: rgba(221, 237, 255, 0.74);
+  font-size: 14px;
+  line-height: 1.7;
+}

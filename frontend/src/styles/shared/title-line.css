@@ -1,0 +1,16 @@
+.minimal-ai-title-line {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+@media (max-width: 900px) {
+  .minimal-theme-toggle {
+      display: inline-flex;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      background: #1e293b;
+      color: #cbd5e1;
+    }
+}

@@ -1,0 +1,137 @@
+.subtasks,
+.ai-analysis {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+
+.subtasks label {
+  display: flex;
+  gap: 8px;
+  color: var(--muted);
+}
+
+.ai-analysis {
+  background: color-mix(in srgb, var(--primary-soft) 58%, var(--surface));
+}
+
+.ai-analysis-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ai-analysis-heading h3 {
+  flex: 1;
+}
+
+.ai-analysis-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.ai-analysis svg {
+  color: var(--primary);
+}
+
+.ai-analysis p {
+  color: var(--muted);
+}
+
+.ai-brand-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 24px;
+  padding: 2px 8px;
+  border: 1px solid rgba(79, 70, 229, 0.3);
+  border-radius: 999px;
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.ai-brand-tag i {
+  font-style: normal;
+  color: var(--primary);
+}
+
+.ai-reason-block {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid color-mix(in srgb, var(--primary) 20%, var(--line));
+  border-left: 3px solid var(--primary);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--primary-soft) 58%, var(--surface));
+}
+
+.ai-reason-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ai-reason-header strong {
+  color: var(--text);
+}
+
+@keyframes checkPop {
+  0% {
+    transform: scale(0.84);
+  }
+  64% {
+    transform: scale(1.08);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes priorityPulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(249, 115, 22, 0);
+  }
+  50% {
+    box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.12);
+  }
+}
+
+@keyframes statusPulse {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes barGrow {
+  from {
+    transform: scaleY(0.12);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+@keyframes progressGrow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}

@@ -1,0 +1,19 @@
+@media (max-width: 460px) {
+  .minimal-actions {
+      flex-wrap: wrap;
+    }
+
+  .minimal-primary,
+    .minimal-status,
+    .minimal-user {
+      flex: 1 1 auto;
+    }
+}
+
+@media (max-width: 820px) {
+  .mobile-bottom-nav .mobile-create-action {
+      background: var(--primary);
+      color: #ffffff;
+      box-shadow: 0 10px 22px rgba(79, 70, 229, 0.28);
+    }
+}

@@ -1,0 +1,251 @@
+/* Settings modal and form styles. */
+
+.ai-suggest-tool,
+.settings-form {
+  display: grid;
+  gap: 14px;
+}
+
+.ai-suggest-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 16px;
+  align-items: stretch;
+}
+
+.ai-suggest-grid label,
+.settings-form label {
+  display: grid;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.suggest-reason {
+  color: var(--muted);
+}
+
+.settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.connection-result {
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-weight: 800;
+}
+
+.connection-result.success {
+  background: #dcfce7;
+  color: var(--green);
+}
+
+.connection-result.failed {
+  background: #fee2e2;
+  color: var(--red);
+}
+
+.settings-modal-backdrop {
+  z-index: 190;
+  background: rgba(15, 23, 42, 0.42);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.settings-shell-modal {
+  width: min(800px, 90vw);
+  max-width: 800px;
+  padding: 0;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+
+.settings-shell-layout {
+  display: flex;
+  min-height: 450px;
+  height: 65vh;
+}
+
+.settings-shell-sidebar {
+  width: 240px;
+  flex: 0 0 240px;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--line);
+  background: color-mix(in srgb, var(--surface-soft) 64%, transparent);
+}
+
+.settings-shell-brand {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px 20px 16px;
+}
+
+.settings-shell-brand h2,
+.settings-section-title {
+  margin: 0;
+  color: var(--text);
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.settings-shell-brand h2 {
+  font-size: 18px;
+}
+
+.settings-nav-list {
+  display: grid;
+  gap: var(--space-1);
+  padding: 0 12px;
+}
+
+.settings-nav-button {
+  min-height: var(--control-height-md);
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: var(--space-3);
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--muted-strong);
+  font-weight: 800;
+}
+
+.settings-nav-button:hover,
+.settings-nav-button.active {
+  background: var(--surface-soft);
+  color: var(--text);
+}
+
+.settings-shell-main {
+  position: relative;
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.settings-close-anchor {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 10;
+}
+
+.settings-close-button {
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  min-height: 32px;
+}
+
+.settings-shell-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 40px;
+}
+
+.settings-stack {
+  display: grid;
+  gap: var(--space-6);
+  width: 100%;
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-5);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--line);
+}
+
+.settings-row span,
+.settings-field span {
+  display: block;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.settings-row small,
+.settings-help-text {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.settings-field {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.settings-help-text {
+  margin: var(--space-4) 0 0;
+}
+
+.profile-modal {
+  width: min(500px, 90vw);
+  max-width: 500px;
+}
+
+.profile-modal-content {
+  padding: 0 24px 24px;
+}
+
+@media (max-width: 1180px) {
+  .stats-panels,
+.timeline-layout,
+.ai-suggest-grid {
+      grid-template-columns: 1fr;
+    }
+}
+
+.ai-card-header h2,
+.section-title h2,
+.page-heading h1,
+.drawer-header h2,
+.distribution-card h2,
+.settings-form h2 {
+  color: var(--text);
+  letter-spacing: 0;
+}
+
+.ai-suggest-grid {
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
+}
+
+.connection-result {
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+}
+
+.connection-result.success {
+  border-color: color-mix(in srgb, var(--green) 24%, var(--line));
+  background: var(--green-soft);
+  color: var(--green);
+}
+
+.connection-result.failed {
+  border-color: color-mix(in srgb, var(--red) 24%, var(--line));
+  background: var(--red-soft);
+  color: var(--red);
+}
+
+@media (max-width: 1180px) {
+  .minimal-grid,
+.stats-panels,
+.timeline-layout,
+.ai-suggest-grid {
+      grid-template-columns: 1fr;
+    }
+}

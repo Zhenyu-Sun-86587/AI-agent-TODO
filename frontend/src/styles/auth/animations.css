@@ -1,0 +1,159 @@
+@keyframes authBgArrive {
+  0% {
+    filter: none;
+    transform: scale(1);
+  }
+  100% {
+    filter: none;
+    transform: scale(1);
+  }
+}
+
+@keyframes authRise {
+  0% {
+    opacity: 0;
+    filter: blur(12px);
+    transform: translateY(28px);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0);
+  }
+}
+
+@keyframes authRiseBadge {
+  0% {
+    opacity: 0;
+    filter:
+      blur(12px)
+      drop-shadow(0 0 14px rgba(139, 190, 255, 0.36));
+    transform: translateY(28px);
+  }
+  100% {
+    opacity: 1;
+    filter:
+      blur(0)
+      drop-shadow(0 0 15px rgba(139, 190, 255, 0.5))
+      drop-shadow(0 9px 18px rgba(7, 18, 49, 0.34));
+    transform: translateY(0);
+  }
+}
+
+@keyframes authPanelUp {
+  0% {
+    opacity: 0;
+    filter: blur(6px);
+    transform: translateY(24px) scale(0.97);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes authPanelDown {
+  0% {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    filter: blur(8px);
+    transform: translateY(20px) scale(0.97);
+  }
+}
+
+@keyframes authStageFade {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes authStageFadeOut {
+  0% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes authStageHaloOut {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.08);
+  }
+}
+
+@keyframes authShellLeave {
+  0% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0.98;
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes authShellReturn {
+  0% {
+    opacity: 0.98;
+    transform: translateY(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes authBackdropLeave {
+  0% {
+    transform: scale(1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes authBackdropReturn {
+  0% {
+    transform: scale(1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes authCoverLeave {
+  0% {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0.86;
+    filter: blur(2px);
+    transform: translateY(-6px) scale(0.995);
+  }
+}
+
+@keyframes authPanelDepart {
+  0% {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0.9;
+    filter: blur(2px);
+    transform: translateY(-5px) scale(0.995);
+  }
+}
+
+@keyframes authStarsDrift {
+  0% { transform: translate3d(0, 0, 0); }
+  100% { transform: translate3d(-10px, 7px, 0); }
+}

@@ -1,0 +1,36 @@
+.row-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+}
+
+.task-actions {
+  width: 100%;
+  justify-content: center;
+}
+
+.row-menu-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  transition: all var(--motion-fast) var(--ease-out);
+  cursor: pointer;
+}
+
+.row-menu-trigger:hover {
+  background: var(--surface-soft);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.row-menu {
+  border-radius: var(--radius-lg);
+}

@@ -1,0 +1,187 @@
+.calendar-week-list {
+  min-width: 0;
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0;
+}
+
+.calendar-week-day {
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--calendar-week-bg);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.05);
+  animation: calendarItemEnter var(--motion-base) var(--ease-out) both;
+  animation-delay: calc(var(--stagger-index, 0) * 34ms);
+  transition:
+    border-color var(--motion-fast) var(--ease-out),
+    box-shadow var(--motion-fast) var(--ease-out),
+    transform var(--motion-fast) var(--ease-out);
+}
+
+.calendar-week-day.today {
+  border-color: color-mix(in srgb, var(--primary) 42%, var(--line));
+  box-shadow:
+    0 14px 32px color-mix(in srgb, var(--primary) 11%, transparent),
+    inset 0 0 0 1px color-mix(in srgb, var(--primary) 16%, transparent);
+}
+
+.calendar-week-day-header {
+  min-height: 54px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 12px 10px;
+  border-bottom: 1px solid var(--line);
+  background: var(--calendar-week-band);
+}
+
+.calendar-week-day-label {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.calendar-week-day-header span,
+.calendar-week-day-header small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 850;
+  line-height: 1;
+}
+
+.calendar-week-day-header strong {
+  color: var(--text);
+  font-size: 18px;
+  font-weight: 850;
+  line-height: 1.15;
+}
+
+.calendar-week-day-header small {
+  flex: 0 0 auto;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: var(--calendar-week-time-bg);
+  color: var(--calendar-week-time-text);
+}
+
+.calendar-week-task-list {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 10px 12px;
+  overflow-y: auto;
+}
+
+.calendar-week-task {
+  --week-task-accent: var(--calendar-week-focus);
+  --week-task-dot-size: 10px;
+  --week-task-dot-gap: 8px;
+  min-width: 0;
+  min-height: var(--calendar-task-card-min-height);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  padding: var(--calendar-task-card-padding);
+  border: 1px solid var(--calendar-week-task-border);
+  border-radius: 10px;
+  background: var(--calendar-week-task-bg);
+  color: var(--text);
+  text-align: left;
+  box-shadow: none;
+  transition:
+    background-color var(--motion-fast) var(--ease-out),
+    border-color var(--motion-fast) var(--ease-out),
+    box-shadow var(--motion-fast) var(--ease-out),
+    transform var(--motion-fast) var(--ease-out);
+  animation: calendarTaskSlideIn var(--motion-base) var(--ease-out) both;
+  animation-delay: calc(var(--stagger-index, 0) * 26ms);
+}
+
+.calendar-week-task::before {
+  content: "";
+  position: absolute;
+  inset: -1px auto -1px -1px;
+  width: 5px;
+  border-radius: 10px 0 0 10px;
+  background: var(--week-task-accent);
+}
+
+.calendar-week-task:hover {
+  border-color: color-mix(in srgb, var(--week-task-accent) 32%, var(--calendar-week-task-border));
+  background: var(--calendar-week-task-hover);
+  transform: translateY(-1px);
+}
+
+.calendar-week-task-dot {
+  display: none;
+  width: var(--week-task-dot-size);
+  height: var(--week-task-dot-size);
+  margin-right: var(--week-task-dot-gap);
+  border-radius: 999px;
+  background: var(--week-task-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--week-task-accent) 18%, transparent);
+  transform: translateY(1px);
+}
+
+.calendar-week-task-copy {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+}
+
+.calendar-week-task-copy small {
+  display: block;
+  color: var(--calendar-week-time-text);
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.calendar-week-task strong {
+  min-width: 0;
+  display: block;
+  color: inherit;
+  font-size: 13px;
+  font-weight: 850;
+  line-height: 1.35;
+  white-space: normal;
+}
+
+.calendar-week-task-focus {
+  --week-task-accent: var(--calendar-week-focus);
+}
+
+.calendar-week-task-calm {
+  --week-task-accent: var(--calendar-week-calm);
+}
+
+.calendar-week-task-urgent {
+  --week-task-accent: var(--calendar-week-urgent);
+}
+
+.calendar-week-task-done {
+  --week-task-accent: var(--calendar-week-done);
+  color: var(--muted);
+}
+
+.calendar-week-empty {
+  margin: 0;
+  padding: 20px 8px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 750;
+  line-height: 1.4;
+  text-align: center;
+}

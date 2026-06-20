@@ -1,0 +1,163 @@
+.ui-surface {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-soft);
+  animation: pageFadeUp var(--motion-base) var(--ease-out) both;
+  transition:
+    background-color var(--motion-base) var(--ease-out),
+    border-color var(--motion-fast) var(--ease-out),
+    box-shadow var(--motion-base) var(--ease-out),
+    transform var(--motion-fast) var(--ease-out);
+}
+
+.ui-surface-padding-none {
+  padding: 0;
+}
+
+.ui-surface-padding-sm {
+  padding: var(--space-3);
+}
+
+.ui-surface-padding-md {
+  padding: var(--space-5);
+}
+
+.ui-surface-padding-lg {
+  padding: var(--space-6);
+}
+
+.ui-surface-muted {
+  background: color-mix(in srgb, var(--surface-soft) 72%, var(--surface));
+}
+
+.ui-surface-panel {
+  background: color-mix(in srgb, var(--surface-soft) 68%, var(--surface));
+}
+
+.ui-surface-accent {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at top right, color-mix(in srgb, var(--purple) 20%, transparent), transparent 34%),
+    linear-gradient(135deg, color-mix(in srgb, var(--primary) 12%, transparent), color-mix(in srgb, var(--purple) 12%, transparent)),
+    var(--surface);
+}
+
+.ui-surface-accent::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 88% 4%, color-mix(in srgb, var(--primary) 16%, transparent), transparent 48%);
+  opacity: 0.72;
+  pointer-events: none;
+  animation: aiGlow 4200ms ease-in-out infinite alternate;
+}
+
+.ui-surface-accent > * {
+  position: relative;
+  z-index: 1;
+}
+
+.ui-surface-interactive:hover {
+  border-color: var(--line-strong);
+  box-shadow: var(--shadow);
+  transform: translateY(-1px);
+}
+
+.ui-surface-header,
+.section-title,
+.ai-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.ui-surface-title-row,
+.ai-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.ui-surface-title-row h2,
+.section-title h2,
+.ai-card-header h2 {
+  margin: 0;
+  color: var(--ui-surface-title-color, var(--text));
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.ui-surface-title-row p,
+.section-title p,
+.ai-card-header p {
+  margin-top: var(--space-1);
+  color: var(--ui-surface-description-color, var(--muted));
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.ui-surface-icon,
+.ai-card-header > span {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, var(--primary), var(--purple));
+  color: #ffffff;
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--primary) 26%, transparent);
+}
+
+.ui-surface-action {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 0 0 auto;
+}
+
+.ui-empty-state,
+.empty-state {
+  display: grid;
+  place-items: center;
+  gap: var(--space-2);
+  min-height: 116px;
+  padding: var(--space-4);
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-xl);
+  background: var(--surface-soft);
+  color: var(--muted);
+  text-align: center;
+  animation: pageFadeUp var(--motion-base) var(--ease-out) both;
+}
+
+.ui-empty-icon,
+.empty-state svg {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--muted-strong);
+}
+
+.ui-empty-state strong,
+.empty-state strong {
+  color: var(--text);
+}
+
+.ui-empty-state p,
+.empty-state p {
+  max-width: 320px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.7;
+}

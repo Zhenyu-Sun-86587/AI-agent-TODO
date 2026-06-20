@@ -1,0 +1,247 @@
+.ui-button,
+.primary-button,
+.ghost-button,
+.danger-button,
+.icon-button,
+.table-footer button,
+.calendar-controls button,
+.calendar-month-actions button,
+.mobile-card-more,
+.mobile-quick-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: var(--control-height-md);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  font: inherit;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+  transition:
+    background-color var(--motion-fast) var(--ease-out),
+    border-color var(--motion-fast) var(--ease-out),
+    color var(--motion-fast) var(--ease-out),
+    box-shadow var(--motion-fast) var(--ease-out),
+    transform var(--motion-fast) var(--ease-out),
+    opacity var(--motion-fast) var(--ease-out);
+}
+
+.ui-button-sm {
+  min-height: var(--control-height-sm);
+  padding: 0 10px;
+  font-size: 13px;
+}
+
+.ui-button-md,
+.primary-button,
+.ghost-button,
+.danger-button,
+.table-footer button,
+.calendar-controls button,
+.calendar-month-actions button,
+.mobile-quick-actions button {
+  min-height: var(--control-height-md);
+  padding: 0 var(--control-padding-x);
+}
+
+.ui-button-lg {
+  min-height: var(--control-height-lg);
+  padding: 0 var(--space-5);
+}
+
+.ui-button-primary,
+.primary-button {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #ffffff;
+}
+
+.ui-button-secondary,
+.ghost-button,
+.table-footer button,
+.calendar-controls button,
+.calendar-month-actions button {
+  border-color: var(--line);
+  background: var(--surface);
+  color: var(--muted-strong);
+}
+
+.ui-button-danger,
+.danger-button {
+  border-color: color-mix(in srgb, var(--red) 26%, var(--line));
+  background: color-mix(in srgb, var(--red) 10%, var(--surface));
+  color: var(--red);
+}
+
+.ui-button-icon,
+.icon-button,
+.mobile-card-more {
+  width: var(--control-icon-size);
+  min-width: var(--control-icon-size);
+  padding: 0;
+  border-color: var(--line);
+  background: var(--surface);
+  color: var(--muted-strong);
+}
+
+.ui-button-plain {
+  border-color: transparent;
+  background: transparent;
+  color: var(--muted-strong);
+}
+
+.ui-button-full {
+  width: 100%;
+}
+
+.ui-button:hover:not(:disabled),
+.primary-button:hover:not(:disabled),
+.ghost-button:hover:not(:disabled),
+.danger-button:hover:not(:disabled),
+.icon-button:hover:not(:disabled),
+.table-footer button:hover:not(:disabled),
+.calendar-controls button:hover:not(:disabled),
+.calendar-month-actions button:hover:not(:disabled),
+.mobile-card-more:hover:not(:disabled),
+.mobile-quick-actions button:hover:not(:disabled) {
+  border-color: var(--line-strong);
+  box-shadow: var(--shadow-soft);
+  transform: translateY(-1px);
+}
+
+.ui-button-primary:hover:not(:disabled),
+.primary-button:hover:not(:disabled) {
+  border-color: var(--primary-dark);
+  background: var(--primary-dark);
+  color: #ffffff;
+}
+
+.ui-toolbar,
+.filter-bar,
+.board-toolbar,
+.calendar-month-actions,
+.calendar-controls,
+.pagination-row,
+.settings-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.ui-toolbar-between {
+  justify-content: space-between;
+}
+
+.ui-toolbar-end,
+.calendar-month-actions,
+.calendar-controls {
+  justify-content: flex-end;
+}
+
+.ui-control,
+.filter-search {
+  width: var(--ui-control-width, 100%);
+  min-height: var(--control-height-lg);
+  height: var(--control-height-lg);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text);
+  outline: none;
+  transition:
+    background-color var(--motion-fast) var(--ease-out),
+    border-color var(--motion-fast) var(--ease-out),
+    box-shadow var(--motion-fast) var(--ease-out),
+    color var(--motion-fast) var(--ease-out);
+}
+
+.ui-search-field,
+.filter-search {
+  padding: 0 var(--control-padding-x);
+  background: var(--surface-soft);
+  color: var(--muted);
+}
+
+.ui-search-field input,
+.filter-search input {
+  min-width: 0;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  box-shadow: none;
+  outline: none;
+}
+
+.ui-select-field {
+  position: relative;
+  padding: 0;
+  color: var(--text);
+}
+
+.ui-select-field select {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: 0 38px 0 var(--control-padding-x);
+  border: 0;
+  border-radius: inherit;
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  color: inherit;
+  outline: none;
+}
+
+.ui-select-field svg {
+  position: absolute;
+  right: var(--control-padding-x);
+  top: 50%;
+  z-index: 0;
+  color: var(--muted-strong);
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.ui-control:focus-within,
+.filter-search:focus-within {
+  border-color: color-mix(in srgb, var(--primary) 58%, var(--line));
+  box-shadow: var(--focus-ring);
+}
+
+.ui-segmented-control,
+.unified-tabs {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  background: var(--surface-soft);
+}
+
+.ui-segmented-control button,
+.unified-tabs button {
+  min-height: var(--control-height-sm);
+  padding: 0 var(--space-5);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--muted-strong);
+  font-weight: 800;
+}
+
+.ui-segmented-control button.active,
+.unified-tabs button.active {
+  background: var(--surface);
+  color: var(--primary);
+  box-shadow: var(--shadow-soft);
+}

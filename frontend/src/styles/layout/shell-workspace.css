@@ -1,0 +1,49 @@
+.minimal-workspace {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0)) 0 0 / 100% 260px no-repeat,
+    var(--bg);
+}
+
+.minimal-shell-dark .minimal-workspace {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0)) 0 0 / 100% 260px no-repeat,
+    var(--bg);
+}
+
+.minimal-header {
+  position: sticky;
+  top: 0;
+  z-index: 90;
+  min-height: 72px;
+  padding: 0 32px;
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  backdrop-filter: blur(12px);
+}
+
+.minimal-search {
+  width: min(420px, 42vw);
+  min-height: 42px;
+  border-color: var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-soft);
+  color: var(--muted);
+}
+
+.minimal-search:focus-within {
+  border-color: var(--primary);
+  box-shadow: var(--focus-ring);
+}
+
+.minimal-search input,
+.minimal-shell .minimal-search input {
+  color: var(--text);
+}
+
+.minimal-search input::placeholder {
+  color: var(--muted);
+}
+
+.minimal-actions {
+  gap: 8px;
+}

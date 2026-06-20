@@ -1,0 +1,33 @@
+.line-created {
+  stroke: #7ba7ff;
+}
+
+.line-done {
+  stroke: #62d59f;
+}
+
+.point-created {
+  fill: #8cb4ff;
+  stroke: rgba(123, 167, 255, 0.28);
+}
+
+.point-done {
+  fill: #6ce1aa;
+  stroke: rgba(98, 213, 159, 0.28);
+}
+
+.legend-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  border: 2px solid currentColor;
+  background: transparent;
+}
+
+.legend-dot.created {
+  color: #7ba7ff;
+}
+
+.legend-dot.done {
+  color: #62d59f;
+}

@@ -1,0 +1,79 @@
+.row-actions {
+  position: relative;
+  display: flex;
+  justify-content: center;
+}
+
+.task-actions {
+  width: 100%;
+  align-items: center;
+}
+
+.row-menu-trigger {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--muted);
+}
+
+.row-menu-trigger.is-open,
+.row-menu-trigger:hover {
+  border-color: color-mix(in srgb, var(--primary) 28%, var(--line));
+  color: var(--primary);
+  transform: translateY(-1px);
+}
+
+.row-menu {
+  position: absolute;
+  top: 34px;
+  right: 0;
+  z-index: 8;
+  min-width: 124px;
+  display: grid;
+  gap: 4px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  transform-origin: top right;
+  animation: menuScaleIn 140ms var(--ease-quick) forwards;
+}
+
+.row-menu button {
+  width: 100%;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 800;
+  text-align: left;
+}
+
+.row-menu button:hover,
+.row-menu button.is-active {
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  color: var(--primary);
+  transform: none;
+}
+
+.row-menu-status {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+.row-menu-status .status-badge {
+  width: 58px;
+}

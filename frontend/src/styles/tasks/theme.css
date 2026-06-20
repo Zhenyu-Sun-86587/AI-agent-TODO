@@ -1,0 +1,130 @@
+.minimal-shell .kanban-card,
+.minimal-shell .drawer-field,
+.minimal-shell .timeline-hour,
+.minimal-shell .task-table-row,
+.minimal-shell .mobile-task-card,
+.minimal-shell .task-table,
+.minimal-shell .filter-search,
+.minimal-shell .row-menu-trigger,
+.minimal-shell .row-menu,
+.minimal-shell .ai-log-row {
+  border-color: rgba(148, 163, 184, 0.16);
+  background: #243247;
+  color: #e2e8f0;
+}
+
+.minimal-shell .ai-recommend-list p,
+.minimal-shell .ai-recommend-meta,
+.minimal-shell .task-table-row p,
+.minimal-shell .drawer-field span {
+  color: #64748b;
+}
+
+.minimal-shell .task-table-header {
+  color: #64748b;
+}
+
+.minimal-shell-dark .trend-chart-shell {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent),
+    #16212d;
+  border-color: rgba(148, 163, 184, 0.12);
+}
+
+.minimal-shell-dark .trend-range-select select {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(148, 163, 184, 0.16);
+}
+
+.minimal-shell-dark .chart-grid-line,
+.minimal-shell-dark .distribution-grid-line {
+  background: rgba(148, 163, 184, 0.12);
+  stroke: rgba(148, 163, 184, 0.14);
+}
+
+.minimal-shell-dark .hourly-bar-track,
+.minimal-shell-dark .distribution-bar-shell {
+  background: rgba(148, 163, 184, 0.08);
+}
+
+.minimal-shell-light .trend-chart-shell {
+  background:
+    linear-gradient(180deg, rgba(248, 250, 252, 0.96), rgba(241, 245, 249, 0.9)),
+    #ffffff;
+  border-color: #e2e8f0;
+}
+
+.minimal-shell-light .trend-range-select select {
+  background: #f8fafc;
+  border-color: #dbe3ee;
+}
+
+.minimal-shell-light .chart-grid-line,
+.minimal-shell-light .distribution-grid-line {
+  background: rgba(148, 163, 184, 0.2);
+  stroke: rgba(148, 163, 184, 0.22);
+}
+
+.minimal-shell-light .hourly-bar-track,
+.minimal-shell-light .distribution-bar-shell {
+  background: rgba(148, 163, 184, 0.14);
+}
+
+.minimal-shell-light .minimal-search,
+.minimal-shell-light .minimal-user,
+.minimal-shell-light .minimal-popover,
+.minimal-shell-light .minimal-recommend-list button,
+.minimal-shell-light .minimal-task-row,
+.minimal-shell-light .ui-surface,
+.minimal-shell-light .stats-card,
+.minimal-shell-light .task-column,
+.minimal-shell-light .calendar-day,
+.minimal-shell-light .today-timeline,
+.minimal-shell-light .overdue-list,
+.minimal-shell-light .drawer,
+.minimal-shell-light .create-modal,
+.minimal-shell-light .kanban-card,
+.minimal-shell-light .drawer-field,
+.minimal-shell-light .timeline-hour,
+.minimal-shell-light .task-table-row,
+.minimal-shell-light .ai-log-row,
+.minimal-shell-light .mobile-task-card,
+.minimal-shell-light .task-table,
+.minimal-shell-light .filter-search,
+.minimal-shell-light .row-menu-trigger,
+.minimal-shell-light .row-menu,
+.minimal-shell-light .table-footer button {
+  border-color: #e4e7ec;
+  background: #ffffff;
+  color: #172033;
+  box-shadow: none;
+}
+
+.minimal-shell-light .mobile-card-more,
+.minimal-shell-light .mobile-quick-actions button,
+.minimal-shell-light .distribution-row div,
+.minimal-shell-light .trend-bars {
+  background: #f8fafc;
+}
+
+.minimal-shell-light .minimal-user:hover,
+.minimal-shell-light .minimal-recommend-list button:hover,
+.minimal-shell-light .minimal-task-row:hover,
+.minimal-shell-light .task-table tbody tr:hover,
+.minimal-shell-light .row-menu button:hover,
+.minimal-shell-light .mobile-task-card:active {
+  background: #f8fafc;
+}
+
+.danger-button {
+  padding: 0 14px;
+  border-color: #fecaca;
+  background: #fff1f2;
+  color: var(--red);
+}
+
+.danger-button:hover {
+  border-color: color-mix(in srgb, var(--red) 40%, #fecaca);
+  box-shadow: 0 10px 22px rgba(220, 38, 38, 0.12);
+  transform: translateY(-1px);
+}

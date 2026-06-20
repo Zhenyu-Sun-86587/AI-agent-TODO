@@ -1,0 +1,26 @@
+.create-modal input,
+.create-modal textarea,
+.create-modal select {
+  width: 100%;
+  min-height: 42px;
+  height: 42px;
+  border: 1px solid var(--line);
+  border-color: var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text);
+  outline: none;
+}
+
+.create-modal input,
+.create-modal textarea,
+.create-modal select {
+  padding: 9px 12px;
+}
+
+.create-modal input:focus,
+.create-modal textarea:focus,
+.create-modal select:focus {
+  border-color: var(--line);
+  box-shadow: none;
+}

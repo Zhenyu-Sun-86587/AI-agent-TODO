@@ -1,0 +1,58 @@
+.page-content {
+  display: grid;
+  align-content: start;
+  gap: 22px;
+  padding: 28px;
+}
+
+.section-title p,
+.page-heading p {
+  color: var(--muted);
+}
+
+.section-title,
+.page-heading,
+.drawer-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.section-title {
+  margin-bottom: 16px;
+}
+
+.page-heading h1 {
+  font-size: 34px;
+  line-height: 1.16;
+}
+
+.page-heading {
+  min-height: 44px;
+}
+
+.page-heading h1 {
+  font-size: clamp(26px, 3vw, 34px);
+}
+
+.page-heading-action {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+@media (max-width: 820px) {
+  .page-content {
+    padding: 0;
+  }
+
+  .page-heading,
+  .section-title,
+  .drawer-header,
+  .table-footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}

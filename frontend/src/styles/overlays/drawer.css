@@ -1,0 +1,62 @@
+.drawer {
+  position: fixed;
+  inset: 0 0 0 auto;
+  z-index: 120;
+  width: min(500px, 100vw);
+  display: grid;
+  align-content: start;
+  gap: 18px;
+  padding: 22px;
+  border-left: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
+  overflow: auto;
+  animation: drawerSlideIn 200ms var(--ease-modal) forwards;
+}
+
+.drawer.entering {
+  animation: drawerSlideIn 200ms var(--ease-modal) forwards;
+}
+
+.drawer.closing {
+  animation: drawerSlideOut var(--motion-base) var(--ease-smooth) forwards;
+}
+
+.drawer-header h2 {
+  font-size: 24px;
+}
+
+.drawer-description {
+  color: var(--muted);
+}
+
+.drawer-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.drawer-field {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface-soft);
+}
+
+.drawer-field span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.drawer-field strong {
+  font-weight: 900;
+}
+
+.drawer-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}

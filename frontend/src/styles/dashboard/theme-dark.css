@@ -1,0 +1,118 @@
+.minimal-shell-dark .minimal-brand strong,
+.minimal-shell-dark .minimal-recommend-list strong,
+.minimal-shell-dark .ai-recommend-list strong,
+.minimal-shell-dark .minimal-task-row strong,
+.minimal-shell-dark .page-heading h1,
+.minimal-shell-dark .section-title h2,
+.minimal-shell-dark .drawer-header h2,
+.minimal-shell-dark .kanban-card strong,
+.minimal-shell-dark .drawer-field strong,
+.minimal-shell-dark .empty-state strong,
+.minimal-shell-dark .ai-reason-header strong,
+.minimal-shell-dark .table-title strong,
+.minimal-shell-dark .mobile-task-title strong {
+  color: #f8fafc;
+}
+
+.minimal-shell-dark .minimal-brand small,
+.minimal-shell-dark .minimal-recommend-list p,
+.minimal-shell-dark .minimal-task-row p,
+.minimal-shell-dark .minimal-task-row small,
+.minimal-shell-dark .page-heading p,
+.minimal-shell-dark .section-title p,
+.minimal-shell-dark .drawer-description,
+.minimal-shell-dark .empty-state p,
+.minimal-shell-dark .ai-recommend-list p,
+.minimal-shell-dark .ai-recommend-meta,
+.minimal-shell-dark .table-title span,
+.minimal-shell-dark .drawer-field span,
+.minimal-shell-dark .mobile-task-card p,
+.minimal-shell-dark .mobile-task-meta {
+  color: #94a3b8;
+}
+
+.minimal-shell-dark .minimal-recommend-list .ai-tiny-tag {
+  border-color: rgba(199, 210, 254, 0.42);
+  background: rgba(67, 56, 202, 0.34);
+  color: #e0e7ff;
+}
+
+.minimal-shell-dark .focus-hero {
+  position: relative;
+  min-height: 180px;
+  padding: 34px 36px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+  background-color: #0f172a;
+  background-image:
+    radial-gradient(circle at 100% 0%, rgba(99, 102, 241, 0.18) 0%, transparent 50%),
+    radial-gradient(circle at 0% 100%, rgba(168, 85, 247, 0.12) 0%, transparent 40%),
+    linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%);
+  box-shadow:
+    0 20px 40px -10px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  overflow: hidden;
+}
+
+.minimal-shell-dark .focus-hero::before,
+.minimal-shell-dark .focus-hero::after {
+  display: none;
+}
+
+.minimal-shell-dark .focus-tags {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.minimal-shell-dark .focus-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  font-size: 13px;
+  color: #e2e8f0;
+  background: rgba(30, 41, 59, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  font-weight: 500;
+  backdrop-filter: blur(8px);
+}
+
+.minimal-shell-dark .metric-item {
+  min-width: 112px;
+  min-height: 106px;
+  align-items: flex-start;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.02));
+  box-shadow:
+    0 8px 32px 0 rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 1px 0 0 rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(16px) saturate(120%);
+  -webkit-backdrop-filter: blur(16px) saturate(120%);
+}
+
+.minimal-shell-dark .metric-item span {
+  font-size: 12px;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 600;
+  color: #94a3b8;
+  background: none;
+  -webkit-text-fill-color: currentColor;
+}
+
+.minimal-shell-dark .metric-item strong {
+  color: #f8fafc;
+  font-size: 40px;
+  font-weight: 760;
+}
+
+.minimal-shell-dark .metric-item small {
+  color: #94a3b8;
+  font-size: 19px;
+  font-weight: 720;
+}

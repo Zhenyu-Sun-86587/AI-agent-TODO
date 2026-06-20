@@ -1,0 +1,27 @@
+.create-modal label,
+.field-group {
+  display: grid;
+  gap: 7px;
+}
+
+.create-modal label {
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.create-modal textarea {
+  height: auto;
+  resize: vertical;
+}
+
+.preview-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.preview-actions .ui-button-primary {
+  margin-left: auto;
+}

@@ -1,0 +1,16 @@
+.filter-bar,
+.board-toolbar {
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) repeat(3, minmax(128px, 150px)) 150px;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.filter-bar {
+  grid-template-columns: minmax(240px, 1fr) repeat(3, minmax(128px, 150px)) minmax(168px, 172px);
+}
+
+.board-toolbar {
+  margin-bottom: 0;
+}

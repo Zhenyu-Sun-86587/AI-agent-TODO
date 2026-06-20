@@ -1,0 +1,12 @@
+.minimal-task-row > button,
+.task-check {
+  border-color: var(--line-strong);
+  background: var(--surface);
+  color: #ffffff;
+}
+
+.minimal-task-row > button.done,
+.task-check.checked {
+  border-color: var(--green);
+  background: var(--green);
+}

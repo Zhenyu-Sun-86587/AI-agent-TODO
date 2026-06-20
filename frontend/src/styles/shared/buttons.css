@@ -1,0 +1,55 @@
+.primary-button,
+.ghost-button,
+.danger-button,
+.icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.primary-button {
+  padding: 0 14px;
+  background: var(--primary);
+  color: #ffffff;
+}
+
+.primary-button:hover {
+  background: var(--primary-dark);
+  box-shadow: 0 12px 26px rgba(79, 70, 229, 0.24);
+  transform: translateY(-1px);
+}
+
+.ghost-button,
+.icon-button {
+  border-color: var(--line);
+  background: var(--surface);
+  color: var(--text);
+}
+
+.ghost-button:hover,
+.icon-button:hover,
+.table-footer button:hover:not(:disabled),
+.calendar-controls button:hover {
+  border-color: color-mix(in srgb, var(--primary) 28%, var(--line));
+  box-shadow: var(--shadow-soft);
+  transform: translateY(-1px);
+}
+
+.ghost-button {
+  padding: 0 12px;
+}
+
+.icon-button {
+  width: 40px;
+  padding: 0;
+}
+
+.full {
+  width: 100%;
+}

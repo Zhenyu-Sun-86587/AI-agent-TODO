@@ -1,0 +1,73 @@
+.ai-recommend-list {
+  display: grid;
+  gap: 10px;
+}
+
+.ai-recommend-list button {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid color-mix(in srgb, var(--primary) 22%, var(--line));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface) 86%, var(--primary-soft));
+  color: var(--text);
+  text-align: left;
+  animation: pageFadeUp var(--motion-base) var(--ease-out) both;
+  animation-delay: calc(var(--stagger-index) * 48ms);
+  transition:
+    background-color var(--motion-fast) var(--ease-out),
+    border-color var(--motion-fast) var(--ease-out),
+    box-shadow var(--motion-base) var(--ease-out),
+    transform var(--motion-fast) var(--ease-out);
+}
+
+.ai-recommend-list .priority-badge {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: start;
+  justify-self: end;
+}
+
+.ai-recommend-list button:hover {
+  border-color: color-mix(in srgb, var(--primary) 46%, var(--line));
+  box-shadow: var(--shadow-soft);
+  transform: translateY(-2px);
+}
+
+.ai-recommend-list p {
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.ai-recommend-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.ai-recommend-meta span {
+  min-height: 24px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 8px;
+  border: 1px solid rgba(79, 70, 229, 0.18);
+  border-radius: 999px;
+  background: rgba(79, 70, 229, 0.08);
+  transition:
+    background-color var(--motion-fast) var(--ease-out),
+    border-color var(--motion-fast) var(--ease-out),
+    color var(--motion-fast) var(--ease-out),
+    transform var(--motion-fast) var(--ease-out);
+}
+
+.ai-recommend-meta span:hover {
+  border-color: color-mix(in srgb, var(--primary) 36%, var(--line));
+  background: color-mix(in srgb, var(--primary-soft) 68%, var(--surface));
+  transform: translateY(-1px);
+}
