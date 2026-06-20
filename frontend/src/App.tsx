@@ -38,16 +38,19 @@ export function App() {
   const { dismissToast, showToast, toasts } = useToastQueue();
 
   const navigateTo = useCallback((pageKey: PageKey) => {
+    // activePage 与 history 同步更新，popstate 再负责浏览器前进后退的反向同步。
     setActivePage(pageKey);
     pushAppPath(pageKey);
   }, []);
 
   const handleAuthenticated = useCallback((nextSession: { name: string; email: string }) => {
+    // 登录完成后立即刷新设置页资料草稿，避免仍显示演示用户信息。
     setProfileRef.current({ username: nextSession.name, email: nextSession.email });
     navigateTo("dashboard");
   }, [navigateTo]);
 
   const handleBeforeAuthenticated = useCallback(async () => {
+    // 认证页先播放离场阶段，再挂载工作区，减少登录态切换时的布局闪动。
     setAuthTransitionPhase("auth-to-app");
     await waitForTransition(120);
   }, []);
@@ -140,6 +143,7 @@ export function App() {
 
   resetTaskSelectionRef.current = resetTaskSelection;
 
+  // 仪表盘派生数据只依赖当前任务集合和远端分类，避免页面组件重复聚合。
   const { recommendedTasks, visibleCategories } = useDashboardData({
     isApiMode: Boolean(activeToken),
     remoteCategories,
@@ -148,6 +152,7 @@ export function App() {
 
   const handleChatTaskChanged = useCallback(async () => {
     if (activeToken) {
+      // AI 聊天工具调用可能创建/更新任务，统一通过工作区加载函数刷新远端状态。
       await loadRemoteWorkspace(activeToken);
     }
   }, [activeToken, loadRemoteWorkspace]);
@@ -160,6 +165,7 @@ export function App() {
         return;
       }
       if (!isKnownPagePath(pathname)) {
+        // 未知路径归一到 dashboard，避免工作区在无效 activePage 下渲染空白。
         window.history.replaceState(null, "", pagePaths.dashboard);
         setActivePage("dashboard");
         return;
@@ -199,6 +205,7 @@ export function App() {
       return;
     }
 
+    // 退出也走过渡状态，期间拒绝重复点击，最后再清理会话。
     setAuthTransitionPhase("app-to-auth");
     await waitForTransition(120);
     await logout();

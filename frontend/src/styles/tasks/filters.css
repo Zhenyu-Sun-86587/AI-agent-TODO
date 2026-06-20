@@ -1,3 +1,5 @@
+/* 任务筛选栏：统一搜索、筛选条件和看板工具栏栅格。 */
+
 .filter-bar,
 .board-toolbar {
   display: grid;

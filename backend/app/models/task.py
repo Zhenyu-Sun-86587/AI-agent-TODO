@@ -7,6 +7,7 @@ from app.utils.datetime import utc_now
 
 class Task(Base):
     __tablename__ = "tasks"
+    # 任务列表按当前用户过滤后常按状态、优先级、分类、截止时间和创建时间检索。
     __table_args__ = (
         Index("idx_tasks_user_status", "user_id", "status"),
         Index("idx_tasks_user_priority", "user_id", "priority"),
@@ -32,4 +33,5 @@ class Task(Base):
         nullable=False,
     )
 
+    # 所有任务必须归属用户，服务层查询也以 current_user 为边界防止越权访问。
     user = relationship("User", back_populates="tasks")

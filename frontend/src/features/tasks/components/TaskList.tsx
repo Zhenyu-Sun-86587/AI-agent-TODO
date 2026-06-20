@@ -26,6 +26,7 @@ export function TaskTable({
 
   useEffect(() => {
     if (openMenuTaskId === null) return;
+    // 行菜单打开后监听全局点击和窗口失焦，避免桌面表格与移动卡片的菜单悬挂在旧任务上。
     const closeMenu = () => setOpenMenuTaskId(null);
     window.addEventListener("click", closeMenu);
     window.addEventListener("blur", closeMenu);

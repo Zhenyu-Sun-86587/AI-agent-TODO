@@ -15,10 +15,12 @@ export async function apiRequest<T>(path: string, options: RequestInit & { token
     headers,
   });
 
+  // 后端 204 没有响应体，统一映射为调用方声明的空结果。
   if (response.status === 204) {
     return null as T;
   }
 
+  // API 约定使用 { code, message, data } 包裹业务结果，HTTP 成功但 code 非 0 也视为失败。
   const payload = (await response.json().catch(() => null)) as ApiEnvelope<T> | null;
   if (!response.ok || !payload || payload.code !== 0) {
     throw new ApiError(payload?.message || `请求失败：${response.status}`, response.status, payload?.code);

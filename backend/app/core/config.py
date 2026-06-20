@@ -5,6 +5,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    """应用配置约定：默认值服务本地开发，部署环境通过 .env 或环境变量覆盖。"""
+
     app_name: str = "AI-agent-TODO"
     app_env: str = "development"
     debug: bool = True
@@ -37,6 +39,7 @@ class Settings(BaseSettings):
 
     @property
     def cors_origins(self) -> List[str]:
+        # 环境变量用逗号分隔多个来源，读取时去空白并过滤空项，避免 CORS 配置出现空字符串。
         return [
             origin.strip()
             for origin in self.backend_cors_origins.split(",")
@@ -46,6 +49,7 @@ class Settings(BaseSettings):
 
 @lru_cache
 def get_settings() -> Settings:
+    # Settings 读取环境变量有一定成本且应保持进程内一致，因此用缓存作为单例配置入口。
     return Settings()
 
 

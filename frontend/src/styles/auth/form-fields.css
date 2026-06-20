@@ -1,3 +1,5 @@
+/* 认证表单字段：统一标签、输入框和焦点反馈。 */
+
 .auth-form {
   display: grid;
   gap: 14px;

@@ -1,3 +1,5 @@
+/* 任务行操作：控制行级按钮、菜单触发器和菜单外观。 */
+
 .row-actions {
   display: flex;
   align-items: center;

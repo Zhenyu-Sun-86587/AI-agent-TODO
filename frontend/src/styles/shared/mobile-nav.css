@@ -1,8 +1,11 @@
+/* 共享移动导航：维护底部导航项、激活态和安全区。 */
+
 .mobile-bottom-nav {
   display: none;
 }
 
 
+/* 响应式断点：移动端宽度下改为单列和触控友好尺寸。 */
 @media (max-width: 820px) {
 
 

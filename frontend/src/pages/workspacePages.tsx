@@ -16,6 +16,7 @@ export interface PageRendererProps
 }
 
 function buildPageProps(props: PageRendererProps) {
+  // 各页面只接收自己需要的 props，避免路由分发处把整个工作区状态透传下去。
   const dashboard: DashboardPageProps = {
     onOpenTask: props.onOpenTask,
     onPageChange: props.onPageChange,

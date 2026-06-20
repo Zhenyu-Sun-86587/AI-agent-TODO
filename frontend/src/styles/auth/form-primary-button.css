@@ -1,3 +1,5 @@
+/* 认证主按钮：封装提交按钮的高亮层和禁用状态。 */
+
 .auth-form .primary-button {
   position: relative;
   min-height: 48px;

@@ -5,6 +5,7 @@ from app.models.user import User
 
 
 def test_settings_get_update_and_delete_key(client):
+    """设置接口覆盖 Key 的新增、脱敏展示和显式清空语义。"""
     headers = auth_headers(client)
 
     response = client.get("/api/settings", headers=headers)
@@ -30,6 +31,7 @@ def test_settings_get_update_and_delete_key(client):
 
 
 def test_test_openai_key_without_saved_key_returns_business_error(client):
+    """未配置任何 Key 时，测试 Key 接口应返回业务错误而不是触发外部请求。"""
     headers = auth_headers(client)
 
     response = client.post("/api/settings/test-openai-key", headers=headers, json={})
@@ -39,6 +41,7 @@ def test_test_openai_key_without_saved_key_returns_business_error(client):
 
 
 def test_ai_parse_suggest_create_and_logs_in_mock_mode(client, monkeypatch):
+    """端到端覆盖 AI Mock 解析、推荐、创建任务以及 mocked 日志数量。"""
     monkeypatch.setattr(settings, "ai_mock_mode", True)
     headers = auth_headers(client)
 
@@ -82,6 +85,7 @@ def test_ai_parse_suggest_create_and_logs_in_mock_mode(client, monkeypatch):
 
 
 def test_ai_chat_endpoint_uses_deepseek_model(client, monkeypatch):
+    """聊天接口用 fake_call_chat_model 隔离真实网络，只断言 DeepSeek 模型透传。"""
     headers = auth_headers(client)
     monkeypatch.setattr(settings, "openai_api_key", "sk-env-secret-5678")
 
@@ -108,6 +112,7 @@ def test_ai_chat_endpoint_uses_deepseek_model(client, monkeypatch):
 
 
 def test_demo_login_resets_ai_settings_to_current_default(client, db_session, monkeypatch):
+    """Demo 登录应重置模型和个人 Key，避免复用上一次演示状态。"""
     monkeypatch.setattr(settings, "openai_api_key", "sk-env-secret-5678")
     monkeypatch.setattr(settings, "openai_default_model", "deepseek-v4-pro")
 

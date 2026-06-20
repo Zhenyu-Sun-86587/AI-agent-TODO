@@ -1,8 +1,10 @@
+/* 主题变量层：集中维护颜色、间距、圆角和动效令牌。 */
+
 :root {
   color-scheme: dark light;
   font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
   
-  /* Accent Colors */
+  /* 品牌色变量 */
   --primary: #6366f1;
   --primary-dark: #4f46e5;
   --purple: #a855f7;
@@ -11,7 +13,7 @@
   --orange: #f59e0b;
   --red: #ef4444;
 
-  /* Shape */
+  /* 圆角变量 */
   --radius-sm: 8px;
   --radius-md: 10px;
   --radius-lg: 12px;
@@ -19,7 +21,7 @@
   --radius-2xl: 18px;
   --radius-pill: 999px;
 
-  /* Spacing */
+  /* 间距变量 */
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -27,14 +29,14 @@
   --space-5: 20px;
   --space-6: 24px;
 
-  /* Controls */
+  /* 控件尺寸变量 */
   --control-height-sm: 34px;
   --control-height-md: 40px;
   --control-height-lg: 42px;
   --control-padding-x: 12px;
   --control-icon-size: 40px;
   
-  /* Motions */
+  /* 动效变量 */
   --motion-fast: 160ms;
   --motion-base: 250ms;
   --motion-slow: 400ms;

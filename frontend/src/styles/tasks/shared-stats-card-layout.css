@@ -1,3 +1,5 @@
+/* 统计卡片布局：统一卡片高度、图标尺寸和数字动效。 */
+
 .stats-card {
   height: 88px;
   min-height: 88px;

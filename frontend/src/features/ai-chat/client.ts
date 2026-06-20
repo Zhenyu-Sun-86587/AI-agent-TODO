@@ -25,6 +25,7 @@ export async function sendChatMessage(request: SendChatRequest): Promise<SendCha
     throw new Error("当前真实 AI 聊天暂不支持附件，请先移除附件后发送。");
   }
 
+  // 发送给后端的历史只保留非空文本，附件 metadata 仍留存在本地消息记录中。
   const data = await sendAiChat(
     request.token,
     request.model.id,

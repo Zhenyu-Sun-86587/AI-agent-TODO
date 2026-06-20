@@ -1,5 +1,6 @@
 import type { ChatModel, ChatModelGroup } from "./types";
 
+// 默认模型需要和产品预设一致，同时作为本地存储损坏时的兜底值。
 export const DEFAULT_CHAT_MODEL_ID = "deepseek-v4-pro";
 
 export const CHAT_MODELS: ChatModel[] = [
@@ -56,6 +57,7 @@ export const CHAT_MODEL_GROUPS: ChatModelGroup[] = [
 
 export function getChatModel(modelId: string | undefined): ChatModel {
   return (
+    // 先查指定模型，再退回默认模型，最后保证至少返回列表中的第一项。
     CHAT_MODELS.find((model) => model.id === modelId) ||
     CHAT_MODELS.find((model) => model.id === DEFAULT_CHAT_MODEL_ID) ||
     CHAT_MODELS[0]!

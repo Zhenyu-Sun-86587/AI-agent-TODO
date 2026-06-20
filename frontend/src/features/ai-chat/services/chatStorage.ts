@@ -45,6 +45,7 @@ function normalizeAttachment(value: unknown, index: number): ChatAttachment | nu
 }
 
 function normalizeMessage(value: unknown, index: number): ChatMessage | null {
+  // localStorage 中的历史消息按字段白名单恢复，脏数据直接丢弃或补默认值。
   if (!isRecord(value) || (value.role !== "user" && value.role !== "assistant") || typeof value.content !== "string") {
     return null;
   }
@@ -76,6 +77,7 @@ export function readConversations(): Conversation[] {
     if (!Array.isArray(parsed)) {
       return fallback;
     }
+    // 会话恢复时容忍旧版本缺字段，确保升级后仍能进入一个可发送的线程。
     const now = new Date().toISOString();
     const conversations = parsed.flatMap((value, index) => {
       if (!isRecord(value)) {

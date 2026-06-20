@@ -4,6 +4,7 @@ from conftest import auth_headers
 
 
 def test_task_crud_status_and_nullable_updates(client):
+    """覆盖任务 CRUD 主链路，并确认显式 null 可以清空可空字段。"""
     headers = auth_headers(client)
     due_time = (datetime.now(timezone.utc) + timedelta(days=1)).isoformat()
 
@@ -65,6 +66,7 @@ def test_task_crud_status_and_nullable_updates(client):
 
 
 def test_task_list_filters_sorting_and_categories(client):
+    """列表接口同时验证过滤、优先级排序和分类聚合的统计口径。"""
     headers = auth_headers(client)
     tomorrow = (datetime.now(timezone.utc) + timedelta(days=1)).isoformat()
     next_week = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
@@ -112,6 +114,7 @@ def test_task_list_filters_sorting_and_categories(client):
 
 
 def test_tasks_are_isolated_by_user(client):
+    """任务访问必须按用户隔离，其他用户看到的是 404 而不是任务详情。"""
     alice_headers = auth_headers(client, username="alice", email="alice@example.com")
     task_id = client.post(
         "/api/tasks",
@@ -224,7 +227,7 @@ def test_filter_tasks_by_due_time_range(client):
         json={"title": "下月截止", "due_time": next_month},
     )
 
-    # 筛选 between 今天 → 两周后
+    # 只应命中今天到两周后的任务，过去和更远未来的任务都排除。
     today = base.isoformat()
     two_weeks = (base + timedelta(days=14)).isoformat()
     response = client.get(
@@ -250,7 +253,7 @@ def test_pagination_boundaries(client):
             json={"title": f"分页测试任务 #{i+1}"},
         )
 
-    # page=1, page_size=2 应返回 2 条 + total_pages=3
+    # 第一页验证 total 和 total_pages 口径，items 只返回当前页。
     response = client.get(
         "/api/tasks",
         headers=headers,
@@ -263,7 +266,7 @@ def test_pagination_boundaries(client):
     assert pag["total_pages"] == 3
     assert len(response.json()["data"]["items"]) == 2
 
-    # page=3 应返回最后 1 条
+    # 最后一页只剩 1 条，验证 offset/limit 的边界行为。
     response = client.get(
         "/api/tasks",
         headers=headers,

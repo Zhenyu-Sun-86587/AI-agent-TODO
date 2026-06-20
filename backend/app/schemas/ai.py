@@ -8,10 +8,12 @@ from app.schemas.task import Priority, TaskRead
 
 class ParseTaskRequest(BaseModel):
     text: str = Field(min_length=1, max_length=1000)
+    # timezone 由客户端显式传入，AI 解析相对日期时不能假设服务器所在时区。
     timezone: str = "Asia/Shanghai"
 
 
 class AiParsedTask(BaseModel):
+    # AI 解析结果允许缺省字段，最终建任务前会与用户覆盖值合并并再次校验。
     title: str
     description: Optional[str] = None
     priority: Priority = Priority.medium
@@ -22,6 +24,7 @@ class AiParsedTask(BaseModel):
 
 
 class AiTaskOverrides(BaseModel):
+    # overrides 用于用户确认 AI 草稿时微调字段，字段规则与普通任务保持兼容。
     title: Optional[str] = Field(default=None, min_length=1, max_length=100)
     description: Optional[str] = Field(default=None, max_length=2000)
     priority: Optional[Priority] = None
@@ -45,11 +48,13 @@ class AiSuggestResponse(BaseModel):
 
 
 class AiChatMessage(BaseModel):
+    # role 限定为常见聊天角色，避免任意字符串透传给模型提供商。
     role: str = Field(pattern="^(user|assistant|system)$")
     content: str = Field(min_length=1, max_length=4000)
 
 
 class AiChatRequest(BaseModel):
+    # agent_mode/follow_up_mode 是服务层行为开关，schema 只负责稳定接收旧客户端字段。
     model_name: Optional[str] = Field(default=None, max_length=100)
     messages: list[AiChatMessage] = Field(min_length=1, max_length=30)
     agent_mode: bool = False
@@ -73,4 +78,5 @@ class AiLogRead(BaseModel):
     model_name: Optional[str] = None
     created_at: datetime
 
+    # 调用日志直接从 ORM 读取，output_json 保持 Any 以兼容不同 AI 返回结构。
     model_config = ConfigDict(from_attributes=True)

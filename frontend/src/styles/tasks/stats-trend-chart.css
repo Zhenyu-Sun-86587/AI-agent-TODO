@@ -1,3 +1,5 @@
+/* 趋势图绘制层：维护 SVG 坐标轴、折线、节点和提示。 */
+
 .trend-chart-svg {
   grid-column: 2;
   grid-row: 1;

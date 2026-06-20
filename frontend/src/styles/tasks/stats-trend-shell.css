@@ -1,3 +1,5 @@
+/* 趋势图外壳：控制图表容器、标题和范围选择器。 */
+
 .trend-chart-shell {
   display: grid;
   gap: 10px;

@@ -1,3 +1,5 @@
+/* 弹出页布局：用于轻量页面在浮层中的尺寸和滚动。 */
+
 .minimal-popover {
   position: absolute;
   top: calc(100% + 10px);

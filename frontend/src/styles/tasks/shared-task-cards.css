@@ -1,3 +1,5 @@
+/* 任务卡片共享态：统一看板卡和移动卡的表面、悬停态。 */
+
 .kanban-card,
 .mobile-task-card {
   border-color: var(--task-card-border);

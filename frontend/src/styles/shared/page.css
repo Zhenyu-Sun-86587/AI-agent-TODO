@@ -1,3 +1,5 @@
+/* 共享页面骨架：统一页面标题、内容栅格和移动端留白。 */
+
 .page-content {
   display: grid;
   align-content: start;
@@ -43,6 +45,7 @@
   flex: 0 0 auto;
 }
 
+/* 响应式断点：移动端宽度下改为单列和触控友好尺寸。 */
 @media (max-width: 820px) {
   .page-content {
     padding: 0;

@@ -13,6 +13,7 @@ export function formatDue(task: Pick<Task, "dueDate" | "dueTime">) {
 }
 
 export function PriorityBadge({ priority }: { priority: TaskPriority }) {
+  // 标签文案保留英文是为了和当前视觉稿、统计图例的展示风格保持一致。
   const displayPriority = priority === "高" ? "High" : priority === "低" ? "Low" : "Medium";
   return <span className={`priority-badge ${taskPriorityClassName(priority)}`}>{displayPriority}</span>;
 }

@@ -7,6 +7,7 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
+          // 将常用依赖拆到 vendor，减少业务代码改动时的缓存失效范围。
           vendor: ["react", "react-dom", "lucide-react"],
         },
       },

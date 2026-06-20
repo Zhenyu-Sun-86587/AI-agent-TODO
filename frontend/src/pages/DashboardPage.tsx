@@ -4,6 +4,7 @@ import type { Task } from "../features/tasks/types";
 import { dateFromToday } from "../lib/date";
 
 function getTaskOverview(tasks: Task[]) {
+  // 首页概览以“今天”为中心计算，避免把完整统计逻辑复制到 Dashboard。
   const todayTasks = tasks.filter((task) => task.dueDate && task.dueDate === dateFromToday(0));
   const completedToday = todayTasks.filter((task) => task.status === "已完成").length;
 

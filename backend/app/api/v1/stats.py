@@ -21,6 +21,7 @@ def overview(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> dict:
+    # 统计口径由服务层统一计算，路由只将查询时间窗传入并包裹响应。
     data = StatsOverview(**StatsService(db).overview(current_user, from_time, to_time))
     return success_response(data, request_id=request.state.request_id)
 
@@ -57,5 +58,6 @@ def trend_stats(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> dict:
+    # days 在入口限制范围，避免一次请求拉取过宽趋势窗口拖慢统计查询。
     data = [TrendStats(**item) for item in StatsService(db).trend(current_user, days)]
     return success_response(data, request_id=request.state.request_id)

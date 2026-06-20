@@ -1,6 +1,7 @@
 import { apiRequest } from "./client";
 import type { ApiAiCreateResponse, ApiCategory, ApiPageResult, ApiTask, ApiTaskPageParams, ApiTaskStatus } from "./types";
 
+// 前端分页筛选使用 camelCase，后端查询参数使用 snake_case，这里集中维护映射关系。
 const taskPageParamKeys = {
   category: "category",
   dueFrom: "due_from",
@@ -15,6 +16,7 @@ const taskPageParamKeys = {
 } satisfies Record<keyof ApiTaskPageParams, string>;
 
 function setSearchParam(params: URLSearchParams, key: string, value: string | number | undefined) {
+  // 空字符串和 undefined 不发送给后端，避免把“未筛选”误解成具体筛选条件。
   if (value === undefined || value === "") {
     return;
   }
@@ -49,6 +51,7 @@ export function buildTasksPagePath(pageParams: ApiTaskPageParams = {}) {
 export function fetchTasksPage(params: ApiTaskPageParams, token: string): Promise<ApiPageResult<ApiTask>>;
 export function fetchTasksPage(path: string, token: string): Promise<ApiPageResult<ApiTask>>;
 export function fetchTasksPage(paramsOrPath: ApiTaskPageParams | string, token: string) {
+  // 支持直接传 path，方便复用已经构造好的分页/筛选 URL。
   const path = typeof paramsOrPath === "string" ? paramsOrPath : buildTasksPagePath(paramsOrPath);
   return apiRequest<ApiPageResult<ApiTask>>(path, { token });
 }

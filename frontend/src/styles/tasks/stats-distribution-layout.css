@@ -1,3 +1,5 @@
+/* 分布统计布局：适配统计页内卡片、标题和条形图密度。 */
+
 .distribution-card {
   display: grid;
   align-content: start;

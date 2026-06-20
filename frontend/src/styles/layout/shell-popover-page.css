@@ -1,3 +1,5 @@
+/* 外壳弹出页面：适配浮层内页面头部和主体滚动。 */
+
 .minimal-popover,
 .row-menu {
   border-color: var(--line);

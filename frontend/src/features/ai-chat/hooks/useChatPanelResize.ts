@@ -27,6 +27,7 @@ export function useChatPanelResize() {
       const deltaX = resizeStart.current.x - moveEvent.clientX;
       const deltaY = resizeStart.current.y - moveEvent.clientY;
 
+      // 浮窗从右下角锚定，向左/向上拖动时用反向 delta 扩大宽高并限制可用边界。
       setPanelSize({
         width: direction === "top" ? resizeStart.current.width : Math.max(320, Math.min(1000, resizeStart.current.width + deltaX)),
         height: direction === "left" ? resizeStart.current.height : Math.max(400, Math.min(1200, resizeStart.current.height + deltaY)),

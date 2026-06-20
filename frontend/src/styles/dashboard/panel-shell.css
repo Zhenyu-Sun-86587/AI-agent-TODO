@@ -1,3 +1,5 @@
+/* 仪表盘面板外壳：统一面板标题和内部栅格。 */
+
 .minimal-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.18fr) minmax(340px, 0.82fr);

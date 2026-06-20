@@ -49,6 +49,7 @@ export default function CalendarPage({
   const [view, setView] = useState<CalendarView>("week");
   const [baseDate, setBaseDate] = useState(() => new Date());
   const timelineRef = useRef<HTMLDivElement | null>(null);
+  // 日历视图的日期范围全部从 baseDate 派生，避免周/月/24 小时视图各自维护游标导致越界。
   const days = useMemo(() => buildCalendarDays(baseDate), [baseDate]);
   const weekDays = useMemo(() => buildWeekDays(baseDate), [baseDate]);
   const dateRange = useMemo(() => getDateRangeForView(view, baseDate, days, weekDays), [baseDate, days, view, weekDays]);
@@ -69,6 +70,7 @@ export default function CalendarPage({
     () => calendarTasks.filter(isOverdue).sort((left, right) => left.dueDate.localeCompare(right.dueDate)),
     [calendarTasks],
   );
+  // 待排程只收纳“有日期但无具体时间”的任务，防止它们同时出现在时间轴的小时槽里。
   const pendingScheduleTasks = useMemo(
     () =>
       calendarTasks
@@ -85,6 +87,7 @@ export default function CalendarPage({
     [calendarTasks, dateRange.end, dateRange.start, view],
   );
   const currentHour = new Date().getHours();
+  // 切换视图或日期时重挂载动画容器，让不同布局的入场状态互不残留。
   const calendarMotionKey = `${view}-${formatLocalDate(baseDate)}`;
   const calendarTitle = view === "week"
     ? formatWeekRangeTitle(weekDays)
@@ -121,6 +124,7 @@ export default function CalendarPage({
       return;
     }
 
+    // 只在查看今天的 24 小时视图时定位当前小时，避免用户翻到历史日期时被自动滚回。
     const currentHourElement = timelineRef.current.querySelector<HTMLElement>("[data-current-hour='true']");
     currentHourElement?.scrollIntoView({ block: "center" });
   }, [selectedDate, view]);

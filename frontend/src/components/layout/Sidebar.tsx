@@ -57,6 +57,7 @@ export default function Sidebar({
           <button
             className="user-profile-btn"
             type="button"
+            // 侧边栏用户面板和顶部面板共用同一套开关，减少浮层状态分裂。
             onClick={() => setOpenPanel((panel) => (panel === "user" ? null : "user"))}
             aria-expanded={openPanel === "user"}
           >

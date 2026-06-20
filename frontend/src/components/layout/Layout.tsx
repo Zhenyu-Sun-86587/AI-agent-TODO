@@ -30,6 +30,7 @@ export default function Layout({
   const mobilePrimaryItems = navItems.filter((item) => mobilePrimaryNavKeys.includes(item.key));
   const mobileSecondaryItems = navItems.filter((item) => mobileSecondaryNavKeys.includes(item.key));
   const mobilePinnedKeys = [...mobilePrimaryNavKeys, ...mobileSecondaryNavKeys];
+  // 移动端主导航只固定常用入口，其余页面收进“更多”面板以控制底栏宽度。
   const mobileMoreItems = navItems.filter((item) => !mobilePinnedKeys.includes(item.key));
 
   useEffect(
@@ -50,6 +51,7 @@ export default function Layout({
       if (sidebarUserRef.current?.contains(event.target as Node)) {
         return;
       }
+      // 用户菜单只监听侧栏外点击关闭，避免影响移动端更多菜单的独立关闭动画。
       setOpenPanel(null);
     };
 
@@ -61,6 +63,7 @@ export default function Layout({
     if (openPanel !== "mobileMore" || isMobileMoreClosing) {
       return;
     }
+    // 更多菜单关闭先保留挂载态，让 backdrop 和面板完成离场动画。
     setMobileMoreClosing(true);
     mobileMoreCloseTimer.current = window.setTimeout(() => {
       setOpenPanel(null);

@@ -42,6 +42,7 @@ export function useTaskRemoteSync({
   const [remoteStats, setRemoteStats] = useState<RemoteStatsState>(emptyRemoteStats);
   const [remoteCategories, setRemoteCategories] = useState<string[]>([]);
 
+  // 切到远程模式时一次性同步用户、任务、设置和统计，保证全局 API 状态来自同一批请求结果。
   const loadRemoteWorkspace = useCallback(async (token = activeToken) => {
     if (!token) {
       return;
@@ -97,6 +98,7 @@ export function useTaskRemoteSync({
     if (session?.isApiSession) {
       void loadRemoteWorkspace(session.token);
     } else {
+      // 退出远程会话后清空远程派生数据，任务主体则继续由 useTasks 的本地存储恢复负责。
       setApiState("local");
       setApiMessage(session ? "本地演示模式" : "请选择登录或使用演示账号");
       setRemoteStats(emptyRemoteStats);

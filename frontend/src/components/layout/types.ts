@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import type { AppNavItem } from "../../app/router/navigation";
 import type { PageKey } from "../../app/types/common";
 
+// MinimalNavItem 直接复用路由层定义，避免布局和导航配置出现双份维护。
 export type MinimalNavItem = AppNavItem;
 
 export type LayoutPanel = "notifications" | "mobileMore" | "user" | null;

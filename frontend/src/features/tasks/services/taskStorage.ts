@@ -15,6 +15,7 @@ function normalizeStoredTask(item: unknown, index: number): Task | null {
     return null;
   }
 
+  // 本地存储可能来自旧版本或被手动修改，恢复时统一补齐枚举和 AI 字段的默认值。
   const status = typeof item.status === "string" && isTaskStatus(item.status) ? item.status : "待办";
   const priority = typeof item.priority === "string" && isTaskPriority(item.priority) ? item.priority : "中";
   const category = typeof item.category === "string" && item.category.trim() ? item.category : "未分类";
@@ -44,6 +45,7 @@ function normalizeStoredTask(item: unknown, index: number): Task | null {
 export function readStoredTasks() {
   const storedTasks = readStoredJson<unknown>(TASKS_STORAGE_KEY, null);
   if (!Array.isArray(storedTasks)) {
+    // 首次打开或存储损坏时回退到 mockData，保证本地演示始终有可操作任务。
     return initialTasks;
   }
 

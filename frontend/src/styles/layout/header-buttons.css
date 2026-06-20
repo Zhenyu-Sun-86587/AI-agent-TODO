@@ -1,3 +1,5 @@
+/* 顶栏按钮组：维护搜索、用户入口和主操作按钮。 */
+
 .minimal-primary,
 .minimal-icon,
 .minimal-user {
@@ -39,7 +41,7 @@
   z-index: 1;
 }
 
-/* Glossy shine effect */
+/* 按钮扫光动效：为主按钮提供轻量高光反馈。 */
 .minimal-primary::after {
   content: '';
   position: absolute;
@@ -69,7 +71,7 @@
   box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
 }
 
-/* Light Theme Styling */
+/* 亮色主题覆盖：调整主操作按钮的背景和阴影。 */
 .minimal-shell-light .minimal-primary {
   background: linear-gradient(135deg, #7ba0ff 0%, #4f80ff 100%);
   border: 1px solid rgba(255, 255, 255, 0.6);

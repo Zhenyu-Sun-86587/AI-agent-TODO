@@ -1,4 +1,4 @@
-/* Settings modal and form styles. */
+/* 设置弹窗：组织 AI 建议工具、侧栏导航和设置表单。 */
 
 .ai-suggest-tool,
 .settings-form {
@@ -202,6 +202,7 @@
   padding: 0 24px 24px;
 }
 
+/* 响应式断点：平板宽度下调整多列布局。 */
 @media (max-width: 1180px) {
   .stats-panels,
 .timeline-layout,

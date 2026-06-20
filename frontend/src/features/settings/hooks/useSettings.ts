@@ -39,6 +39,7 @@ export function useSettings({
   const [isDark, setIsDark] = useState(() => readStoredTheme());
 
   useEffect(() => {
+    // 设置草稿持久化到本地；后端模式下敏感 Key 保存后会被替换为掩码状态。
     writeStoredJson(SETTINGS_STORAGE_KEY, settings);
   }, [settings]);
 
@@ -57,6 +58,7 @@ export function useSettings({
     }
 
     if (!activeToken) {
+      // 未登录后端时只更新前端资料与 session，保持演示模式可离线使用。
       setProfile({ username, email });
       setSession((currentSession) => currentSession ? { ...currentSession, name: username, email } : currentSession);
       return "已保存到本地演示资料。";
@@ -65,6 +67,7 @@ export function useSettings({
     try {
       setApiState("loading");
       setApiMessage("正在保存 /users/me...");
+      // 后端返回值作为最终资料来源，避免邮箱规范化等服务端处理后前后端不一致。
       const user = await updateMe(activeToken, username, email);
       setProfile({ username: user.username, email: user.email });
       setSession((currentSession) => currentSession ? { ...currentSession, name: user.username, email: user.email } : currentSession);
@@ -91,6 +94,7 @@ export function useSettings({
     try {
       setApiState("loading");
       setApiMessage("正在保存 /settings...");
+      // 明文 Key 只提交给后端，前端保存掩码和 hasOpenaiApiKey 状态用于回显。
       const data = await updateRemoteSettings(activeToken, nextSettings.openaiApiKey, nextSettings.modelName);
       setSettings({
         openaiApiKey: "",
@@ -122,6 +126,7 @@ export function useSettings({
     try {
       setApiState("loading");
       setApiMessage("正在调用 /settings/test-openai-key...");
+      // 测试连接不写入配置，只用当前草稿向后端做一次即时校验。
       const data = await testRemoteOpenAIKey(activeToken, nextSettings.openaiApiKey, nextSettings.modelName);
       setApiState("online");
       setApiMessage(data.valid ? "OpenAI Key 测试通过" : "OpenAI Key 测试失败");

@@ -1,3 +1,5 @@
+/* 标题行辅助：维护 AI 标题行和移动端主题切换入口。 */
+
 .minimal-ai-title-line {
   display: flex;
   min-width: 0;
@@ -6,6 +8,7 @@
   gap: 8px;
 }
 
+/* 响应式断点：移动外壳启用时切换导航和内容留白。 */
 @media (max-width: 900px) {
   .minimal-theme-toggle {
       display: inline-flex;

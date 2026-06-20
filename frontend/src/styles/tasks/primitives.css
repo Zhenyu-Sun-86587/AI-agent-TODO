@@ -1,3 +1,5 @@
+/* 任务基础元件：维护统计栅格、勾选控件和移动卡片。 */
+
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -111,4 +113,4 @@
   flex: 0 0 auto;
 }
 
-/* Removed ::before dots to fix text alignment */
+/* 文本对齐修正：移除旧版圆点装饰避免标题偏移。 */

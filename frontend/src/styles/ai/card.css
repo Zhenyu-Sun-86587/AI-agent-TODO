@@ -1,3 +1,5 @@
+/* AI 面板卡片：承载智能建议入口和轻量高亮背景。 */
+
 .ai-card:hover {
   border-color: color-mix(in srgb, var(--primary) 24%, var(--line));
 }

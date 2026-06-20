@@ -1,3 +1,5 @@
+/* 认证表单入口：按标题、字段、消息和按钮拆分加载。 */
+
 @import "./form-title.css";
 @import "./form-fields.css";
 @import "./form-messages.css";

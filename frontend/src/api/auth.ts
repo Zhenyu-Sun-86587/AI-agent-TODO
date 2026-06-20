@@ -1,6 +1,7 @@
 import { apiRequest } from "./client";
 import type { ApiAuthResponse, ApiUser } from "./types";
 
+// 认证相关请求统一经过 apiRequest，保证 token、错误包裹和响应结构处理一致。
 export function login(account: string, password: string) {
   return apiRequest<ApiAuthResponse>("/auth/login", {
     method: "POST",

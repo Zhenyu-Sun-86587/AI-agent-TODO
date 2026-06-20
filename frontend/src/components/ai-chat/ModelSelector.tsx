@@ -10,6 +10,7 @@ type ProviderLogoProps = {
 };
 
 function getProviderLogo(provider: string) {
+  // 图标资源按 provider 分发，缺省时退回统一的 Bot 图标。
   if (provider === "openai") {
     return { alt: "GPT", provider, src: "/gpt-logo.png" };
   }
@@ -39,6 +40,7 @@ export default function ModelSelector({
     if (!isOpen) {
       return;
     }
+    // 模型菜单采用点击外部关闭，避免遮挡聊天输入时用户无处收起。
     const handleClickOutside = (event: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
         setIsOpen(false);

@@ -1,3 +1,5 @@
+/* 共享表面：统一卡片、标题行和图标容器的基础样式。 */
+
 .ui-surface {
   min-width: 0;
   border: 1px solid var(--line);

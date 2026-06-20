@@ -1,6 +1,7 @@
 import type { Task } from "../types";
 import { dateFromToday } from "../../../lib/date";
 
+// mock 任务覆盖了 AI 创建、无截止时间、已完成、响应式演示等典型场景，方便离线演示。
 export const initialTasks: Task[] = [
   {
     id: 1,

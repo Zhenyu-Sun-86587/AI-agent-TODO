@@ -22,6 +22,7 @@ export function sendAiChat(
   return apiRequest<ApiAiChatResponse>("/ai/chat", {
     method: "POST",
     token,
+    // agent_mode 和 follow_up_mode 是后端智能体分流依据，timezone 用于解析“今天/明天”等相对时间。
     body: JSON.stringify({
       agent_mode: true,
       follow_up_mode: options.followUpMode,

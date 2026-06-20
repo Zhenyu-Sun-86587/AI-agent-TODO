@@ -41,6 +41,7 @@ export function filterTasks(tasks: Task[], filters: TaskQueryFilters) {
   const priority = filters.priority ?? TASK_FILTER_ALL;
   const category = filters.category ?? TASK_FILTER_ALL;
 
+  // 全部筛选项采用同一个哨兵值，便于本地列表和远程查询参数保持一致的筛选语义。
   return tasks.filter((task) => {
     const matchesStatus = status === TASK_FILTER_ALL || task.status === status;
     const matchesPriority = priority === TASK_FILTER_ALL || task.priority === priority;
@@ -60,6 +61,7 @@ export function sortTasks(tasks: Task[], sort: TaskSortKey | string) {
       return right.createdAt.localeCompare(left.createdAt);
     }
 
+    // 没有截止日期的任务排到最后，避免空日期在字符串排序中抢到最前面。
     return (left.dueDate || "9999-12-31").localeCompare(right.dueDate || "9999-12-31");
   });
 }
@@ -69,6 +71,7 @@ export function filterAndSortTasks(tasks: Task[], filters: TaskQueryFilters, sor
 }
 
 export function getTodayTasks(tasks: Task[], today = dateFromToday(0)) {
+  // 今日页只看截止日期等于今天的任务，再按截止时段从早到晚排列。
   return tasks
     .filter((task) => task.dueDate && task.dueDate === today)
     .sort((left, right) => (left.dueTime || "23:59").localeCompare(right.dueTime || "23:59"));

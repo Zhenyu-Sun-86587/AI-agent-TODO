@@ -18,6 +18,7 @@ export function StatsCard({
   value: number | string;
 }) {
   return (
+    // 统计卡统一接受 stagger index，便于在不同页面复用相同的入场动画节奏。
     <Surface as="article" className={`stats-card ${tone}`} padding="sm" interactive style={{ "--stagger-index": index } as CSSProperties}>
       <span><Icon size={20} /></span>
       <div>

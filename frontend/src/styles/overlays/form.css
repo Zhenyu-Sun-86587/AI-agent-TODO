@@ -1,3 +1,5 @@
+/* 浮层表单布局：维护创建任务表单的分区和按钮行。 */
+
 .create-modal label,
 .field-group {
   display: grid;

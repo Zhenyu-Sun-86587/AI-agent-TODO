@@ -1,5 +1,7 @@
+/* 悬浮 AI 聊天：集中维护入口按钮、面板、消息流和输入区。 */
+
 .ai-chat-floating {
-  /* Theme Variables */
+  /* 主题变量：统一聊天浮层的明暗色、头像和阴影令牌。 */
   --ai-chat-bg: rgba(31, 31, 31, 0.55);
   --ai-chat-surface: rgba(255, 255, 255, 0.04);
   --ai-chat-surface-strong: rgba(255, 255, 255, 0.08);
@@ -38,6 +40,7 @@
   transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+/* 亮色主题覆盖：替换聊天面板、附件和启动头像资源。 */
 .minimal-shell-light .ai-chat-floating {
   --ai-chat-bg: rgba(255, 255, 255, 0.25);
   --ai-chat-surface: rgba(248, 250, 252, 0.72);
@@ -80,6 +83,7 @@
   pointer-events: auto;
 }
 
+/* 悬浮入口：头像按钮保持可点击层和悬停反馈独立于面板。 */
 .ai-chat-launcher {
   width: 58px;
   height: 58px;
@@ -138,6 +142,7 @@
   transform: scale(0.95);
 }
 
+/* 聊天面板主体：固定浮层尺寸、毛玻璃背景和入场动画。 */
 .ai-chat-panel {
   position: relative;
   width: clamp(520px, 35vw, 680px);
@@ -167,6 +172,7 @@
   -webkit-backdrop-filter: blur(34px) saturate(150%);
 }
 
+/* 面板动画：打开和关闭沿右下角缩放位移。 */
 @keyframes panelSlideUp {
   0% { opacity: 0; transform: scale(0.9) translateY(20px); }
   100% { opacity: 1; transform: scale(1) translateY(0); }
@@ -177,6 +183,7 @@
   100% { opacity: 0; transform: scale(0.94) translateY(18px); }
 }
 
+/* 面板头部：标题菜单入口与窗口操作按钮并列。 */
 .ai-chat-header {
   min-height: 72px;
   display: grid;
@@ -258,6 +265,7 @@
   color: var(--ai-chat-text);
 }
 
+/* 会话菜单：在面板内弹出历史会话并支持删除操作。 */
 .ai-chat-conversation-menu {
   position: absolute;
   top: 66px;
@@ -343,6 +351,7 @@
   color: var(--ai-chat-error);
 }
 
+/* 消息流：占据可滚动主区域并区分空态与消息气泡。 */
 .ai-chat-thread {
   flex: 1 1 auto;
   min-height: 0;
@@ -480,6 +489,7 @@
   border-radius: 8px;
 }
 
+/* 输入区：承载附件、文本域、跟进开关、模型选择和发送按钮。 */
 .ai-chat-composer {
   --ai-chat-composer-edge-gap: 14px;
   position: relative;
@@ -683,6 +693,7 @@
   cursor: not-allowed;
 }
 
+/* 响应式断点：移动端聊天浮层避开底部导航和安全区。 */
 @media (max-width: 820px) {
   .ai-chat-floating {
     right: 12px;
@@ -764,6 +775,7 @@
   }
 }
 
+/* 焦点归一：由组件态控制高亮，避免浏览器默认描边干扰。 */
 .ai-chat-floating input:focus,
 .ai-chat-floating input:focus-visible,
 .ai-chat-floating textarea:focus,
@@ -774,7 +786,7 @@
   box-shadow: none;
 }
 
-/* Custom Model Selector */
+/* 模型选择器：控制触发按钮、弹出菜单和厂商图标。 */
 .ai-model-selector {
   position: relative;
   margin-left: auto;
@@ -913,6 +925,7 @@
   background-color: var(--ai-chat-text);
 }
 
+/* 确认弹窗：覆盖聊天面板内部的危险操作确认流程。 */
 .ai-chat-confirm-overlay {
   position: absolute;
   top: 0;
@@ -993,6 +1006,7 @@
   color: white;
 }
 
+/* 面板缩放手柄：提供顶部、左侧和角落拖拽热区。 */
 .ai-chat-resizer-top {
   position: absolute;
   top: -4px;

@@ -1,3 +1,5 @@
+/* 认证次级操作：维护辅助按钮和服务端点提示。 */
+
 .auth-form .ghost-button {
   position: relative;
   min-height: 48px;

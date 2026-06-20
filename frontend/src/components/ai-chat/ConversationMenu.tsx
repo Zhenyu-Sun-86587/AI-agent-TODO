@@ -48,6 +48,7 @@ const ConversationMenu = forwardRef<HTMLDivElement, ConversationMenuProps>(funct
             tabIndex={0}
             aria-label={`删除 ${conversation.title}`}
             onClick={(event) => {
+              // 删除按钮嵌在整行按钮里，需要阻止冒泡，避免先切换会话再删除。
               event.stopPropagation();
               onDelete(conversation.id);
             }}

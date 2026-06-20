@@ -1,3 +1,5 @@
+/* 布局模块入口：组合外壳、导航、顶栏和移动端样式。 */
+
 @import "./shell-base.css";
 @import "./mobile-shell-legacy.css";
 @import "./theme.css";

@@ -17,6 +17,7 @@ def get_settings(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> dict:
+    # 设置页读取时懒创建默认配置，保证新用户首次进入也能获得完整响应结构。
     service = SettingService(db)
     setting = service.get_or_create(current_user)
     return success_response(service.to_read(setting), request_id=request.state.request_id)
@@ -30,6 +31,7 @@ def update_settings(
     db: Session = Depends(get_db),
 ) -> dict:
     service = SettingService(db)
+    # 使用 model_fields_set 区分“未传字段”和“显式传空值”，对清除 API key 很关键。
     fields_set = getattr(payload, "model_fields_set", set())
     setting = service.update(
         current_user,
@@ -47,6 +49,7 @@ def test_openai_key(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> dict:
+    # 未传临时 key 时回退到用户已保存密钥；测试过程不改变当前设置。
     setting_service = SettingService(db)
     api_key = payload.openai_api_key or setting_service.require_openai_api_key(current_user)
     model_name = payload.model_name or setting_service.get_model_name(current_user)

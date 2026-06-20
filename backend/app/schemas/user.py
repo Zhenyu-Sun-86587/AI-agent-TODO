@@ -11,6 +11,7 @@ class UserCreate(BaseModel):
 
 
 class UserUpdate(BaseModel):
+    # 更新接口允许部分字段提交，None 表示该字段不参与修改。
     username: Optional[str] = Field(default=None, min_length=3, max_length=32)
     email: Optional[EmailStr] = None
 
@@ -22,4 +23,5 @@ class UserRead(BaseModel):
     created_at: datetime
     updated_at: datetime
 
+    # 读取模型直接接收 SQLAlchemy 对象，避免路由层手动拆字段。
     model_config = ConfigDict(from_attributes=True)

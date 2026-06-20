@@ -45,6 +45,7 @@ export default function Header({
           <button
             className="minimal-icon"
             type="button"
+            // 通知面板和其它顶部浮层共享 openPanel 状态，保证同一时间只展开一个。
             onClick={() => setOpenPanel((panel) => (panel === "notifications" ? null : "notifications"))}
             aria-expanded={openPanel === "notifications"}
             aria-label="通知"

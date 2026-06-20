@@ -10,6 +10,7 @@ export function PendingSchedulePanel({
   onOpenTask: (task: Task) => void;
   tasks: Task[];
 }) {
+  // 侧栏承担无具体时段任务的承接区，保持主日历布局只处理可定位到格/小时的项目。
   return (
     <Surface as="aside" className="calendar-pending-panel">
       <h2>待排程任务</h2>

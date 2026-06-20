@@ -8,6 +8,7 @@ api_router = APIRouter()
 
 @api_router.get("/health", tags=["system"])
 def api_health_check(request: Request) -> dict:
+    # API 层健康检查也走统一响应结构，便于前端和网关按 code/request_id 解析。
     return success_response({"status": "ok"}, request_id=request.state.request_id)
 
 

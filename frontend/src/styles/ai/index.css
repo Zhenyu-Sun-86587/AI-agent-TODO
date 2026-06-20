@@ -1,3 +1,5 @@
+/* AI 模块样式入口：汇总卡片、日志、建议和响应式规则。 */
+
 @import "./card.css";
 @import "./recommendations.css";
 @import "./logs.css";

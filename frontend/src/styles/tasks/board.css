@@ -1,3 +1,5 @@
+/* 任务看板：组织三列看板、列标题和卡片列表。 */
+
 .kanban-board {
   display: grid;
   grid-template-columns: repeat(3, minmax(230px, 1fr));

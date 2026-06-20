@@ -14,6 +14,7 @@ down_revision = ${repr(down_revision)}
 branch_labels = ${repr(branch_labels)}
 depends_on = ${repr(depends_on)}
 
+## 新迁移应在 upgrade 写明结构变更意图，在 downgrade 保持可逆或解释不可逆原因。
 
 def upgrade() -> None:
     ${upgrades if upgrades else "pass"}

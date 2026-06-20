@@ -1,3 +1,5 @@
+/* AI 执行日志：控制日志筛选、行布局和状态标签。 */
+
 .ai-logs-panel {
   display: grid;
   gap: 14px;

@@ -1,3 +1,5 @@
+/* 外壳基础入口：连接页面根节点和最小化外壳。 */
+
 @import "./shell-structure.css";
 @import "./brand-nav.css";
 @import "./workspace-header.css";

@@ -18,6 +18,7 @@ export default function ChatThread({ isSending, messages }: { isSending: boolean
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
+    // 消息或发送状态变化时滚到线程底部，保持乐观消息和等待态可见。
     bottomRef.current?.scrollIntoView({ block: "end" });
   }, [messages, isSending]);
 

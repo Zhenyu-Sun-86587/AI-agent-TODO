@@ -10,6 +10,7 @@ export function getStatsRangeConfig(range: StatsRangeKey) {
   const today = new Date();
 
   if (range === "currentWeek" || range === "lastWeek") {
+    // 周趋势固定以周一为起点，和后端统计接口的日期范围保持同一口径。
     const weekStart = getWeekStart(today);
     const start = new Date(weekStart);
     start.setDate(start.getDate() + (range === "lastWeek" ? -7 : 0));
@@ -78,11 +79,13 @@ export function buildLocalTrend(tasks: Task[], buckets: Array<{ key: string; lab
   return buckets.map((bucket) => ({
     label: bucket.label,
     created: tasks.filter((task) => task.createdAt === bucket.key).length,
+    // 旧本地数据可能没有 completedAt，已完成且截止日在桶内时也计入完成趋势。
     done: tasks.filter((task) => task.completedAt === bucket.key || (task.status === "已完成" && task.dueDate === bucket.key)).length,
   }));
 }
 
 export function buildLocalCategoryStats(tasks: Task[], startDate: string, endDate: string): ApiCategoryStats[] {
+  // 分类/优先级分布按截止日期落入统计范围计算；无截止日期任务保留在分布里，避免长期任务消失。
   const relevantTasks = tasks.filter((task) => !task.dueDate || isDateInRange(task.dueDate, startDate, endDate));
   const categoryMap = new Map<string, { done: number; todo: number; total: number }>();
 

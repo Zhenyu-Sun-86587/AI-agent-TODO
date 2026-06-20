@@ -34,11 +34,13 @@ export function useTasks({
   const [tasks, setTasks] = useState<Task[]>(() => readStoredTasks());
   const [taskVersion, setTaskVersion] = useState(0);
 
+  // 任务变更版本号供分页列表和统计页重新拉取远程数据，避免把派生刷新绑死在任务数组引用上。
   const markTaskDataChanged = useCallback(() => {
     setTaskVersion((value) => value + 1);
   }, []);
 
   useEffect(() => {
+    // API 会话以服务端为准，只有本地演示模式才把任务快照写回浏览器存储。
     if (!session?.isApiSession) {
       writeStoredJson(TASKS_STORAGE_KEY, tasks);
     }

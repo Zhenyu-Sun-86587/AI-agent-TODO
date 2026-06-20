@@ -15,6 +15,7 @@ export function dateFromToday(offsetDays: number) {
 export function getWeekStart(date = new Date()) {
   const value = new Date(date);
   value.setHours(0, 0, 0, 0);
+  // 统计页按中国常用周一作为一周开始，周日折算为第 7 天。
   const dayOfWeek = value.getDay() === 0 ? 7 : value.getDay();
   value.setDate(value.getDate() - (dayOfWeek - 1));
   return value;

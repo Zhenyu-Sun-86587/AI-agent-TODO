@@ -17,6 +17,7 @@ export function useAnimatedDismiss(onClose: () => void, duration: number, resetK
   const timeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
+    // resetKey 变化通常代表弹层内容切换，需要取消上一轮关闭动画和定时器。
     setClosing(false);
     if (timeoutRef.current !== null) {
       window.clearTimeout(timeoutRef.current);
@@ -39,6 +40,7 @@ export function useAnimatedDismiss(onClose: () => void, duration: number, resetK
         return;
       }
       setClosing(true);
+      // 等 CSS 动画结束后再真正关闭，避免元素提前卸载导致过渡失效。
       timeoutRef.current = window.setTimeout(() => {
         afterClose();
       }, duration);

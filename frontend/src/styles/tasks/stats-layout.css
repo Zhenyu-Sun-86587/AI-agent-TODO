@@ -1,3 +1,5 @@
+/* 统计页布局：组织指标卡、趋势图和分布图区域。 */
+
 .chart-card {
   display: grid;
   gap: 0;

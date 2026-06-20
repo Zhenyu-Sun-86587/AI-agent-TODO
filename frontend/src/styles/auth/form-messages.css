@@ -1,3 +1,5 @@
+/* 认证表单消息：区分接口提示和错误反馈的视觉状态。 */
+
 .api-message {
   padding: 12px 16px;
   border: 1px solid var(--line-strong);

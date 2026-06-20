@@ -5,6 +5,7 @@ export type ChatAttachment = {
   type: string;
 };
 
+// ChatMessage 的 status 只用于前端发送态展示，不直接映射后端消息状态机。
 export type ChatMessage = {
   id: string;
   role: "user" | "assistant";

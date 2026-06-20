@@ -1,3 +1,5 @@
+/* 创建任务弹窗：控制模态容器、标题和关闭按钮。 */
+
 .modal-backdrop {
   position: fixed;
   inset: 0;

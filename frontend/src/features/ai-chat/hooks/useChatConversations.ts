@@ -26,6 +26,7 @@ export function sortConversations(conversations: Conversation[]) {
 
 function getInitialModelId(initialModelId: string | undefined) {
   const storedModelId = readSelectedModelId();
+  // 外部传入的模型优先级高于本地缓存，用于设置页改模型后同步浮窗默认值。
   if (isKnownChatModel(initialModelId) && storedModelId !== initialModelId) {
     return initialModelId || DEFAULT_CHAT_MODEL_ID;
   }
@@ -57,6 +58,7 @@ export function useChatConversations(initialModelId: string | undefined, token?:
   const [selectedModelId, setSelectedModelId] = useState(() => getInitialModelId(initialModelId));
   const [conversationToDelete, setConversationToDelete] = useState<string | null>(null);
 
+  // activeConversationId 失效时回退到最新会话，防止删除当前会话后线程区域悬空。
   const activeConversation = useMemo(
     () => conversations.find((conversation) => conversation.id === activeConversationId) || sortConversations(conversations)[0],
     [activeConversationId, conversations],
@@ -92,6 +94,7 @@ export function useChatConversations(initialModelId: string | undefined, token?:
 
   const createConversation = ({ onOpen }: { onOpen: () => void }) => {
     if (isFreshEmptyConversation(activeConversation)) {
+      // 空白新会话不重复创建，只负责打开面板，避免侧边菜单堆积无标题记录。
       onOpen();
       return false;
     }
@@ -122,6 +125,7 @@ export function useChatConversations(initialModelId: string | undefined, token?:
     setConversations((current) => {
       const remaining = current.filter((conversation) => conversation.id !== conversationId);
       if (!remaining.length) {
+        // 至少保留一个空会话，后续发送流程始终有稳定的 conversationId。
         const fallbackConversation = createEmptyConversation();
         setActiveConversationId(fallbackConversation.id);
         return [fallbackConversation];
@@ -152,6 +156,7 @@ export function useChatConversations(initialModelId: string | undefined, token?:
     };
     const nextMessages = [...activeConversation.messages, userMessage];
 
+    // 先乐观写入用户消息，再等待后端回复；失败也追加 assistant 错误消息以保留完整对话流。
     updateConversation(conversationId, (conversation) => ({
       ...conversation,
       title: isFreshEmptyConversation(conversation) ? getConversationTitle(input, attachments) : conversation.title,
@@ -176,6 +181,7 @@ export function useChatConversations(initialModelId: string | undefined, token?:
         updatedAt: response.message.createdAt,
       }));
       if (response.taskChanged) {
+        // AI 可能通过工具改动任务，通知上层重新拉取工作区数据。
         await onTaskChanged?.();
       }
     } catch (error) {

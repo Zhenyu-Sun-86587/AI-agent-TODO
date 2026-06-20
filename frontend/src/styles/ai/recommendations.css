@@ -1,3 +1,5 @@
+/* AI 推荐列表：组织建议项卡片、元信息和交互反馈。 */
+
 .ai-recommend-list {
   display: grid;
   gap: 10px;

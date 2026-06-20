@@ -37,6 +37,7 @@ export default function SettingsModal({
   const [activeTab, setActiveTab] = useState<"theme" | "ai" | "debug">("theme");
 
   useEffect(() => {
+    // 打开设置弹窗时使用最新持久化配置，避免保留上次未保存的草稿。
     setDraft(settings);
   }, [settings]);
 
@@ -60,6 +61,7 @@ export default function SettingsModal({
     setTesting(true);
     setFeedback("");
     try {
+      // 测试连接只更新反馈，不覆盖当前草稿，方便用户边调边改。
       const message = await onTest(draft);
       const isFailure = message.includes("失败") || message.includes("过短") || message.includes("无效");
       setFeedback(message);

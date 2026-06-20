@@ -1,3 +1,6 @@
+/* 工作区动画：统一页面、菜单和数值进入动效。 */
+
+/* 动画关键帧：集中描述该模块的进入、漂浮或反馈节奏。 */
 @keyframes workspaceShellEnter {
   0% {
     opacity: 0.96;

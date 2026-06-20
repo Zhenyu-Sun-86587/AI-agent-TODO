@@ -1,2 +1,4 @@
+/* 旧版移动外壳入口：保留历史断点拆分的加载顺序。 */
+
 @import "./mobile-shell-legacy-main.css";
 @import "./mobile-shell-legacy-small.css";

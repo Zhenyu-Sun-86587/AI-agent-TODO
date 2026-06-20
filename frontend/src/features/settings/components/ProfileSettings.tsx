@@ -17,6 +17,7 @@ export function ProfileSettings({
   profileDraft: ProfileState;
 }) {
   return (
+    // 资料表单复用通用 Surface，和设置页其它表单保持一致的结构与反馈样式。
     <Surface as="form" className="settings-form" onSubmit={onSubmit}>
       <label className="settings-field">
         <span>用户名</span>

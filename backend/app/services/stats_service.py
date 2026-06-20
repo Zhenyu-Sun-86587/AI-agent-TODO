@@ -24,6 +24,7 @@ class StatsService:
         to_time: Optional[datetime] = None,
     ) -> dict:
         query = self._task_query(user, from_time, to_time)
+        # overview 的基础口径是创建时间范围内的任务，逾期/今日截止在这个集合上继续统计。
         total_tasks = query.count()
         done_tasks = query.filter(Task.status == TaskStatus.done.value).count()
         todo_tasks = query.filter(Task.status == TaskStatus.todo.value).count()
@@ -35,6 +36,7 @@ class StatsService:
         ).count()
 
         today_start, tomorrow_start = self._today_bounds()
+        # 今日截止按应用时区的自然日计算，不按 UTC 日期切分。
         today_due_tasks = query.filter(
             Task.due_time.isnot(None),
             Task.due_time >= today_start,
@@ -59,6 +61,7 @@ class StatsService:
     ) -> list[dict]:
         buckets: dict[str, dict] = defaultdict(lambda: {"total": 0, "done": 0, "todo": 0})
         for task in self._task_query(user, from_time, to_time).all():
+            # 空字符串和纯空白分类统一归入“未分类”，保持前端统计展示稳定。
             category = task.category.strip() if task.category and task.category.strip() else "未分类"
             bucket = buckets[category]
             bucket["total"] += 1
@@ -81,6 +84,7 @@ class StatsService:
         return sorted(result, key=lambda item: (-item["total"], item["category"]))
 
     def by_priority(self, user: User) -> list[dict]:
+        # 固定输出 high/medium/low 三个桶，即使某个优先级没有任务也返回 0。
         values = {
             priority.value: {"priority": priority.value, "total": 0, "done": 0, "todo": 0}
             for priority in (Priority.high, Priority.medium, Priority.low)
@@ -99,12 +103,14 @@ class StatsService:
     def trend(self, user: User, days: int) -> list[dict]:
         today = utc_now().astimezone(APP_TIMEZONE).date()
         start_date = today - timedelta(days=days - 1)
+        # 先补齐每一天的桶，保证无任务日期也会返回 0，前端折线图不需要自行补点。
         buckets = {
             start_date + timedelta(days=offset): {"created": 0, "done": 0}
             for offset in range(days)
         }
 
         range_start = datetime.combine(start_date, time.min, tzinfo=APP_TIMEZONE)
+        # 趋势统计同时看 created_at 和 updated_at：创建数按创建日，完成数按完成状态的更新时间。
         tasks = (
             self.db.query(Task)
             .filter(
@@ -134,6 +140,7 @@ class StatsService:
         to_time: Optional[datetime] = None,
     ) -> Query:
         query = self.db.query(Task).filter(Task.user_id == user.id)
+        # from/to 只过滤 created_at，表示“统计这段时间新建的任务”。
         if from_time:
             query = query.filter(Task.created_at >= from_time)
         if to_time:
@@ -148,8 +155,10 @@ class StatsService:
 
     def _local_date(self, value: datetime):
         if value.tzinfo is None:
+            # 数据库或测试里出现 naive datetime 时按 UTC 解释，再换算到应用时区。
             value = value.replace(tzinfo=timezone.utc)
         return value.astimezone(APP_TIMEZONE).date()
 
     def _rate(self, done: int, total: int) -> float:
+        # 完成率保留 4 位小数，空集合约定为 0，避免除零和 None 混入响应。
         return round(done / total, 4) if total else 0

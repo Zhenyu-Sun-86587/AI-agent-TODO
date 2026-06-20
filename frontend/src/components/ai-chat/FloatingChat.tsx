@@ -63,6 +63,7 @@ export default function FloatingChat({
       return;
     }
 
+    // 关闭时先进入 closing 状态等待 CSS 动画结束，再真正卸载面板。
     clearCloseTimer();
     setClosing(true);
     closeTimerRef.current = window.setTimeout(() => {
@@ -92,6 +93,7 @@ export default function FloatingChat({
     if (!isBlocked) {
       return;
     }
+    // 设置弹窗打开时收起聊天，避免两个浮层同时抢焦点和键盘事件。
     closeChatPanel();
   }, [closeChatPanel, isBlocked]);
 
@@ -108,6 +110,7 @@ export default function FloatingChat({
       if (floatingRef.current?.contains(target)) {
         return;
       }
+      // 点击浮窗外部只关闭面板，不清空当前会话或输入草稿。
       closeChatPanel();
     };
 
@@ -148,6 +151,7 @@ export default function FloatingChat({
   const openConversation = () => {
     createConversation({
       onOpen: () => {
+        // 新建/复用空会话后统一打开面板，保证启动按钮和菜单入口行为一致。
         setConversationMenuOpen(false);
         openChatPanel();
       },

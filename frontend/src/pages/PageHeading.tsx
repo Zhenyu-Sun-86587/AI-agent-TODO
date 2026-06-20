@@ -10,6 +10,7 @@ export default function PageHeading({
   title: string;
 }) {
   return (
+    // PageHeading 统一页面标题和右侧操作区的对齐方式，减少各页重复样板。
     <div className="page-heading">
       <div>
         <h1>{title}</h1>

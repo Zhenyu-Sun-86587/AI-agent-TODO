@@ -21,4 +21,5 @@ class UserSetting(Base):
         nullable=False,
     )
 
+    # 每个用户最多一份设置，保存加密后的 API key 和当前默认模型。
     user = relationship("User", back_populates="setting")

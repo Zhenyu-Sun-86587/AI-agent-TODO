@@ -66,6 +66,7 @@ export function AIPage({
 
 function formatAiLogOutput(output: unknown) {
   if (typeof output === "string") {
+    // 后端日志可能把 JSON 存成字符串，也可能直接存对象；前端统一归一后再裁剪展示。
     try { return formatAiLogOutput(JSON.parse(output)); } catch { return output.slice(0, 120); }
   }
   if (!output || typeof output !== "object") return "无结构化输出";
@@ -102,6 +103,7 @@ function AILogsPanel({ isApiMode, onApiError, taskVersion, token }: { isApiMode:
       .then((data) => { if (!isCancelled) { setLogs(data.items); setTotal(data.pagination.total); } })
       .catch((requestError) => { if (!isCancelled) { setError(onApiError(requestError)); } })
       .finally(() => { if (!isCancelled) setLoading(false); });
+    // 切换筛选、翻页或离开页面时忽略旧请求结果，避免日志列表闪回。
     return () => { isCancelled = true; };
   }, [isApiMode, onApiError, page, status, taskVersion, token]);
 

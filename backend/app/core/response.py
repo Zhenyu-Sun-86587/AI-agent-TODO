@@ -7,6 +7,7 @@ def success_response(
     message: str = "ok",
     request_id: Optional[str] = None,
 ) -> dict:
+    # 所有成功响应都通过这一层包裹，保证前端能稳定读取 code/message/data。
     payload = {
         "code": 0,
         "message": message,
@@ -23,6 +24,7 @@ def page_response(
     page_size: int,
     total: int,
 ) -> dict:
+    # 分页元信息内嵌在 data 中，外层仍由 success_response 负责统一响应协议。
     return {
         "items": items,
         "pagination": {

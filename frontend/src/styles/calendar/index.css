@@ -1,3 +1,5 @@
+/* 日历模块入口：按主题、控件、视图和响应式规则加载。 */
+
 @import "./theme.css";
 @import "./controls.css";
 @import "./month-basic.css";

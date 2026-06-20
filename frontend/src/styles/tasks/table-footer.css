@@ -1,3 +1,5 @@
+/* 任务表格分页：维护分页信息和翻页按钮布局。 */
+
 .table-footer {
   display: flex;
   align-items: center;

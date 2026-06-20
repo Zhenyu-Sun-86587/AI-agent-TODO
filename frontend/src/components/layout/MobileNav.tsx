@@ -19,6 +19,7 @@ export default function MobileNav({
 }) {
   return (
     <>
+      {/* 移动端优先保留高频入口，剩余页面交给顶部 more 面板承接。 */}
       <nav className="minimal-mobile-nav mobile-bottom-nav" aria-label="移动端导航">
         {mobilePrimaryItems.map((item) => (
           <NavItem

@@ -20,7 +20,9 @@ class User(Base):
         nullable=False,
     )
 
+    # 删除用户时级联清理其任务、设置和 AI 调用记录，避免残留跨用户数据。
     tasks = relationship("Task", back_populates="user", cascade="all, delete-orphan")
+    # 用户设置是一对一关系，uselist=False 与 user_settings.user_id 的唯一索引保持一致。
     setting = relationship(
         "UserSetting",
         back_populates="user",

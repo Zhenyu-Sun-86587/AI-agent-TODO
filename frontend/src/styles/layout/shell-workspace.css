@@ -1,3 +1,5 @@
+/* 工作区外壳：管理内容承载区、页面内边距和滚动。 */
+
 .minimal-workspace {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0)) 0 0 / 100% 260px no-repeat,

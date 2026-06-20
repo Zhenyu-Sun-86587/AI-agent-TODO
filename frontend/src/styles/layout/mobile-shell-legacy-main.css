@@ -1,3 +1,6 @@
+/* 旧版移动外壳主断点：兼容移动端导航和内容区布局。 */
+
+/* 响应式断点：移动外壳启用时切换导航和内容留白。 */
 @media (max-width: 900px) {
   .minimal-shell {
       display: block;

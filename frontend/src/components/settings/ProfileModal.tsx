@@ -22,6 +22,7 @@ export default function ProfileModal({ onClose, onSaveProfile, overlayExitMs = 1
   const [isSavingProfile, setSavingProfile] = useState(false);
 
   useEffect(() => {
+    // 外层资料刷新后同步重置草稿，避免弹窗继续编辑旧值。
     setProfileDraft(profile);
   }, [profile]);
 
@@ -30,6 +31,7 @@ export default function ProfileModal({ onClose, onSaveProfile, overlayExitMs = 1
     setSavingProfile(true);
     setFeedback("");
     try {
+      // 当前接口返回字符串时可能既表示成功提示也表示校验失败信息，这里统一做前端语义归类。
       const message = await onSaveProfile(profileDraft);
       const isFailure = (message || "").includes("不能") || (message || "").includes("无效") || (message || "").includes("不能为空");
       setFeedback(message || "用户资料已保存。");

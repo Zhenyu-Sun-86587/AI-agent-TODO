@@ -17,6 +17,7 @@ function readStoredSession() {
     return null;
   }
   if (storedSession.isApiSession !== true || typeof storedSession.token !== "string" || !storedSession.token) {
+    // 只恢复后端会话；旧的本地演示态不再复用，避免刷新后误以为仍有真实 token。
     window.localStorage.removeItem(SESSION_STORAGE_KEY);
     return null;
   }
@@ -53,11 +54,13 @@ export function useAuth({
 
   useEffect(() => {
     if (session) {
+      // session 是刷新恢复的唯一来源，登录/注册成功后立即写入本地存储。
       writeStoredJson(SESSION_STORAGE_KEY, session);
     }
   }, [session]);
 
   const clearSession = useCallback(() => {
+    // 清理会话时同步回到登录路由，并让任务侧抽屉等依赖登录态的选择态归零。
     setSession(null);
     window.localStorage.removeItem(SESSION_STORAGE_KEY);
     window.history.pushState(null, "", "/login");
@@ -67,6 +70,7 @@ export function useAuth({
 
   const handleApiError = useCallback((error: unknown) => {
     if (error instanceof ApiError && error.status === 401) {
+      // 401 表示 token 已不可用，必须立即丢弃本地会话，防止后续请求循环失败。
       showToast("登录已过期", "请重新登录后继续操作。", "error");
       clearSession();
       return "登录已过期，请重新登录。";
@@ -80,6 +84,7 @@ export function useAuth({
   }, [clearSession, setApiMessage, setApiState, showToast]);
 
   const authenticate = useCallback(async (nextSession: DemoSession) => {
+    // 允许上层在切到工作区前先同步远端数据或播放过渡动画。
     await onBeforeAuthenticated?.(nextSession);
     setSession(nextSession);
     onAuthenticated(nextSession);
@@ -142,6 +147,7 @@ export function useAuth({
   const logout = useCallback(async () => {
     if (activeToken) {
       try {
+        // 后端登出失败不阻塞本地退出，用户侧会话仍应被清除。
         await logoutApi(activeToken);
       } catch (error) {
         setApiMessage(asErrorMessage(error));

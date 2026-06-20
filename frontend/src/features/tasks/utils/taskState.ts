@@ -10,6 +10,7 @@ export function getNextToggleStatus(status: TaskStatus): TaskStatus {
 }
 
 export function resolveCompletedAt(status: TaskStatus, completedAtWhenDone = dateFromToday(0)) {
+  // completedAt 只在已完成状态下参与统计，状态回退时必须清空以免完成数被重复计算。
   return status === "已完成" ? completedAtWhenDone : null;
 }
 

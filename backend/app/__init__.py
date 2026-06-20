@@ -1,1 +1,1 @@
-"""Backend application package."""
+"""后端应用包入口，仅用于声明 app 包。"""

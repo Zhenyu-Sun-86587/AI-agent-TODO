@@ -20,6 +20,7 @@ export function RecommendedTasks({
             <button
               className="minimal-recommend-item"
               key={task.id}
+              // 动画延迟按顺序展开，让推荐列表在首页显得更有层次但不影响排序语义。
               style={{ "--stagger-index": index } as CSSProperties}
               type="button"
               onClick={() => onOpenTask(task)}

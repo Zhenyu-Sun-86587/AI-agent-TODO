@@ -34,6 +34,7 @@ export function useCalendarTasks({
       return;
     }
 
+    // 远端日历每次只拉取当前视图窗口；逾期视图单独限制为今天之前的未完成任务。
     let isCancelled = false;
     const taskParams = {
       page: 1,
@@ -72,6 +73,7 @@ export function useCalendarTasks({
         }
       });
     return () => {
+      // 日期或视图快速切换时忽略过期响应，避免旧范围任务覆盖新范围。
       isCancelled = true;
     };
   }, [dateRange.end, dateRange.start, isApiMode, onApiError, taskVersion, token, view]);

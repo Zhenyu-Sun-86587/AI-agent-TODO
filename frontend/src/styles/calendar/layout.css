@@ -1,4 +1,4 @@
-/* Calendar Grid Aesthetics */
+/* 日历布局骨架：管理主视图、待排任务侧栏和工具栏。 */
 
 .calendar-page-shell {
   --calendar-view-height: clamp(560px, calc(100vh - 222px), 700px);

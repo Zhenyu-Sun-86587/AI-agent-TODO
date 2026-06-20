@@ -14,6 +14,7 @@ export function KanbanTaskCard({
 }) {
   return (
     <button
+      // 看板卡片通过优先级和完成态叠加 class，样式层据此渲染强调色与透明度。
       className={`kanban-card ${taskPriorityClassName(task.priority)} ${task.status === "已完成" ? "is-complete" : ""}`}
       key={task.id}
       style={{ "--stagger-index": index } as CSSProperties}

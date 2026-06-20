@@ -1,3 +1,6 @@
+/* 日历动画：统一视图进入、任务滑入和今日高亮脉冲。 */
+
+/* 动画关键帧：集中描述该模块的进入、漂浮或反馈节奏。 */
 @keyframes calendarViewEnter {
   from {
     opacity: 0;

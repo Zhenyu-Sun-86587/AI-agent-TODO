@@ -1,3 +1,5 @@
+/* 任务列表入口：组合表格、标题、行菜单和分页样式。 */
+
 @import "./table-base.css";
 @import "./table-title.css";
 @import "./row-menu.css";

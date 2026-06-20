@@ -1,3 +1,5 @@
+/* 任务表格标题列：控制标题截断、到期信息和摘要文本。 */
+
 .table-title {
   display: grid;
   gap: 8px;

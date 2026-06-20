@@ -1,3 +1,6 @@
+/* 降低动态偏好：为系统减弱动效设置全局兜底。 */
+
+/* 可访问性断点：尊重系统减弱动态偏好。 */
 @media (prefers-reduced-motion: reduce) {
   *,
     *::before,

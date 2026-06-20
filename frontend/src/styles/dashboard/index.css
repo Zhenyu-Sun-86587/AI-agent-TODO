@@ -1,3 +1,5 @@
+/* 仪表盘模块入口：聚合头图、面板、标签和主题样式。 */
+
 @import "./hero.css";
 @import "./panels.css";
 @import "./theme-dark.css";

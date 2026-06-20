@@ -1,3 +1,5 @@
+/* 认证模块入口：组合封面、卡片、表单、动画和断点。 */
+
 @import "./shell.css";
 @import "./cover.css";
 @import "./card.css";

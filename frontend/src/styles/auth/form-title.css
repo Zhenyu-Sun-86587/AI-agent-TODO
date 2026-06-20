@@ -1,3 +1,5 @@
+/* 认证标题区：统一表单标题和说明文字层级。 */
+
 .auth-title {
   display: grid;
   gap: 8px;

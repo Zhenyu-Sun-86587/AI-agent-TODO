@@ -25,6 +25,7 @@ export default function Dashboard({
   recommendedTasks,
   todayTasks,
 }: DashboardProps) {
+  // 首页只展示前 5 条今日任务，完整任务池交给任务页，避免仪表盘滚动过长。
   const visibleTasks = todayTasks.slice(0, 5);
   const completionRate = todayTasks.length ? Math.round((completedToday / todayTasks.length) * 100) : 0;
   const openTodayTasks = todayTasks.length - completedToday;

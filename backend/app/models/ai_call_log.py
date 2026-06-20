@@ -17,4 +17,5 @@ class AiCallLog(Base):
     error_message = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False, index=True)
 
+    # AI 调用日志按用户隔离，用于排障、审计和“我的调用记录”分页查询。
     user = relationship("User", back_populates="ai_call_logs")

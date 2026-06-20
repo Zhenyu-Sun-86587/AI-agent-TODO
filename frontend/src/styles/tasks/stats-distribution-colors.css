@@ -1,3 +1,5 @@
+/* 分布统计颜色：映射优先级和分类条形的渐变语义。 */
+
 .distribution-bar.bar-high {
   background: linear-gradient(90deg, var(--red), #f43f5e);
 }

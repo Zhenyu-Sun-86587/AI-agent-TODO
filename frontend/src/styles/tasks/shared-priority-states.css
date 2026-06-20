@@ -1,3 +1,5 @@
+/* 任务优先级共享态：统一高优先级描边和完成透明度。 */
+
 .minimal-task-row.is-high-priority,
 .task-table-row.is-high-priority,
 .mobile-task-card.is-high-priority,

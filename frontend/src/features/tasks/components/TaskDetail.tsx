@@ -55,6 +55,7 @@ export function TaskDetailDrawer({ detailState, isApiMode, onClose, onDelete, on
         </div>
         <section className="subtasks">
           <h3>子任务</h3>
+          {/* 远程任务模型暂未返回子任务，API 模式只展示真实字段，避免详情抽屉混入本地演示数据。 */}
           {isApiMode ? (
             <p>后端任务模型暂未提供子任务字段，前端不再展示假数据。</p>
           ) : (

@@ -41,6 +41,7 @@ export function FilterBar({
   return (
     <section className="filter-bar">
       <SearchField value={query} onChange={onQueryChange} placeholder="搜索任务..." />
+      {/* 筛选项的合法性校验放在 onChange 边界，避免 URL 或本地存储恢复出未知值时污染状态。 */}
       <SelectField value={status} onChange={(value) => { if (isTaskStatusFilter(value)) onStatusChange(value); }}>
         <option value={TASK_FILTER_ALL}>全部状态</option>
         {statusOptions.map((item) => <option key={item} value={item}>{item}</option>)}

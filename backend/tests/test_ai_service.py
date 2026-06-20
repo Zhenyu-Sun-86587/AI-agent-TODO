@@ -14,6 +14,7 @@ from app.services.task_service import TaskService
 
 
 def make_db():
+    # 服务层测试直接使用内存库，绕开 HTTP 层以便精确断言模型分支和日志。
     engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False}, future=True)
     Base.metadata.create_all(bind=engine)
     return sessionmaker(autocommit=False, autoflush=False, bind=engine, future=True)()
@@ -28,6 +29,7 @@ def make_user(db):
 
 
 def test_parse_task_uses_mock_fallback_and_logs(monkeypatch):
+    """Mock 解析应产出稳定任务字段，并写入 mocked 状态日志。"""
     monkeypatch.setattr(settings, "ai_mock_mode", True)
     db = make_db()
     user = make_user(db)
@@ -51,6 +53,7 @@ def test_parse_task_uses_mock_fallback_and_logs(monkeypatch):
 
 
 def test_suggest_task_fields_in_mock_mode(monkeypatch):
+    """推荐接口在 Mock 模式下使用本地关键词规则，不依赖外部模型。"""
     monkeypatch.setattr(settings, "ai_mock_mode", True)
     db = make_db()
     user = make_user(db)
@@ -67,6 +70,7 @@ def test_suggest_task_fields_in_mock_mode(monkeypatch):
 
 
 def test_create_task_by_ai_persists_ai_task_with_overrides(monkeypatch):
+    """AI 创建任务时，用户 overrides 应覆盖模型解析字段并保留 AI 创建标记。"""
     monkeypatch.setattr(settings, "ai_mock_mode", True)
     db = make_db()
     user = make_user(db)
@@ -88,6 +92,7 @@ def test_create_task_by_ai_persists_ai_task_with_overrides(monkeypatch):
 
 
 def test_setting_service_encrypts_and_masks_openai_key():
+    """保存 Key 要落加密值，读取配置只返回脱敏展示值。"""
     db = make_db()
     user = make_user(db)
     service = SettingService(db)
@@ -107,6 +112,7 @@ def test_setting_service_encrypts_and_masks_openai_key():
 
 
 def test_ai_service_uses_deepseek_base_url_for_deepseek_models():
+    """DeepSeek 模型名前缀应切到 DeepSeek 兼容接口地址。"""
     db = make_db()
     service = AiService(db)
 
@@ -115,6 +121,7 @@ def test_ai_service_uses_deepseek_base_url_for_deepseek_models():
 
 
 def test_setting_service_uses_env_api_key_fallback(monkeypatch):
+    """用户未保存 Key 时，设置服务应回退到环境级 Key。"""
     monkeypatch.setattr(settings, "openai_api_key", "sk-env-secret-5678")
     db = make_db()
     user = make_user(db)
@@ -128,6 +135,7 @@ def test_setting_service_uses_env_api_key_fallback(monkeypatch):
 
 
 def test_chat_uses_requested_model_and_returns_content(monkeypatch):
+    """普通聊天用 monkeypatch 替换真实模型调用，只验证参数传递和响应封装。"""
     monkeypatch.setattr(settings, "openai_api_key", "sk-env-secret-5678")
     db = make_db()
     user = make_user(db)
@@ -148,6 +156,7 @@ def test_chat_uses_requested_model_and_returns_content(monkeypatch):
 
 
 def test_agent_chat_creates_task_from_ai_decision(monkeypatch):
+    """Agent 测试 mock 模型 JSON 决策，后端负责真正创建任务。"""
     monkeypatch.setattr(settings, "openai_api_key", "sk-env-secret-5678")
     db = make_db()
     user = make_user(db)
@@ -192,6 +201,7 @@ def test_agent_chat_creates_task_from_ai_decision(monkeypatch):
 
 
 def test_agent_chat_follow_up_mode_blocks_uncertain_task_json(monkeypatch):
+    """追问模式下模型标记关键字段不确定时，不应写入任何任务。"""
     monkeypatch.setattr(settings, "openai_api_key", "sk-env-secret-5678")
     db = make_db()
     user = make_user(db)
@@ -234,6 +244,7 @@ def test_agent_chat_follow_up_mode_blocks_uncertain_task_json(monkeypatch):
 
 
 def test_agent_chat_updates_status_only_with_ai_selected_task(monkeypatch):
+    """状态更新必须由模型给出可校验的目标任务 ID，再由后端执行。"""
     monkeypatch.setattr(settings, "openai_api_key", "sk-env-secret-5678")
     db = make_db()
     user = make_user(db)

@@ -59,6 +59,7 @@ export function AllTasksPage({
   useEffect(() => setPage(1), [globalSearch]);
 
   useEffect(() => {
+    // 后端任务状态没有“进行中”，切到 API 模式时主动清理这个本地专属筛选。
     if (isApiMode && status === "进行中") {
       setStatus(TASK_FILTER_ALL);
       setPage(1);
@@ -73,6 +74,7 @@ export function AllTasksPage({
     const remoteStatus = isApiMode && status === "进行中" ? TASK_FILTER_ALL : status;
     setRemoteLoading(true);
     setRemoteError("");
+    // 远程模式使用后端分页和筛选，taskVersion 变化时重新请求以同步 CRUD 后的新结果。
     void fetchTasksPage({
       category: category === TASK_FILTER_ALL ? undefined : category,
       keyword: keyword || undefined,
@@ -99,11 +101,13 @@ export function AllTasksPage({
       });
 
     return () => {
+      // 快速切换筛选/页码时丢弃旧请求结果，避免后返回的数据覆盖当前视图。
       isCancelled = true;
     };
   }, [category, globalSearch, isApiMode, page, priority, query, sort, status, taskVersion, token, onApiError]);
 
   const filteredTasks = useMemo(() => {
+    // 本地模式在前端完成完整筛选排序，再切片分页；远程模式只保留作为离线展示的备用派生。
     return filterAndSortTasks(tasks, { category, globalSearch, priority, query, status }, sort);
   }, [category, globalSearch, priority, query, sort, status, tasks]);
 

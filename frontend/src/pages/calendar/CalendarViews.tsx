@@ -27,6 +27,7 @@ export function TimelineView({
   tasksByHour,
   timelineRef,
 }: TimelineViewProps) {
+  // 时间轴固定渲染 24 个小时槽，空槽也保留高度以维持滚动定位稳定。
   return (
     <section className="calendar-view-slot timeline-layout calendar-view-enter">
       <div className="today-timeline" ref={timelineRef}>
@@ -150,6 +151,7 @@ export function MonthTasksView({
   calendarWeeks: CalendarDay[][];
   onOpenTask: (task: Task) => void;
 }) {
+  // 月视图先画日期格，再覆盖一层任务条，避免任务高度把日期网格撑变形。
   return (
     <Surface as="div" className="calendar-view-slot calendar-view-enter" padding="none">
       <div className="calendar-header-row" aria-hidden="true">

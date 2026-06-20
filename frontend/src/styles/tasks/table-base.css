@@ -1,3 +1,5 @@
+/* 任务表格基础：定义桌面表格、移动卡容器和列宽。 */
+
 .task-table-wrap {
   overflow-x: auto;
   border: 1px solid var(--line);

@@ -1,3 +1,5 @@
+/* 认证卡片层：负责弹出舞台、卡片容器和登录注册标签。 */
+
 .auth-panel-stage {
   position: absolute;
   inset: 0;

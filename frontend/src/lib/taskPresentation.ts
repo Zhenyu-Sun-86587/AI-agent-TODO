@@ -23,6 +23,7 @@ const statusByApi: Record<ApiTaskStatusCode, TaskStatusLabel> = {
   done: "已完成",
 };
 
+// 后端目前只有 todo/done，前端“进行中”在提交时归并为 todo。
 const apiByStatus: Record<Extract<TaskStatusLabel, "待办" | "已完成">, ApiTaskStatusCode> = {
   待办: "todo",
   已完成: "done",
@@ -56,6 +57,7 @@ export function statusToApiCode(status: TaskStatusLabel): ApiTaskStatusCode {
 }
 
 export function taskPriorityClassName(priority: TaskPriorityLabel | ApiPriorityCode): TaskPriorityClass {
+  // className 使用 API code 作为稳定后缀，便于中文展示文案调整时不影响 CSS。
   const code = priority in priorityByApi ? priority : priorityToApiCode(priority as TaskPriorityLabel);
   return `priority-${code}` as TaskPriorityClass;
 }

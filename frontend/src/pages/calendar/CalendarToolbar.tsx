@@ -21,6 +21,7 @@ export function CalendarToolbar({
   return (
     <div className="calendar-toolbar">
       <PageHeading title="日历视图" />
+      {/* 不同视图共享同一组导航按钮，但移动粒度会随 week / month / 24h 切换。 */}
       <Toolbar className="calendar-month-actions" align="end" aria-label={view === "week" ? "周切换" : view === "24h" ? "日期切换" : "月份切换"}>
         <ActionButton style={motionStyle(0)} onClick={onJumpToToday}>今天</ActionButton>
         {view === "week" ? (

@@ -18,6 +18,7 @@ function createSmoothTicks(maxValue: number, segments = 5) {
   const roughStep = safeMax / segments;
   const magnitude = 10 ** Math.floor(Math.log10(Math.max(roughStep, 1)));
   const normalized = roughStep / magnitude;
+  // 使用 1/2/5 阶梯生成刻度，让小数据量和大数据量的坐标轴都保持可读。
   const step = normalized <= 1 ? magnitude : normalized <= 2 ? 2 * magnitude : normalized <= 5 ? 5 * magnitude : 10 * magnitude;
   const top = Math.max(step, Math.ceil(safeMax / step) * step);
   const ticks: number[] = [];

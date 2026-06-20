@@ -19,6 +19,7 @@ class AuthService:
         self.db = db
 
     def register(self, payload: UserCreate) -> dict:
+        # 用户名和邮箱都作为登录凭据，注册时必须一起做唯一性检查。
         existing_user = (
             self.db.query(User)
             .filter(or_(User.username == payload.username, User.email == payload.email))
@@ -38,6 +39,7 @@ class AuthService:
         )
         self.db.add(user)
         self.db.flush()
+        # 注册成功立即创建设置行，确保后续 AI 模型名读取有稳定默认值。
         self.db.add(UserSetting(user_id=user.id, model_name=settings.openai_default_model))
         self.db.commit()
         self.db.refresh(user)
@@ -68,6 +70,7 @@ class AuthService:
             self.db.add(user)
             self.db.flush()
 
+        # Demo 账号每次登录都回到当前默认模型，并清掉个人 Key，避免上一次体验污染本次会话。
         if user.setting:
             user.setting.model_name = settings.openai_default_model
             user.setting.openai_api_key_encrypted = None

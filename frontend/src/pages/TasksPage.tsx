@@ -48,6 +48,7 @@ export default function TasksPage(props: TasksPageProps) {
             className={activeTab === tab.key ? "active" : ""}
             key={tab.key}
             type="button"
+            // 任务页通过本地 tab 切换不同聚合视图，不为这些子视图单独维护路由。
             onClick={() => setActiveTab(tab.key)}
           >
             {tab.label}

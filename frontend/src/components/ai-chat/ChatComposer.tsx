@@ -4,6 +4,7 @@ import type { ChatAttachment, ChatModelGroup, ChatSendOptions } from "../../feat
 import ModelSelector from "./ModelSelector";
 
 function createAttachmentId() {
+  // 附件仅在前端会话内使用，组合时间戳和随机串即可满足唯一性要求。
   return `attachment-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
@@ -54,6 +55,7 @@ export default function ChatComposer({
     if (textareaRef.current) {
       textareaRef.current.value = "";
     }
+    // 先清空本地输入，再异步发送，避免网络慢时用户误以为提交没有生效。
     onInputChange("");
     onAttachmentsChange([]);
     window.requestAnimationFrame(() => {

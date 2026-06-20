@@ -29,6 +29,7 @@ def create_task(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> dict:
+    # 受保护任务接口统一从 token 推导用户，禁止客户端指定 user_id。
     task = TaskService(db).create_task(current_user, payload)
     return success_response(TaskRead.model_validate(task), request_id=request.state.request_id)
 
@@ -49,6 +50,7 @@ def list_tasks(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> dict:
+    # 查询参数只表达筛选和排序意图，用户隔离与 SQL 细节由 TaskService 统一处理。
     items, total = TaskService(db).list_tasks(
         current_user,
         page=page,
@@ -106,6 +108,7 @@ def delete_task(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> Response:
+    # 204 响应不携带统一 JSON 体，避免违反 HTTP 无内容响应语义。
     TaskService(db).delete_task(current_user, task_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 

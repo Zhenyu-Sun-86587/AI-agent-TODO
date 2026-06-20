@@ -23,6 +23,7 @@ const toastIcons = {
 
 export default function ToastViewport({ items, onDismiss }: ToastViewportProps) {
   useEffect(() => {
+    // 每条提示独立计时，允许用户在新提示出现时仍保留较早的反馈一小段时间。
     const timers = items.map((item) => window.setTimeout(() => onDismiss(item.id), 3200));
     return () => timers.forEach((timer) => window.clearTimeout(timer));
   }, [items, onDismiss]);

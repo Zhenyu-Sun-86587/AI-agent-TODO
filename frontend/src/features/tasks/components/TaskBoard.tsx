@@ -19,6 +19,7 @@ export function TaskBoard({ categories, isApiMode, onCreateTask, onOpenTask, tas
   const [query, setQuery] = useState("");
   const [priority, setPriority] = useState<TaskPriorityFilter>(TASK_FILTER_ALL);
   const [category, setCategory] = useState(TASK_FILTER_ALL);
+  // 看板不分页，只按当前搜索/优先级/分类先收窄，再分发到各状态列。
   const filteredTasks = useMemo(() => filterTasks(tasks, { category, priority, query }), [category, priority, query, tasks]);
 
   return (
@@ -30,6 +31,7 @@ export function TaskBoard({ categories, isApiMode, onCreateTask, onOpenTask, tas
         <ActionButton className="create-task-button" variant="primary" onClick={onCreateTask} icon={<Plus size={17} />}><span className="create-task-button-label">新建任务</span></ActionButton>
       </div>
       <div className="kanban-board">
+        {/* API 模式隐藏“进行中”列，保持看板列集合和后端状态枚举一致。 */}
         {(isApiMode ? API_TASK_STATUS_OPTIONS : TASK_STATUS_OPTIONS).map((status, index) => (
           <TaskColumn key={status} columnIndex={index} onOpenTask={onOpenTask} status={status} tasks={filteredTasks.filter((task) => task.status === status)} />
         ))}

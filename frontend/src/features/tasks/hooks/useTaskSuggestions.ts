@@ -17,6 +17,7 @@ export function useTaskSuggestions({
 }) {
   const suggestTaskFields = useCallback(async (title: string, description: string): Promise<TaskFieldSuggestion> => {
     if (!activeToken) {
+      // /ai/suggest 依赖后端保存的 BYOK 配置，本地演示只允许前端规则生成任务草稿。
       const message = "请先登录或使用演示账号后再调用 /ai/suggest。";
       setApiState("local");
       setApiMessage(message);
@@ -37,6 +38,7 @@ export function useTaskSuggestions({
       };
     } catch (error) {
       if (isAiConfigError(error)) {
+        // AI 配置错误说明 API 仍在线，只是缺少可用模型或密钥，不应把整体状态降级为离线。
         const message = asErrorMessage(error);
         setApiState("online");
         setApiMessage(message);

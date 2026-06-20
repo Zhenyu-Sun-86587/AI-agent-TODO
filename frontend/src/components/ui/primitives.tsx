@@ -24,6 +24,7 @@ export function Surface({
   variant = "default",
   ...props
 }: SurfaceProps) {
+  // Surface 统一承载卡片/面板的边框、留白和交互态，减少各页面重复样式胶水代码。
   return createElement(
     as,
     {
@@ -172,6 +173,7 @@ export function SelectField({
   const style = width ? ({ "--ui-control-width": width } as CSSProperties) : undefined;
   return (
     <label className={cx("ui-control ui-select-field", className)} style={style}>
+      {/* 自定义箭头样式依赖外层包裹 label，避免原生 select 在不同平台表现不一致。 */}
       <select value={value} aria-label={ariaLabel} onChange={(event) => onChange(event.target.value)}>
         {children}
       </select>

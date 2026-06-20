@@ -1,3 +1,5 @@
+/* AI 建议表单：管理输入区、左侧字段组和文本域焦点态。 */
+
 .suggest-left-column {
   display: grid;
   gap: 16px;

@@ -1,3 +1,5 @@
+/* 任务勾选共享态：统一完成按钮和圆形勾选控件。 */
+
 .minimal-task-row > button,
 .task-check {
   border-color: var(--line-strong);

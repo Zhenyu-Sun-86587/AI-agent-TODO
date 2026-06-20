@@ -1,4 +1,4 @@
-/* Authentication shell styles. */
+/* 认证外壳：承载背景图层、夜色遮罩和面板打开态。 */
 
 .auth-shell {
   position: relative;
@@ -36,6 +36,7 @@
     transform 900ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+/* 动画关键帧：集中描述该模块的进入、漂浮或反馈节奏。 */
 @keyframes bgBreathing {
   0% { transform: scale(1) translate(0, 0); }
   100% { transform: scale(1.04) translate(-0.5%, -0.5%); }

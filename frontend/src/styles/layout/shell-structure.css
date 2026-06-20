@@ -1,3 +1,5 @@
+/* 外壳结构：定义侧栏、主区和内容容器的基础栅格。 */
+
 .minimal-shell {
   height: 100vh;
   overflow: hidden;

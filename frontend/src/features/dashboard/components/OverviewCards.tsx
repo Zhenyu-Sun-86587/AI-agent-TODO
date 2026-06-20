@@ -6,6 +6,7 @@ export function OverviewCards({
   recommendedCount: number;
 }) {
   return (
+    // 首页指标卡只展示高频概览，详细统计留给任务统计页展开。
     <div className="focus-metrics">
       <div className="metric-item">
         <span>今日完成率</span>

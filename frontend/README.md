@@ -2,7 +2,7 @@
 
 React + Vite + TypeScript frontend for TaskPilot.
 
-TaskPilot is the current product name shown in the browser title, login page, sidebar brand, demo content, and frontend-facing documentation. The repository and some backend configuration may still use the historical project name `AI-agent-TODO`.
+TaskPilot is the current product name shown in the browser title, login page, sidebar brand, demo content, and frontend-facing documentation. The repository, course-project materials, and some backend configuration still use the historical name `AI-agent-TODO`.
 
 Full frontend implementation notes are maintained in `../doc/前端实现文档.md`.
 
@@ -34,5 +34,5 @@ When `VITE_API_BASE_URL` already includes `/api`, frontend API modules should ca
 ## Naming Notes
 
 - Use `TaskPilot` for user-facing UI text and frontend docs.
-- Keep `AI-agent-TODO` only when referring to the repository, legacy storage keys, or backend application metadata.
-- Demo/local fallback profile email should use `demo@taskpilot.dev`.
+- Keep `AI-agent-TODO` only when referring to the repository, course-project context, legacy storage keys, or backend application metadata.
+- The real backend demo account currently uses `demo@aitodo.dev`; do not rename it in docs unless the backend implementation changes too.

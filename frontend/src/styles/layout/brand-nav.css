@@ -1,3 +1,5 @@
+/* 品牌导航区：控制应用标识、侧栏导航和激活态。 */
+
 .minimal-brand {
   min-height: 80px;
   display: flex;

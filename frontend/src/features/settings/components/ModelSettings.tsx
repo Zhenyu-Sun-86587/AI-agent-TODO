@@ -30,6 +30,7 @@ export function ModelSettings({
           <span>API Key</span>
           <input
             value={draft.openaiApiKey}
+            // 允许留空，表示继续使用后端已保存的脱敏密钥而不是强制覆盖。
             onChange={(event) => onDraftChange({ ...draft, openaiApiKey: event.target.value })}
             placeholder={settings.maskedKey || "sk-... 留空则使用后端已保存 Key"}
             type="password"

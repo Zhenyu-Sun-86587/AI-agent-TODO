@@ -15,6 +15,7 @@ depends_on = None
 
 
 def upgrade() -> None:
+    # 初始迁移创建用户、任务、用户设置和 AI 调用日志四组核心表。
     op.create_table(
         "users",
         sa.Column("id", sa.Integer(), nullable=False),
@@ -29,6 +30,7 @@ def upgrade() -> None:
     op.create_index("ix_users_username", "users", ["username"], unique=True)
     op.create_index("ix_users_email", "users", ["email"], unique=True)
 
+    # tasks 以 user_id 作为隔离边界，并为列表页常用筛选/排序字段建立索引。
     op.create_table(
         "tasks",
         sa.Column("id", sa.Integer(), nullable=False),
@@ -58,6 +60,7 @@ def upgrade() -> None:
     op.create_index("idx_tasks_user_due_time", "tasks", ["user_id", "due_time"], unique=False)
     op.create_index("idx_tasks_user_created_at", "tasks", ["user_id", "created_at"], unique=False)
 
+    # user_settings 通过 user_id 唯一索引保证一人一份设置，密钥字段只存加密值。
     op.create_table(
         "user_settings",
         sa.Column("id", sa.Integer(), nullable=False),
@@ -72,6 +75,7 @@ def upgrade() -> None:
     op.create_index("ix_user_settings_id", "user_settings", ["id"], unique=False)
     op.create_index("ix_user_settings_user_id", "user_settings", ["user_id"], unique=True)
 
+    # ai_call_logs 保存请求摘要、结构化输出和状态，便于按用户审计与排障。
     op.create_table(
         "ai_call_logs",
         sa.Column("id", sa.Integer(), nullable=False),
@@ -92,6 +96,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    # 按外键依赖的反向顺序删除表，先删子表再删 users。
     op.drop_index("ix_ai_call_logs_created_at", table_name="ai_call_logs")
     op.drop_index("ix_ai_call_logs_status", table_name="ai_call_logs")
     op.drop_index("ix_ai_call_logs_user_id", table_name="ai_call_logs")

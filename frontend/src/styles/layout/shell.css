@@ -1,3 +1,5 @@
+/* 外壳模块入口：按基础、结构、工作区和操作区加载。 */
+
 @import "./shell-workspace.css";
 @import "./shell-create-task-button.css";
 @import "./shell-actions-status.css";

@@ -12,6 +12,7 @@ class Priority(str, Enum):
 
 
 class TaskStatus(str, Enum):
+    # 当前业务只区分待办和完成；新增状态需同步服务层过滤、统计和迁移约束。
     todo = "todo"
     done = "done"
 
@@ -31,6 +32,7 @@ class TaskCreate(BaseModel):
 
 
 class TaskUpdate(BaseModel):
+    # PATCH/PUT 更新语义：未传字段不改；传 null 的字段由服务层决定是否清空。
     title: Optional[str] = Field(default=None, min_length=1, max_length=100)
     description: Optional[str] = Field(default=None, max_length=2000)
     priority: Optional[Priority] = None
@@ -55,6 +57,7 @@ class TaskRead(BaseModel):
     created_at: datetime
     updated_at: datetime
 
+    # from_attributes 兼容 ORM 实例，保持 service 返回模型对象时路由可直接序列化。
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -63,6 +66,7 @@ class TaskStatusRead(BaseModel):
     status: TaskStatus
     updated_at: datetime
 
+    # 状态更新接口只暴露最小响应面，减少前端误依赖完整任务字段。
     model_config = ConfigDict(from_attributes=True)
 
 

@@ -60,6 +60,7 @@ export function buildDateKeys(start: Date, count: number) {
 
 export function getCalendarGridStart(date: Date) {
   const value = getMonthStart(date);
+  // 月视图从所在周的周日开始补齐网格，保证每行固定 7 列。
   value.setDate(value.getDate() - value.getDay());
   return value;
 }
@@ -70,6 +71,7 @@ export function buildCalendarDays(baseDate: Date): CalendarDay[] {
   const gridStart = getCalendarGridStart(baseDate);
   const leadingDays = monthStart.getDay();
   const trailingDays = 6 - monthEnd.getDay();
+  // totalDays 向上补齐整周，跨月日期只标记 outsideMonth，不从范围里剔除。
   const totalDays = Math.ceil((leadingDays + monthEnd.getDate() + trailingDays) / 7) * 7;
 
   return buildDateKeys(gridStart, totalDays).map((date) => ({
@@ -97,6 +99,7 @@ export function getDateRangeForView(
   monthDays: Array<{ date: string }>,
   weekDays: Array<{ date: string }>,
 ): CalendarDateRange {
+  // API 查询边界与屏幕可见边界保持一致，月视图包含首尾补齐的跨月日期。
   if (view === "24h") {
     const selectedDate = getSelectedDate(baseDate);
     return { start: selectedDate, end: selectedDate };
@@ -131,6 +134,7 @@ export function buildTaskBarsForWeek(weekDays: CalendarDay[], tasks: Task[]) {
   const dayIndexByDate = new Map(weekDays.map((day, index) => [day.date, index]));
   const usedRowsByDate = new Map<string, Set<number>>();
 
+  // 月视图任务条按日期占列、按当日已有行数堆叠，超过可见行数时压到最后一行标记溢出。
   return tasks
     .filter((task) => dayIndexByDate.has(task.dueDate))
     .sort((left, right) => `${left.dueDate} ${left.dueTime || "99:99"}`.localeCompare(`${right.dueDate} ${right.dueTime || "99:99"}`))
@@ -173,6 +177,7 @@ export function buildWeekTasksByDate(weekDays: CalendarWeekDay[], tasks: Task[])
 export function buildTimelineTasksByHour(selectedDate: string, tasks: Task[]) {
   const tasksByHour = new Map<number, Task[]>();
 
+  // 24 小时时间轴只展示有 dueTime 的任务，无时间任务交给待排程侧栏处理。
   tasks
     .filter((task) => task.dueDate === selectedDate && Boolean(task.dueTime))
     .sort((left, right) => `${left.dueTime || "99:99"} ${left.title}`.localeCompare(`${right.dueTime || "99:99"} ${right.title}`))

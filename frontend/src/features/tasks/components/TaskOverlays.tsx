@@ -32,6 +32,7 @@ export function DeleteConfirmModal({ onCancel, onConfirm, task }: { onCancel: ()
         </div>
         <div className="preview-actions">
           <ActionButton onClick={() => closeWithAnimation()}>取消</ActionButton>
+          {/* 确认删除也走退场动画，避免数据更新时弹窗瞬间消失造成跳变。 */}
           <ActionButton variant="danger" onClick={() => closeWithAnimation(onConfirm)}>确认删除</ActionButton>
         </div>
       </div>

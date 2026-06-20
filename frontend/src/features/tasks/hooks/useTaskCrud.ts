@@ -63,6 +63,7 @@ export function useTaskCrud({
       return;
     }
 
+    // 登录后状态流转必须先落后端，再用服务端返回的更新时间修正本地列表和详情抽屉。
     if (activeToken) {
       try {
         setApiState("loading");
@@ -83,6 +84,7 @@ export function useTaskCrud({
       return;
     }
 
+    // 本地模式没有后端校验，直接按前端状态机更新并同步 selectedTask，避免详情抽屉显示旧状态。
     const applyStatus = (task: Task): Task => taskWithStatus(task, nextStatus);
     setTasks((currentTasks) => currentTasks.map((task) => (task.id === taskId ? applyStatus(task) : task)));
     setSelectedTask((currentTask) => (currentTask?.id === taskId ? applyStatus(currentTask) : currentTask));
@@ -100,6 +102,7 @@ export function useTaskCrud({
   }, [tasks, updateTaskStatus]);
 
   const deleteTask = useCallback(async (taskId: number) => {
+    // 删除确认弹窗可能来自列表、详情或编辑态，标题优先取候选任务以保证提示文案稳定。
     const taskTitle = deleteCandidate?.id === taskId ? deleteCandidate.title : tasks.find((task) => task.id === taskId)?.title;
     setDeleteCandidate(null);
     if (activeToken) {
@@ -131,6 +134,7 @@ export function useTaskCrud({
   }, [activeToken, deleteCandidate, editingTask, handleApiError, loadRemoteWorkspace, markTaskDataChanged, selectedTask, setApiMessage, setApiState, setDeleteCandidate, setEditingTask, setSelectedTask, setTasks, showToast, tasks]);
 
   const createLocalTask = useCallback((input: NewTaskInput) => {
+    // 本地任务 ID 只需在当前演示数据内递增，恢复存储时会再次兜底异常 ID。
     const task = createTaskFromInput(input, Math.max(0, ...tasks.map((item) => item.id)) + 1);
     setTasks((currentTasks) => [task, ...currentTasks]);
     markTaskDataChanged();
@@ -144,6 +148,7 @@ export function useTaskCrud({
       try {
         setApiState("loading");
         setApiMessage(normalizedInput.isAiCreated ? "正在通过 AI 创建任务..." : "正在创建任务...");
+        // AI 任务优先走后端解析；前端 fallback 生成的草稿只按普通任务提交，避免重复 AI 解析。
         if (normalizedInput.isAiCreated && normalizedInput.aiBackendMode !== "frontend-fallback") {
           const data = await createTaskWithAi({
             text: normalizedInput.sourceText || `${normalizedInput.title}\n${normalizedInput.description}`.trim(),
@@ -193,6 +198,7 @@ export function useTaskCrud({
 
     const originalTask = tasks.find((task) => task.id === taskId);
     if (originalTask) {
+      // 本地编辑保留原任务的创建时间和历史 AI 字段，只覆盖表单真正承载的可编辑字段。
       const updatedTask = mergeTaskInput(originalTask, normalizedInput);
       setTasks((currentTasks) =>
         currentTasks.map((task) => {

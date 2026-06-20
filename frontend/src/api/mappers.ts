@@ -27,6 +27,7 @@ export function statusToApi(status: TaskStatus): ApiTaskStatus {
 }
 
 export function localPartsFromIso(value: string | null) {
+  // 后端日期可能为空或被旧数据污染，解析失败时返回空字段让表单走默认值。
   if (!value) {
     return { date: "", time: "" };
   }
@@ -47,6 +48,7 @@ export function isoFromLocalParts(date: string, time: string) {
     return null;
   }
 
+  // 没填具体时间时按当天结束处理，并显式带上本地时区偏移交给后端。
   const localDate = new Date(`${date}T${time || "23:59"}:00`);
   const offsetMinutes = -localDate.getTimezoneOffset();
   const offsetSign = offsetMinutes >= 0 ? "+" : "-";
@@ -72,6 +74,7 @@ export function dateFromIso(value: string | null) {
 }
 
 export function mapApiTask(task: ApiTask, parsedTask?: ApiParsedTask): Task {
+  // 页面 Task 模型包含展示文案、标签和 AI 辅助信息，这里把后端字段补齐为可直接渲染的数据。
   const due = localPartsFromIso(task.due_time);
   return {
     id: task.id,
@@ -100,6 +103,7 @@ export function mapApiTask(task: ApiTask, parsedTask?: ApiParsedTask): Task {
 }
 
 export function mapParsedTaskToInput(parsedTask: ApiParsedTask, sourceText: string): NewTaskInput {
+  // AI 未返回分类或时间时使用本地生成规则兜底，保持创建表单字段完整。
   const due = localPartsFromIso(parsedTask.due_time);
   const category = parsedTask.category || pickGeneratedCategory(sourceText.toLowerCase());
   const priority = priorityFromApi(parsedTask.priority);
@@ -156,6 +160,7 @@ export function buildTaskListPath({
   status: TaskStatus | "全部";
 }) {
   const normalizedKeyword = keyword.trim();
+  // UI 的“全部”是本地筛选状态，发请求时省略对应参数表示不过滤。
   return buildTasksPagePath({
     category: category === "全部" ? undefined : category,
     dueFrom,

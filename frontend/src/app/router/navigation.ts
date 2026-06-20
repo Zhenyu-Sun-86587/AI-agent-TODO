@@ -15,5 +15,6 @@ export const navItems = [
   { key: "ai", label: "智能助手", icon: Sparkles },
 ] satisfies AppNavItem[];
 
+// 移动端底部栏只放两个高频入口，其余入口放进次级导航区。
 export const mobilePrimaryNavKeys: readonly PageKey[] = ["dashboard", "tasks"];
 export const mobileSecondaryNavKeys: readonly PageKey[] = ["calendar", "ai"];

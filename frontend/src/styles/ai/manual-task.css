@@ -1,3 +1,5 @@
+/* AI 手动任务表单：保持表单栅格和字段间距一致。 */
+
 .manual-task-form {
   display: grid;
   gap: 14px;

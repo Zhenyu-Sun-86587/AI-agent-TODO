@@ -1,3 +1,5 @@
+/* 统计卡片颜色：集中维护不同指标的色彩语义。 */
+
 .stats-card > span {
   display: grid;
   place-items: center;

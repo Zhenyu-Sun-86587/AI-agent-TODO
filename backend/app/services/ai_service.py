@@ -47,6 +47,7 @@ def _override_hostname_resolution(hostname: str, ip_address: str):
 
     def patched_getaddrinfo(host, port, family=0, type=0, proto=0, flags=0):
         if host == hostname:
+            # 仅替换目标模型域名解析，避免影响同进程内其他网络请求。
             return original_getaddrinfo(ip_address, port, family, type, proto, flags)
         return original_getaddrinfo(host, port, family, type, proto, flags)
 
@@ -58,7 +59,7 @@ def _override_hostname_resolution(hostname: str, ip_address: str):
 
 
 class AiService:
-    """AI Agent service for task parsing, suggestions, and call logging."""
+    """AI Agent 服务，负责真实模型调用、Mock 兜底、任务执行和调用日志。"""
 
     def __init__(self, db: Session) -> None:
         self.db = db
@@ -67,6 +68,7 @@ class AiService:
     def parse_task(self, user: User, payload: ParseTaskRequest) -> dict:
         model_name = self.setting_service.get_model_name(user)
         if settings.ai_mock_mode:
+            # Mock 模式完全绕开外部模型，便于离线演示和测试保持稳定。
             parsed = self._mock_parse_task(payload.text, payload.timezone)
             self._write_log(user.id, payload.text, parsed.model_dump(mode="json"), AiStatus.mocked.value, model_name)
             return {
@@ -77,6 +79,7 @@ class AiService:
 
         api_key = self.setting_service.require_openai_api_key(user)
         try:
+            # 真实模型分支先让模型解析，再做本地 schema 和枚举兜底校验。
             content = self._call_parse_model(api_key, model_name, payload)
             parsed = self._validate_parsed_task(content, payload.text)
         except (AuthenticationError, PermissionDeniedError) as exc:
@@ -88,6 +91,7 @@ class AiService:
                 data={"valid": False},
             ) from exc
         except (OpenAIError, ValueError, ValidationError) as exc:
+            # 非鉴权类失败降级到启发式解析，保证创建任务主流程仍可继续。
             parsed = self._mock_parse_task(payload.text, payload.timezone)
             self._write_log(
                 user.id,
@@ -113,6 +117,7 @@ class AiService:
     def create_task_by_ai(self, user: User, payload: CreateTaskByAiRequest) -> dict:
         parse_result = self.parse_task(user, ParseTaskRequest(text=payload.text, timezone=payload.timezone))
         parsed: AiParsedTask = parse_result["parsed_task"]
+        # 先把 AI 解析结果转成普通创建 payload，后续覆盖逻辑复用任务服务校验。
         task_data = TaskCreate(
             title=parsed.title,
             description=parsed.description,
@@ -121,6 +126,7 @@ class AiService:
             due_time=parsed.due_time,
         )
         if payload.overrides:
+            # 用户显式覆盖优先于 AI 建议，用于前端确认页修正分类、优先级等字段。
             merged = task_data.model_dump()
             for key, value in payload.overrides.model_dump(exclude_unset=True).items():
                 merged[key] = value
@@ -138,6 +144,7 @@ class AiService:
         text = f"{title}\n{description or ''}".strip()
         model_name = self.setting_service.get_model_name(user)
         if settings.ai_mock_mode:
+            # 字段推荐的 Mock 结果只依赖关键词，避免测试被模型输出波动影响。
             suggestion = self._heuristic_suggestion(text)
             self._write_log(user.id, text, suggestion.model_dump(mode="json"), AiStatus.mocked.value, model_name)
             return suggestion
@@ -155,6 +162,7 @@ class AiService:
                 data={"valid": False},
             ) from exc
         except (OpenAIError, ValueError, ValidationError) as exc:
+            # 推荐失败不阻塞用户编辑任务，退回本地关键词规则并标记为 mocked。
             suggestion = self._heuristic_suggestion(text)
             self._write_log(
                 user.id,
@@ -179,6 +187,7 @@ class AiService:
         query = self.db.query(AiCallLog).filter(AiCallLog.user_id == user.id)
         if log_status:
             query = query.filter(AiCallLog.status == log_status)
+        # total 是过滤后的日志总数，items 再按创建时间倒序分页。
         total = query.count()
         items = (
             query.order_by(AiCallLog.created_at.desc(), AiCallLog.id.desc())
@@ -199,6 +208,7 @@ class AiService:
     ) -> AiChatResponse:
         resolved_model_name = model_name or self.setting_service.get_model_name(user)
         if agent_mode:
+            # Agent 模式会读取任务列表并可能写库，普通聊天只透传模型响应。
             return self._agent_chat(user, messages, resolved_model_name, follow_up_mode, timezone_name)
 
         api_key = self.setting_service.require_openai_api_key(user)
@@ -236,6 +246,7 @@ class AiService:
     ) -> AiChatResponse:
         api_key = self.setting_service.require_openai_api_key(user)
         try:
+            # Agent 先让模型产出结构化决策，再由后端白名单执行，避免模型直接操作数据库。
             content = self._call_agent_model(api_key, model_name, messages, user, follow_up_mode, timezone_name)
             decision = self._validate_agent_decision(content)
             response = self._execute_agent_decision(user, decision, model_name, follow_up_mode)
@@ -263,6 +274,7 @@ class AiService:
             user.id,
             self._latest_user_text(messages),
             {
+                # 日志记录决策和后端执行结果，方便排查模型判断和实际写库是否一致。
                 "decision": decision,
                 "response": {
                     "content": response.content,
@@ -302,6 +314,7 @@ class AiService:
         client = self._client_for_model(api_key, model_name)
         now = self._now_for_timezone(timezone_name)
         tasks, total = TaskService(self.db).list_tasks(user, page=1, page_size=80)
+        # 只给模型当前用户的任务摘要和 ID 白名单，后端仍会再次校验任务归属。
         task_json = json.dumps([self._task_to_agent_dict(task) for task in tasks], ensure_ascii=False)
         system_prompt = (
             "你是 AI-agent-TODO 的后端任务 Agent。你必须先判断用户是在普通聊天，还是要操作任务，"
@@ -347,6 +360,7 @@ class AiService:
     def _validate_agent_decision(self, content: str) -> dict[str, Any]:
         data = self._json_loads(content)
         action = str(data.get("action") or "chat").strip().lower().replace("-", "_")
+        # 未知 action 统一降级为 chat，避免模型输出新动作时误触发写操作。
         data["action"] = action if action in AGENT_ACTIONS else "chat"
         if not isinstance(data.get("message"), str):
             data["message"] = ""
@@ -358,6 +372,7 @@ class AiService:
         else:
             data["uncertain_fields"] = []
         for key in ("task", "filters", "updates"):
+            # 任务、过滤器、更新字段必须是对象，后续执行阶段只从这些字典里取值。
             if not isinstance(data.get(key), dict):
                 data[key] = {}
         return data
@@ -375,6 +390,7 @@ class AiService:
 
         uncertain_fields = self._agent_uncertain_fields(decision)
         if follow_up_mode and uncertain_fields:
+            # 追问模式下任何关键字段不确定都不写库，让用户先补齐信息。
             return AiChatResponse(
                 content=message or self._format_uncertain_fields_follow_up(uncertain_fields),
                 model_name=model_name,
@@ -384,6 +400,7 @@ class AiService:
         if action == "create_task":
             task_data = self._agent_task_create(decision.get("task") or {})
             if not task_data:
+                # 创建任务至少需要可用标题；过泛的标题会被当成信息不足处理。
                 return AiChatResponse(
                     content=message or "请补充要创建的任务内容。",
                     model_name=model_name,
@@ -400,6 +417,7 @@ class AiService:
 
         if action == "list_tasks":
             filters = decision.get("filters") or {}
+            # 查询只接受后端可识别的筛选字段，忽略模型额外生成的复杂条件。
             items, total = task_service.list_tasks(
                 user,
                 page=1,
@@ -418,6 +436,7 @@ class AiService:
         if action == "show_task":
             task, candidates = self._resolve_agent_task(user, decision)
             if not task:
+                # 未定位到唯一任务时返回候选项，避免查看或后续修改落到错误任务。
                 return AiChatResponse(
                     content=message or self._format_task_follow_up(candidates, "查看"),
                     model_name=model_name,
@@ -434,6 +453,7 @@ class AiService:
             task, candidates = self._resolve_agent_task(user, decision)
             status = self._agent_status((decision.get("updates") or {}).get("status"))
             if not task or not status:
+                # 状态更新同时要求唯一任务和合法状态，缺一项都进入追问。
                 return AiChatResponse(
                     content=message or self._format_task_follow_up(candidates, "更新状态"),
                     model_name=model_name,
@@ -452,6 +472,7 @@ class AiService:
             task, candidates = self._resolve_agent_task(user, decision)
             update_data = self._agent_task_update(decision.get("updates") or {})
             if not task or not update_data:
+                # update_data 为空表示模型没有给出可执行字段，不能提交空更新。
                 return AiChatResponse(
                     content=message or self._format_task_follow_up(candidates, "修改"),
                     model_name=model_name,
@@ -469,6 +490,7 @@ class AiService:
         if action == "delete_task":
             task, candidates = self._resolve_agent_task(user, decision)
             if not task:
+                # 删除是破坏性操作，必须定位到唯一任务后才执行。
                 return AiChatResponse(
                     content=message or self._format_task_follow_up(candidates, "删除"),
                     model_name=model_name,
@@ -507,6 +529,7 @@ class AiService:
     def _agent_task_create(self, data: dict[str, Any]) -> Optional[TaskCreate]:
         title = self._optional_short_text(data.get("title"), 100)
         if not title or title in {"弄一下", "处理一下", "搞一下", "任务", "待办", "事情", "这个", "那个"}:
+            # 泛化占位标题无法代表明确任务，交回前端追问。
             return None
         return TaskCreate(
             title=title,
@@ -524,6 +547,7 @@ class AiService:
         if "description" in data:
             description = self._optional_short_text(data.get("description"), 2000)
             if description:
+                # Agent 更新目前只采纳非空文本，避免模型把 null 当成“清空字段”误操作。
                 update_data["description"] = description
         priority = self._agent_priority(data.get("priority"), default=None)
         if priority:
@@ -546,6 +570,7 @@ class AiService:
         if action == "create_task":
             task_data = decision.get("task") or {}
             if task_data.get("due_time") and not self._parse_agent_datetime(task_data.get("due_time")):
+                # 模型给了无法解析的截止时间时也视为不确定，避免静默丢失用户时间意图。
                 fields.append("due_time")
         if action == "update_task":
             updates = decision.get("updates") or {}
@@ -553,6 +578,7 @@ class AiService:
                 fields.append("due_time")
         normalized: list[str] = []
         for field in fields:
+            # 统一中英文和别名字段，追问文案才能稳定映射成人类可读标签。
             canonical = field.lower().replace("-", "_").replace(".", "_")
             canonical = {
                 "deadline": "due_time",
@@ -597,6 +623,7 @@ class AiService:
         target_id = decision.get("target_task_id")
         if target_id not in (None, ""):
             try:
+                # 即使模型给出 ID，也通过 TaskService 校验当前用户是否拥有该任务。
                 return task_service.get_task(user, int(target_id)), []
             except (BusinessError, TypeError, ValueError):
                 return None, []
@@ -605,6 +632,7 @@ class AiService:
         if not query:
             return None, []
 
+        # 没有 ID 时用关键词做候选匹配；只有唯一命中才允许自动执行。
         matches, _ = task_service.list_tasks(user, page=1, page_size=10, keyword=query)
         if len(matches) == 1:
             return matches[0], []
@@ -616,6 +644,7 @@ class AiService:
         try:
             return Priority(str(value).strip().lower())
         except ValueError:
+            # 非法优先级回到调用方指定默认值，创建时默认 medium，过滤时可返回 None。
             return default
 
     def _agent_status(self, value: Any) -> Optional[TaskStatus]:
@@ -629,6 +658,7 @@ class AiService:
         try:
             return TaskStatus(normalized)
         except ValueError:
+            # 状态无法识别时不猜测，调用方会转入追问或忽略该条件。
             return None
 
     def _parse_agent_datetime(self, value: Any) -> Optional[datetime]:
@@ -640,6 +670,7 @@ class AiService:
         if text.endswith("Z"):
             text = f"{text[:-1]}+00:00"
         try:
+            # Agent 提示词要求 ISO 8601，这里只解析标准格式，避免自然语言时间被误读。
             return datetime.fromisoformat(text)
         except ValueError:
             return None
@@ -769,6 +800,7 @@ class AiService:
     def _json_loads(self, content: str) -> dict[str, Any]:
         cleaned = content.strip()
         if cleaned.startswith("```"):
+            # 兼容模型偶尔包上 Markdown 代码块的情况，但最终仍要求 JSON 对象。
             cleaned = re.sub(r"^```(?:json)?\s*|\s*```$", "", cleaned, flags=re.IGNORECASE | re.DOTALL)
         data = json.loads(cleaned)
         if not isinstance(data, dict):
@@ -777,6 +809,7 @@ class AiService:
 
     def _mock_parse_task(self, text: str, timezone_name: str) -> AiParsedTask:
         due_time, raw_due_text = self._mock_due_time(text, timezone_name)
+        # Mock 解析用固定置信度和关键词规则，覆盖离线演示的核心任务字段。
         return AiParsedTask(
             title=self._safe_title(self._strip_time_words(text), text),
             description=None,
@@ -798,6 +831,7 @@ class AiService:
         now = self._now_for_timezone(timezone_name)
         target_date = None
         raw = None
+        # Mock 只识别少量中文相对日期，超出范围保持 None，避免伪造截止时间。
         if "后天" in text:
             target_date = now.date() + timedelta(days=2)
             raw = "后天"
@@ -822,6 +856,7 @@ class AiService:
 
         match = re.search(r"(\d{1,2})\s*[点:]\s*(\d{1,2})?", text)
         if match:
+            # 处理“下午三点/15:30”这类简单时间，分钟和小时都做边界裁剪。
             hour = int(match.group(1))
             if ("下午" in text or "晚上" in text) and hour < 12:
                 hour += 12
@@ -836,6 +871,7 @@ class AiService:
         try:
             tz = ZoneInfo(timezone_name)
         except ZoneInfoNotFoundError:
+            # 非法时区退回 UTC，保证模型提示和 Mock 时间计算仍能继续。
             tz = timezone.utc
         return utc_now().astimezone(tz)
 
@@ -884,6 +920,7 @@ class AiService:
         model_name: Optional[str],
         error_message: Optional[str] = None,
     ) -> None:
+        # 日志落库不保存完整异常栈，只保留截断后的错误消息用于排查状态和模型问题。
         log = AiCallLog(
             user_id=user_id,
             input_text=input_text,
@@ -900,6 +937,7 @@ class AiService:
 
     def _base_url_for_model(self, model_name: str) -> str:
         if model_name.lower().startswith(DEEPSEEK_MODEL_PREFIX):
+            # DeepSeek 兼容 OpenAI SDK，但需要切换到独立 base_url。
             return settings.deepseek_base_url
         return settings.openai_base_url
 
@@ -913,6 +951,7 @@ class AiService:
 
         ip_address = self._resolve_deepseek_ip(hostname)
         if not ip_address:
+            # DoH 失败时回到系统 DNS，网络兜底不应阻断模型调用。
             return callback()
 
         with _override_hostname_resolution(hostname, ip_address):
@@ -920,11 +959,13 @@ class AiService:
 
     def _resolve_deepseek_ip(self, hostname: str) -> Optional[str]:
         if settings.deepseek_force_resolve_ip:
+            # 手动指定 IP 优先级最高，方便部署环境绕过 DNS 污染或调试解析问题。
             return settings.deepseek_force_resolve_ip
 
         global _DEEPSEEK_DNS_CACHE
         now = time.monotonic()
         if _DEEPSEEK_DNS_CACHE and now - _DEEPSEEK_DNS_CACHE[1] < DEEPSEEK_DNS_CACHE_TTL_SECONDS:
+            # 短 TTL 缓存减少每次请求前的 DoH 开销。
             return _DEEPSEEK_DNS_CACHE[0]
 
         query = urllib.parse.urlencode({"name": hostname, "type": "A"})
@@ -936,6 +977,7 @@ class AiService:
             with urllib.request.urlopen(request, timeout=3) as response:
                 data = json.loads(response.read().decode("utf-8"))
         except Exception:
+            # DNS 辅助解析失败不暴露给业务层，由调用方继续使用系统 DNS。
             return None
 
         for answer in data.get("Answer", []):
@@ -949,6 +991,7 @@ class AiService:
         started_at = time.perf_counter()
         try:
             client = self._client_for_model(api_key, model_name)
+            # 用最小 token 的 ping 验证 Key、模型权限和网络连通性，并返回粗略延迟。
             self._run_with_model_dns(
                 model_name,
                 lambda: client.chat.completions.create(

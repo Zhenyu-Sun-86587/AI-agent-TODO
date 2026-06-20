@@ -1,3 +1,5 @@
+/* 共享模块入口：聚合重置、页面、表面、控件和状态样式。 */
+
 @import "./title-line.css";
 @import "./reset.css";
 @import "./buttons.css";

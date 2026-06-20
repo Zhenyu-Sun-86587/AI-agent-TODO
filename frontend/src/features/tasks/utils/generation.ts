@@ -104,6 +104,7 @@ export function generateTaskFromPrompt(prompt: string): NewTaskInput {
   const text = normalized.toLowerCase();
   const priority = pickGeneratedPriority(text);
   const category = pickGeneratedCategory(text);
+  // 前端 fallback 通过关键词给出可编辑草稿，真正的后端 AI 创建会在 useTaskCrud 中另走 /tasks/ai。
   const dueOffset = priority === "高" ? 1 : priority === "中" ? 2 : 4;
   const title = createGeneratedTitle(normalized, category);
   const baseTags = [category, "AI生成"];
@@ -140,6 +141,7 @@ export function generateTaskFromPrompt(prompt: string): NewTaskInput {
 }
 
 export function taskTagsFromInput(input: NewTaskInput) {
+  // AI 生成标记统一在这里补入，避免创建和编辑路径各自重复拼接标签。
   return Array.from(
     new Set(
       input.tags
@@ -205,6 +207,7 @@ export function mergeTaskInput(task: Task, input: NewTaskInput): Task {
     category: input.category,
     dueDate: input.dueDate,
     dueTime: input.dueTime,
+    // completedAt 是统计完成趋势的口径，恢复为未完成时必须清空，重复标记完成则保留首次完成日期。
     completedAt: input.status === "已完成" ? task.completedAt || dateFromToday(0) : null,
     tags: taskTagsFromInput(input),
     aiReason: input.aiReason || task.aiReason,

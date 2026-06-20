@@ -1,3 +1,5 @@
+/* 认证封面层：控制首屏文案、徽章和进入离开状态。 */
+
 .auth-cover-copy {
   position: absolute;
   top: 26.6%;
@@ -15,6 +17,7 @@
     transform 340ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+/* 动画关键帧：集中描述该模块的进入、漂浮或反馈节奏。 */
 @keyframes authFloatGroup {
   0% { translate: 0 0; }
   100% { translate: 0 -8px; }

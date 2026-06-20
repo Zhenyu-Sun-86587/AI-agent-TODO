@@ -1,3 +1,6 @@
+/* 日历基础响应式：处理旧版月格、时间线和移动端任务卡。 */
+
+/* 响应式断点：移动端宽度下改为单列和触控友好尺寸。 */
 @media (max-width: 820px) {
   .calendar-grid {
       grid-template-columns: 1fr;

@@ -25,6 +25,7 @@ export function TodayTasksPage({
   const todayTasks = getTodayTasks(tasks);
   const done = todayTasks.filter((task) => task.status === "已完成").length;
   const remaining = todayTasks.length - done;
+  // 今日 AI 重点按“未完成且 AI 生成或高优先级”计算，用于提示当天最值得关注的任务。
   const aiRecommended = todayTasks.filter((task) => task.status !== "已完成" && (task.isAiCreated || task.priority === "高")).length;
 
   return (

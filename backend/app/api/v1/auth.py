@@ -13,6 +13,7 @@ router = APIRouter()
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)
 def register(payload: UserCreate, request: Request, db: Session = Depends(get_db)) -> dict:
+    # 路由层只负责依赖注入和响应包装，注册事务与唯一性校验交给 AuthService。
     data = AuthService(db).register(payload)
     data["user"] = UserRead.model_validate(data["user"])
     return success_response(data, request_id=request.state.request_id)
@@ -37,4 +38,5 @@ def logout(
     request: Request,
     current_user: User = Depends(get_current_user),
 ) -> dict:
+    # 当前 JWT 无服务端会话状态；登出接口用于前端清理 token，并保留鉴权边界。
     return success_response(None, request_id=request.state.request_id)

@@ -1,3 +1,5 @@
+/* 月视图增强版：控制周行、跨日任务条和日期层级。 */
+
 .calendar-header-row {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));

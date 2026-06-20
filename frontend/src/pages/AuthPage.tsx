@@ -41,6 +41,7 @@ export default function AuthPage({
     setError("");
     const normalizedEmail = email.trim();
 
+    // 认证页在发请求前先做最基础校验，避免把明显无效输入提交到后端。
     if (!isBackendCompatibleEmail(normalizedEmail)) {
       setError("请输入有效邮箱，不能使用 .local 或 example.com 等保留域名。");
       return;
@@ -113,6 +114,7 @@ export default function AuthPage({
       return;
     }
     if (event.key === "Enter" || event.key === " ") {
+      // 登录封面支持键盘进入，保证首次进入页面时也有基本无障碍可用性。
       event.preventDefault();
       openPanel();
     }

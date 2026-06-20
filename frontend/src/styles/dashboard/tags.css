@@ -1,3 +1,5 @@
+/* 仪表盘标签体系：维护 AI 标签、品牌标记和优先级徽标。 */
+
 .ai-tiny-tag {
   display: inline-flex;
   align-items: center;

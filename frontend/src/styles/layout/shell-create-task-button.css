@@ -1,3 +1,5 @@
+/* 新建任务按钮：封装主操作按钮的高亮和亮色覆盖。 */
+
 .minimal-primary,
 .primary-button {
   border: 1px solid var(--primary);

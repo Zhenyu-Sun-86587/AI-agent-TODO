@@ -1,3 +1,5 @@
+/* 全局样式入口：按基础层、布局层和业务模块组织加载顺序。 */
+
 @import "./core/tokens.css";
 @import "./core/base.css";
 @import "./layout/index.css";

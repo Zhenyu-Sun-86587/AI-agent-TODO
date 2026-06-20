@@ -1,4 +1,4 @@
-/* Dashboard hero styles. */
+/* 仪表盘头图区：管理欢迎卡片、装饰层和浮动动画。 */
 
 .minimal-dashboard {
   max-width: 1240px;
@@ -61,6 +61,7 @@
   animation: float 3s ease-in-out infinite;
 }
 
+/* 动画关键帧：集中描述该模块的进入、漂浮或反馈节奏。 */
 @keyframes float {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-10px); }

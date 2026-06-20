@@ -7,6 +7,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 
 class ErrorCode:
+    # 错误码是前后端契约：0 表示成功，业务域按千位分段，5000 作为兜底内部错误。
     SUCCESS = 0
     PARAM_INVALID = 1001
     UNAUTHORIZED = 1002
@@ -23,6 +24,8 @@ class ErrorCode:
 
 
 class BusinessError(Exception):
+    """业务层主动抛出的可预期错误，统一由异常处理器转换为 JSON 响应。"""
+
     def __init__(
         self,
         code: int,
@@ -41,6 +44,7 @@ def _request_id(request: Request) -> Optional[str]:
 
 
 def _payload(code: int, message: str, data: Any, request: Request) -> dict:
+    # 成功和失败响应都保持 code/message/data/request_id 结构，方便客户端统一拦截。
     payload = {
         "code": code,
         "message": message,
@@ -60,6 +64,7 @@ async def business_error_handler(request: Request, exc: BusinessError) -> JSONRe
 
 
 async def validation_error_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
+    # Pydantic 校验错误保留字段路径，前端可将错误定位到具体表单项。
     errors = [
         {
             "field": ".".join(str(item) for item in error.get("loc", [])),
@@ -79,6 +84,7 @@ async def validation_error_handler(request: Request, exc: RequestValidationError
 
 
 async def http_error_handler(request: Request, exc: StarletteHTTPException) -> JSONResponse:
+    # FastAPI/Starlette 的 HTTPException 统一映射到本项目错误码，避免裸 detail 泄漏到客户端。
     code = ErrorCode.INTERNAL_ERROR
     if exc.status_code == 401:
         code = ErrorCode.UNAUTHORIZED
@@ -95,6 +101,7 @@ async def http_error_handler(request: Request, exc: StarletteHTTPException) -> J
 
 
 async def unhandled_error_handler(request: Request, exc: Exception) -> JSONResponse:
+    # 未预期异常只返回通用信息，具体堆栈交给日志系统，避免暴露内部实现。
     return JSONResponse(
         status_code=500,
         content=_payload(ErrorCode.INTERNAL_ERROR, "Internal server error", None, request),
@@ -102,6 +109,7 @@ async def unhandled_error_handler(request: Request, exc: Exception) -> JSONRespo
 
 
 def register_exception_handlers(app: FastAPI) -> None:
+    # 注册顺序覆盖业务异常、请求校验、框架 HTTP 异常和最终兜底异常。
     app.add_exception_handler(BusinessError, business_error_handler)
     app.add_exception_handler(RequestValidationError, validation_error_handler)
     app.add_exception_handler(StarletteHTTPException, http_error_handler)

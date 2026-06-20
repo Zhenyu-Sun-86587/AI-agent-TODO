@@ -20,6 +20,7 @@ def parse_task(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> dict:
+    # AI 能力同样必须经过用户鉴权，因为密钥、模型和日志都按用户隔离。
     data = AiService(db).parse_task(current_user, payload)
     return success_response(data, request_id=request.state.request_id)
 
@@ -31,6 +32,7 @@ def create_task_by_ai(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> dict:
+    # 先解析再创建任务，最终返回仍转换为 TaskRead，避免泄露 ORM 内部字段。
     data = AiService(db).create_task_by_ai(current_user, payload)
     data["task"] = TaskRead.model_validate(data["task"])
     return success_response(data, request_id=request.state.request_id)
@@ -54,6 +56,7 @@ def chat(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> dict:
+    # 聊天接口的任务变更、追问和代理行为都收口在 AiService，路由保持协议编排。
     data = AiService(db).chat(
         current_user,
         payload.messages,
@@ -74,6 +77,7 @@ def list_ai_logs(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> dict:
+    # 日志列表按当前用户分页读取，状态筛选只影响该用户自己的调用记录。
     items, total = AiService(db).list_logs(current_user, page, page_size, log_status)
     data = page_response([AiLogRead.model_validate(item) for item in items], page, page_size, total)
     return success_response(data, request_id=request.state.request_id)

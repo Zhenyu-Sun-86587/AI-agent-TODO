@@ -2,6 +2,7 @@ from conftest import auth_headers
 
 
 def test_register_success_returns_user_and_token(client):
+    """注册成功应返回用户安全字段和可用于后续请求的 Bearer Token。"""
     response = client.post(
         "/api/auth/register",
         json={"username": "alice", "email": "alice@example.com", "password": "12345678"},
@@ -18,6 +19,7 @@ def test_register_success_returns_user_and_token(client):
 
 
 def test_register_duplicate_user_fails(client):
+    """用户名或邮箱重复时，注册应返回稳定业务错误码。"""
     auth_headers(client)
 
     response = client.post(
@@ -30,6 +32,7 @@ def test_register_duplicate_user_fails(client):
 
 
 def test_login_success_with_email(client):
+    """邮箱登录覆盖 account 字段作为邮箱凭据的路径。"""
     auth_headers(client)
 
     response = client.post(
@@ -43,6 +46,7 @@ def test_login_success_with_email(client):
 
 
 def test_demo_login_returns_backend_session(client):
+    """Demo 登录返回真实后端会话，token 可继续访问 /users/me。"""
     response = client.post("/api/auth/demo")
 
     assert response.status_code == 200
@@ -60,6 +64,7 @@ def test_demo_login_returns_backend_session(client):
 
 
 def test_login_wrong_password_fails(client):
+    """错误密码不暴露用户是否存在，只返回统一登录失败错误。"""
     auth_headers(client)
 
     response = client.post(
@@ -72,6 +77,7 @@ def test_login_wrong_password_fails(client):
 
 
 def test_current_user_requires_authentication(client):
+    """受保护接口缺少 Token 时应由鉴权依赖拦截。"""
     response = client.get("/api/users/me")
 
     assert response.status_code == 401
@@ -79,6 +85,7 @@ def test_current_user_requires_authentication(client):
 
 
 def test_get_and_update_current_user(client):
+    """当前用户资料更新后，再读取应看到最新用户名和邮箱。"""
     headers = auth_headers(client)
 
     response = client.get("/api/users/me", headers=headers)

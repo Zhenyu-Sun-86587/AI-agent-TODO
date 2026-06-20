@@ -6,6 +6,7 @@ from app.core.config import settings
 
 
 def test_stats_overview_empty_tasks(client):
+    """无任务时 overview 所有计数和完成率都应为 0。"""
     headers = auth_headers(client)
 
     response = client.get("/api/stats/overview", headers=headers)
@@ -23,6 +24,7 @@ def test_stats_overview_empty_tasks(client):
 
 
 def test_stats_overview_category_priority_and_trend(client, monkeypatch):
+    """综合统计用 Mock AI 创建任务，覆盖 AI 创建数、分类、优先级和趋势。"""
     monkeypatch.setattr(settings, "ai_mock_mode", True)
     headers = auth_headers(client)
     shanghai = ZoneInfo("Asia/Shanghai")
@@ -56,6 +58,7 @@ def test_stats_overview_category_priority_and_trend(client, monkeypatch):
     client.patch(f"/api/tasks/{task_a['id']}/status", headers=headers, json={"status": "done"})
     client.patch(f"/api/tasks/{ai_task['id']}/status", headers=headers, json={"status": "done"})
 
+    # overview 统计的是当前用户全部任务，完成率为 done / total。
     response = client.get("/api/stats/overview", headers=headers)
     overview = response.json()["data"]
     assert overview["total_tasks"] == 4
@@ -85,6 +88,7 @@ def test_stats_overview_category_priority_and_trend(client, monkeypatch):
 
 
 def test_stats_time_range_filters_created_at(client):
+    """from/to 时间范围过滤 created_at，而不是 due_time 或 updated_at。"""
     headers = auth_headers(client)
     client.post("/api/tasks", headers=headers, json={"title": "范围内任务"})
 
@@ -114,6 +118,7 @@ def test_overview_only_overdue_tasks(client):
     headers = auth_headers(client)
     from datetime import datetime, timedelta, timezone
 
+    # 逾期统计只计算仍处于 todo 的、截止时间早于当前时间的任务。
     yesterday = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
     client.post(
         "/api/tasks",

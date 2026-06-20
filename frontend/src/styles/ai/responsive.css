@@ -1,3 +1,6 @@
+/* AI 模块响应式：收窄日志、建议表单和动效偏好。 */
+
+/* 响应式断点：移动端宽度下改为单列和触控友好尺寸。 */
 @media (max-width: 820px) {
   .ai-logs-panel .ui-select-field {
       width: 100%;
@@ -9,6 +12,7 @@
     }
 }
 
+/* 响应式断点：平板宽度下调整多列布局。 */
 @media (max-width: 1180px) {
   .ai-suggest-grid > label,
   .suggest-left-column {
@@ -21,12 +25,14 @@
   }
 }
 
+/* 响应式断点：极窄屏下保留主要操作可见。 */
 @media (max-width: 460px) {
   .ai-card {
     padding: 14px;
   }
 }
 
+/* 可访问性断点：尊重系统减弱动态偏好。 */
 @media (prefers-reduced-motion: reduce) {
   .ai-card::before,
   .ai-card-header .ui-surface-icon svg,

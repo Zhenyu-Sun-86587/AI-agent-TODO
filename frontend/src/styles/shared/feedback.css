@@ -1,3 +1,5 @@
+/* 共享反馈态：管理加载、空态和错误提示文字。 */
+
 .form-error {
   padding: 12px 16px;
   border: 1px solid rgba(239, 68, 68, 0.3);

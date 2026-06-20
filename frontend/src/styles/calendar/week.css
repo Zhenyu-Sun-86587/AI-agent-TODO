@@ -1,3 +1,5 @@
+/* 周视图看板：组织七列日程、任务卡状态和空态。 */
+
 .calendar-week-list {
   min-width: 0;
   height: 100%;

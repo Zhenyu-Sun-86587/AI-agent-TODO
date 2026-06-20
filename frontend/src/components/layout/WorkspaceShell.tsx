@@ -60,8 +60,11 @@ export default function WorkspaceShell({
 }: WorkspaceShellProps) {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  // 设置弹窗打开时阻塞聊天浮窗，避免两个全局浮层同时接收输入。
+  const isChatBlockedBySettings = isSettingsOpen;
 
   const handleLogout = () => {
+    // 退出前先收起模态层，避免登录页出现工作区残留的设置/资料弹窗。
     setIsSettingsOpen(false);
     setIsProfileOpen(false);
     onLogout();
@@ -105,7 +108,7 @@ export default function WorkspaceShell({
       )}
       <FloatingChat
         initialModelId={settings.modelName || "deepseek-v4-pro"}
-        isBlocked={isSettingsOpen}
+        isBlocked={isChatBlockedBySettings}
         onTaskChanged={onTaskChanged}
         token={token}
       />

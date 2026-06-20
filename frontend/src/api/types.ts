@@ -1,3 +1,4 @@
+// 后端响应统一包一层 envelope，业务成功以 code === 0 为准。
 export interface ApiEnvelope<T> {
   code: number;
   message: string;
@@ -7,6 +8,7 @@ export interface ApiEnvelope<T> {
 
 export interface ApiPageResult<T> {
   items: T[];
+  // pagination 字段名保持后端 snake_case，避免在 API 层和页面层之间来回改名。
   pagination: {
     page: number;
     page_size: number;

@@ -1,3 +1,5 @@
+/* 仪表盘任务行：控制紧凑任务摘要和完成态。 */
+
 .minimal-task-row {
   grid-template-columns: minmax(auto, 60px) minmax(0, 1fr) auto auto;
   cursor: pointer;

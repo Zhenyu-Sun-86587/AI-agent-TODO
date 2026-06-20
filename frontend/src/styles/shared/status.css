@@ -1,3 +1,5 @@
+/* 状态标签：映射待办、进行中和已完成的视觉状态。 */
+
 .status-待办,
 .status-todo {
   background: color-mix(in srgb, var(--muted) 12%, transparent);

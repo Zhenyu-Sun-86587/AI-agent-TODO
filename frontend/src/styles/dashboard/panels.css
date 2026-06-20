@@ -1,3 +1,5 @@
+/* 仪表盘面板汇总：保留面板栅格的共享入口。 */
+
 @import "./panel-shell.css";
 @import "./panel-lists.css";
 @import "./panel-task-row.css";

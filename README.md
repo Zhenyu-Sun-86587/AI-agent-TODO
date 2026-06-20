@@ -1,71 +1,53 @@
 # AI-agent-TODO
 
-一个基于AI agent的智能TODO管理软件
+一个基于 AI agent 的智能 TODO 管理软件。
 
 ## 📝 项目简介
 
-AI-agent-TODO是一个创新的任务管理应用，利用人工智能代理技术来帮助用户更智能地管理日常任务。通过AI的帮助，您可以自动分类任务、设置优先级、获取智能提醒，让任务管理变得更加高效和便捷。
+AI-agent-TODO 对应当前仓库与后端历史名称，当前面向用户展示的产品名称为 `TaskPilot`。它是一个面向个人任务管理场景的智能任务应用，结合 AI 能力帮助用户更高效地创建、整理和追踪待办事项。
+
+当前仓库中的项目已经完成前后端基础功能搭建并可本地运行：
+
+- 仓库名、课程项目名、后端历史应用名仍使用 `AI-agent-TODO`
+- 前端界面、用户文案、产品展示名统一使用 `TaskPilot`
+
+通过 AI 的帮助，用户可以进行自然语言任务解析、任务字段推荐、AI 聊天式任务操作，并结合统计面板查看任务完成情况。
 
 ## ✨ 主要特性
 
-- 🤖 **AI智能辅助**：利用AI技术自动分析和组织任务
-- 📋 **任务管理**：创建、编辑、删除和标记任务完成状态
-- 🏷️ **智能分类**：AI自动为任务分类和设置标签
-- ⚡ **优先级排序**：智能分析任务重要性并自动排序
-- 🔔 **智能提醒**：基于任务重要性和截止日期的智能提醒系统
-- 📊 **数据统计**：可视化展示任务完成情况和效率分析
-- 🌐 **多平台支持**：支持Web、桌面和移动端访问
+- 🤖 **AI 智能辅助**：支持 AI 解析任务、字段推荐与聊天式任务操作
+- 📋 **任务管理**：支持任务创建、编辑、删除、详情查看和完成状态切换
+- 🏷️ **分类与筛选**：支持按分类、优先级、状态、关键词、截止时间筛选任务
+- ⚡ **优先级管理**：支持低 / 中 / 高优先级设置与排序
+- 📊 **数据统计**：支持任务总览、分类统计、优先级统计和趋势统计
+- 🔐 **用户系统**：支持注册、登录、退出登录和演示账号登录
+- 🧠 **AI 配置**：支持 OpenAI / DeepSeek 模型名配置和 API Key 测试
+- 🌐 **Web 工作台**：提供桌面端和移动端适配的前端工作台界面
 
 ## 🚀 快速开始
 
-> **注意**：本项目目前处于初始化阶段，核心功能正在开发中。
+> **说明**：本项目当前以本地开发环境为主，前端与后端分目录运行。
 
 ### 环境要求
 
-- Python 3.8+
-- pip 或 conda 包管理器
+- Python 3.10+
+- Node.js 18+
+- npm
 
-### 安装步骤（开发中）
+### 1. 启动后端
 
-1. 克隆仓库：
-```bash
-git clone https://github.com/Zhenyu-Sun-86587/AI-agent-TODO.git
-cd AI-agent-TODO
-```
+后端代码位于 `backend/` 目录。
 
-2. 创建虚拟环境（推荐）：
-```bash
-python -m venv venv
-source venv/bin/activate  # Windows用户请使用: venv\Scripts\activate
-```
-
-3. 安装依赖（待项目文件添加后）：
-```bash
-pip install -r requirements.txt
-```
-
-4. 配置环境变量（待项目文件添加后）：
-```bash
-cp .env.example .env
-# 编辑.env文件，添加必要的配置信息（如AI API密钥）
-```
-
-5. 运行应用（待项目文件添加后）：
-```bash
-python main.py
-```
-
-### 后端本地测试
-
-后端代码位于 `backend/` 目录。首次测试或依赖更新后，先安装依赖：
+安装依赖并配置环境：
 
 ```bash
 cd backend
 python3 -m venv .venv
 .venv/bin/python -m pip install -r requirements.txt
+cp .env.example .env
 ```
 
-初始化或升级本地数据库：
+初始化数据库：
 
 ```bash
 .venv/bin/alembic upgrade head
@@ -77,76 +59,131 @@ python3 -m venv .venv
 .venv/bin/uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-启动成功后，在浏览器打开后端接口测试页面：
+启动成功后可访问：
 
 ```text
-http://127.0.0.1:8000/docs
+Swagger: http://127.0.0.1:8000/docs
+ReDoc: http://127.0.0.1:8000/redoc
+Health: http://127.0.0.1:8000/health
+API Health: http://127.0.0.1:8000/api/health
 ```
 
-也可以在终端检查健康接口和自动化测试：
+### 2. 启动前端
+
+前端代码位于 `frontend/` 目录。
+
+安装依赖并启动：
 
 ```bash
-curl http://127.0.0.1:8000/health
+cd frontend
+npm install
+npm run dev
+```
+
+默认访问地址：
+
+```text
+http://127.0.0.1:5173
+```
+
+当前前端开发环境接口地址位于 `frontend/.env.development`：
+
+```text
+VITE_API_BASE_URL=http://127.0.0.1:8000/api
+```
+
+### 3. 运行测试
+
+后端测试：
+
+```bash
+cd backend
 .venv/bin/python -m pytest -q
+```
+
+前端端到端测试：
+
+```bash
+cd frontend
+npm run test:e2e
 ```
 
 ## 💡 使用指南
 
-### 创建任务
+### 登录与进入系统
 
-```python
-# 示例代码
-todo.create_task("完成项目文档", priority="high", deadline="2024-12-31")
-```
+- 可以使用注册账号登录后端
+- 也可以使用演示账号快速体验系统
+- 登录后进入 `TaskPilot` 工作台
 
-### AI辅助功能
+### AI 辅助功能
 
-AI代理可以帮助您：
-- 自动从自然语言描述中提取任务信息
-- 智能推荐任务的最佳执行时间
-- 根据历史数据预测任务完成所需时间
-- 提供任务执行建议
+当前 AI 能力包括：
+
+- 自动从自然语言中提取任务标题、分类、优先级和截止时间
+- AI 解析后直接创建任务
+- 为任务推荐分类和优先级
+- 通过 AI 聊天浮窗执行任务相关操作
+
+详细使用方式可参考：
+
+- [使用文档](使用文档.md)
 
 ## 🛠️ 技术栈
 
-- **后端框架**：Python
-- **AI技术**：自然语言处理、机器学习
-- **数据存储**：SQLite/PostgreSQL
-- **前端**：HTML/CSS/JavaScript（计划中）
+- **后端框架**：FastAPI、SQLAlchemy、Alembic、Pydantic、pytest
+- **前端框架**：React 19、TypeScript、Vite、Fetch API、Playwright
+- **数据存储**：SQLite（本地开发），可扩展 PostgreSQL
+- **AI 接入**：OpenAI SDK，支持 OpenAI 与 DeepSeek 兼容接口配置
 
 ## 📁 项目结构
 
 ### 当前结构
-```
+
+```text
 AI-agent-TODO/
 ├── README.md                  # 项目说明文档
+├── 使用文档.md                # AI 聊天与任务操作说明
 ├── doc/                       # 项目文档
-│   ├── 项目初步设计.md         # 项目方案书
-│   └── 开发文档与计划.md       # 4人团队开发文档、计划与分工
-└── .gitignore                 # Git忽略文件配置
+│   ├── 项目初步设计.md         # 早期方案书 / 课程资料
+│   ├── 开发文档与计划.md       # 早期开发计划 / 课程资料
+│   ├── 前后端API接口文档.md    # 当前前后端接口文档
+│   ├── 前端实现文档.md         # 当前前端实现说明
+│   └── 后端实现文档.md         # 当前后端实现说明
+├── backend/                   # FastAPI 后端
+│   ├── app/
+│   ├── alembic/
+│   ├── tests/
+│   ├── requirements.txt
+│   └── .env.example
+└── frontend/                  # React + Vite 前端
+    ├── src/
+    ├── public/
+    ├── tests/
+    ├── package.json
+    └── vite.config.ts
 ```
 
-### 规划中的项目结构
-```
-AI-agent-TODO/
-├── README.md          # 项目说明文档
-├── .gitignore        # Git忽略文件配置
-├── requirements.txt  # Python依赖列表
-├── main.py          # 主程序入口
-├── src/             # 源代码目录
-│   ├── agent/       # AI代理模块
-│   ├── models/      # 数据模型
-│   ├── services/    # 业务逻辑
-│   └── utils/       # 工具函数
-└── tests/           # 测试文件
-```
+### 说明
 
+- `AI-agent-TODO` 是仓库与后端历史名称
+- `TaskPilot` 是当前前端界面展示名称
+- `doc/项目初步设计.md` 和 `doc/开发文档与计划.md` 作为课程过程资料保留，不完全代表当前实现
+
+### 命名约定
+
+- 对用户展示的产品名称：统一使用 `TaskPilot`
+- 对仓库、课程项目、后端历史配置的引用：使用 `AI-agent-TODO`
+- 如果文档同时提到两者，优先表述为“`AI-agent-TODO` 仓库 / `TaskPilot` 产品”
 
 ## 📚 开发文档
 
-- [项目初步设计](doc/项目初步设计.md)：项目背景、目标、功能、技术方案与初步团队分工。
-- [4 人团队开发文档与计划](doc/开发文档与计划.md)：开发落地方案、模块拆解、4 人职责、里程碑计划、测试与验收标准。
-- [前后端 API 对接文档](doc/前后端API接口文档.md)：MVP 阶段接口约定、数据模型、请求响应示例、错误码与联调建议。
+- [项目初步设计](doc/项目初步设计.md)：课程立项与早期设计方案。
+- [4 人团队开发文档与计划](doc/开发文档与计划.md)：课程阶段计划、分工与历史开发安排。
+- [前后端 API 对接文档](doc/前后端API接口文档.md)：当前接口、请求响应、错误码与联调约定。
+- [前端实现文档](doc/前端实现文档.md)：当前前端页面结构、模块划分与样式组织说明。
+- [后端实现文档](doc/后端实现文档.md)：当前后端目录、配置、服务与测试说明。
+- [使用文档](使用文档.md)：AI 聊天操作任务的使用方法。
 
 ## 🤝 贡献指南
 

@@ -12,10 +12,12 @@ class UserService:
 
     def update_me(self, user: User, payload: UserUpdate) -> User:
         fields_set = getattr(payload, "model_fields_set", set())
+        # 只检查本次请求显式提交的字段，未提交字段保持原值且不参与冲突判断。
         username = payload.username if "username" in fields_set else None
         email = str(payload.email) if "email" in fields_set and payload.email is not None else None
 
         if username or email:
+            # 排除当前用户自身，防止“保存未变化资料”被误判成重复。
             filters = []
             if username:
                 filters.append(User.username == username)

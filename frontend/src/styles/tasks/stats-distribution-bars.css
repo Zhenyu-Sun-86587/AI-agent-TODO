@@ -1,3 +1,5 @@
+/* 分布统计条形图：控制网格线、标签列和值列。 */
+
 .distribution-chart {
   display: grid;
   grid-template-rows: minmax(0, 1fr) auto;

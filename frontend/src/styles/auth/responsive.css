@@ -1,3 +1,5 @@
+/* 认证页响应式：适配封面文案、卡片尺寸和小屏布局。 */
+
 .eyebrow {
   margin-bottom: 6px;
   color: var(--primary);
@@ -7,6 +9,7 @@
   text-transform: uppercase;
 }
 
+/* 响应式断点：平板宽度下调整多列布局。 */
 @media (max-width: 1180px) {
   .auth-cover-copy {
       top: 26.6%;
@@ -39,6 +42,7 @@
     }
 }
 
+/* 响应式断点：移动端宽度下改为单列和触控友好尺寸。 */
 @media (max-width: 820px) {
   .auth-shell {
       min-height: 100svh;

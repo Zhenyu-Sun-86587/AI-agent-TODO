@@ -1,1 +1,1 @@
-"""Versioned API routers."""
+"""v1 API 路由包，集中放置对外暴露的首版接口。"""

@@ -1,3 +1,5 @@
+/* 共享菜单动画：控制行菜单和弹出菜单进入效果。 */
+
 @keyframes menuScaleIn {
   from {
     opacity: 0;

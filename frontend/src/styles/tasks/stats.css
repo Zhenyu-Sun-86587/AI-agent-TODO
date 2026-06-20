@@ -1,3 +1,5 @@
+/* 任务统计入口：组合趋势、分布和统计卡片样式。 */
+
 @import "./stats-layout.css";
 @import "./stats-trend-shell.css";
 @import "./stats-trend-chart.css";

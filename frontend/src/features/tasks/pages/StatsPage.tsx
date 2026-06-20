@@ -61,6 +61,7 @@ export function StatsPage({
   const visibleTrend = isApiMode ? trend : localTrend;
   const visibleCategoryStats = isApiMode ? categoryStats : localCategoryStats;
   const visiblePriorityStats = isApiMode ? priorityStats : localPriorityStats;
+  // 顶部概览优先采用远程聚合；本地模式按当前任务数组即时派生相同口径的指标。
   const totalTasks = overview?.total_tasks || tasks.length;
   const done = overview?.done_tasks || tasks.filter((task) => task.status === "已完成").length;
   const todo = overview?.todo_tasks || tasks.filter((task) => task.status !== "已完成").length;
@@ -80,6 +81,7 @@ export function StatsPage({
     const rangeQuery = new URLSearchParams(buildDateRange(rangeConfig.startDate, rangeConfig.endDate)).toString();
     setRemoteLoading(true);
     setRemoteError("");
+    // 统计接口按同一个日期范围并发请求，保证趋势、分类和优先级图表展示同一统计窗口。
     void Promise.all([
       fetchOverview(token, rangeQuery),
       fetchCategoryStats(token, rangeQuery),
@@ -101,6 +103,7 @@ export function StatsPage({
       });
 
     return () => {
+      // 用户切换统计周期或任务版本时，忽略上一轮慢请求返回，避免图表数据串档。
       isCancelled = true;
     };
   }, [isApiMode, onApiError, rangeConfig.apiDays, rangeConfig.endDate, rangeConfig.startDate, taskVersion, token]);

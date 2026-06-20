@@ -3,6 +3,7 @@ import { expect, test } from "@playwright/test";
 async function enterDemo(page: import("@playwright/test").Page, path = "/") {
   await page.goto(path);
   await page.evaluate(() => {
+    // 每个用例都清掉本地态，避免登录、主题和 AI 聊天历史串到下一条测试。
     localStorage.removeItem("ai-agent-todo.session");
     localStorage.removeItem("ai-agent-todo.tasks");
     localStorage.removeItem("ai-agent-todo.theme");
@@ -25,6 +26,7 @@ async function enterDemo(page: import("@playwright/test").Page, path = "/") {
     if (!session?.token) {
       return;
     }
+    // 演示账号共享后端数据，进入用例前主动清空任务，保证列表断言稳定。
     const headers = { Authorization: `Bearer ${session.token}` };
     const response = await fetch("http://127.0.0.1:8000/api/tasks?page=1&page_size=100", { headers });
     const payload = await response.json();
@@ -67,6 +69,7 @@ async function createRemoteTask(page: import("@playwright/test").Page, title: st
 async function sendChat(page: import("@playwright/test").Page, text: string) {
   const input = page.getByLabel("AI 聊天输入");
   const sendButton = page.getByRole("button", { name: "发送消息" });
+  // 聊天输入框会受自动聚焦和面板动画影响，短重试让输入断言在慢机器上更稳。
   for (let attempt = 0; attempt < 5; attempt += 1) {
     await input.fill(text);
     await page.waitForTimeout(120);
@@ -105,12 +108,14 @@ test("page routes open without a blank screen", async ({ page }) => {
 
 test("user can create, search, filter, edit, complete and delete a task", async ({ page, isMobile }, testInfo) => {
   await enterDemo(page);
+  // 标题带项目名，避免桌面和移动端项目并行执行时互相命中同一条任务。
   const titlePrefix = `Playwright唯一任务-${testInfo.project.name}`;
   const createdTitle = `${titlePrefix} <script>alert("xss")</script>`;
   const editedTitle = `${titlePrefix} - 已编辑`;
 
   await page.getByRole("button", { name: "新建任务" }).first().click();
   await page.getByLabel("任务标题").fill(createdTitle);
+  // 带入 HTML 片段是为了验证任务内容按纯文本展示，不被浏览器当作标记执行。
   await page.getByLabel("描述").fill("中文、emoji ✨ 和 <img src=x onerror=alert(\"xss\") /> 都应作为文本展示。");
   await page.getByLabel("优先级").selectOption("高");
   await page.getByLabel("分类").selectOption("前端开发");
@@ -189,6 +194,7 @@ test("AI chat follow-up mode delegates task instructions to backend agent", asyn
   await enterDemo(page);
   const aiRequests: Array<{ agent_mode?: boolean; follow_up_mode?: boolean; messages?: Array<{ content: string }>; model_name?: string }> = [];
   await page.route("**/api/ai/chat", async (route) => {
+    // 这里拦截 AI 接口，专注验证前端是否正确携带追问模式和历史消息。
     const payload = route.request().postDataJSON() as { agent_mode?: boolean; follow_up_mode?: boolean; messages?: Array<{ content: string }>; model_name?: string };
     aiRequests.push(payload);
     const responses = [
@@ -249,6 +255,7 @@ test("AI chat closes on outside interactions without swallowing target clicks", 
 
   await enterDemo(page);
   const taskTitle = "浮窗外点击关闭验证任务";
+  // 后端直接造数，避免这个用例重复覆盖“新建任务”流程，只测浮窗外点击行为。
   await createRemoteTask(page, taskTitle);
 
   await openChatPanel(page);

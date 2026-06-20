@@ -1,3 +1,5 @@
+/* 吐司通知：维护全局提示堆叠、类型和动效。 */
+
 .toast-viewport {
   position: fixed;
   right: 22px;
