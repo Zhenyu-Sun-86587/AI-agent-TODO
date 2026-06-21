@@ -26,87 +26,88 @@ AI-agent-TODO 对应当前仓库与后端历史名称，当前面向用户展示
 
 ## 🚀 快速开始
 
+> **说明**：本项目当前以本地开发环境为主，前端与后端分目录运行。
+
 ### 环境要求
 
-| 工具 | 版本 | 说明 |
-|------|------|------|
-| Python | 3.10+ | 推荐使用 conda 管理环境 |
-| Node.js | 18+ | 前端构建与开发 |
-| npm | 9+ | 随 Node.js 安装 |
+- Python 3.10+
+- Node.js 18+
+- npm
 
 ### 1. 启动后端
 
+后端代码位于 `backend/` 目录。
+
+安装依赖并配置环境：
+
 ```bash
 cd backend
-```
-
-**安装依赖：**
-
-```bash
-# === 方式 A：使用 venv（通用） ===
-python -m venv .venv
-
-# Windows
-.venv\Scripts\python -m pip install -r requirements.txt
-
-# macOS / Linux
+python3 -m venv .venv
 .venv/bin/python -m pip install -r requirements.txt
-
-# === 方式 B：使用 conda（推荐 Windows 用户） ===
-conda create -n ai-todo python=3.12
-conda activate ai-todo
-pip install -r requirements.txt
-```
-
-**配置环境变量：**
-
-```bash
-# Windows
-copy .env.example .env
-
-# macOS / Linux
 cp .env.example .env
 ```
 
-> `.env.example` 默认已开启 `AI_MOCK_MODE=true`，无需配置 OpenAI Key 即可体验 AI 功能（Mock 模式使用前端规则兜底）。
-
-**初始化数据库：**
+初始化数据库：
 
 ```bash
-# Windows (venv)
-.venv\Scripts\alembic upgrade head
-
-# macOS / Linux (venv)
 .venv/bin/alembic upgrade head
-
-# conda 环境（直接使用）
-alembic upgrade head
 ```
 
-**启动服务：**
+启动 FastAPI 后端服务：
 
 ```bash
-# Windows (venv)
-.venv\Scripts\uvicorn app.main:app --reload --host 127.0.0.1 --port 8000 --reload-exclude "*.db"
-
-# macOS / Linux (venv)
-.venv/bin/uvicorn app.main:app --reload --host 127.0.0.1 --port 8000 --reload-exclude "*.db"
-
-# conda 环境
-uvicorn app.main:app --reload --host 127.0.0.1 --port 8000 --reload-exclude "*.db"
+.venv/bin/uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
-
-> 💡 `--reload-exclude "*.db"` 可避免 SQLite 文件变化触发不必要的热重载。
 
 启动成功后可访问：
 
 ```text
-Swagger UI : http://127.0.0.1:8000/docs
-Health     : http://127.0.0.1:8000/health
-API Health : http://127.0.0.1:8000/api/health
+Swagger: http://127.0.0.1:8000/docs
+ReDoc: http://127.0.0.1:8000/redoc
+Health: http://127.0.0.1:8000/health
+API Health: http://127.0.0.1:8000/api/health
 ```
 
+#### 💡 Windows 用户补充说明
+
+如果你在 Windows 上开发，以下额外提示可能对你有帮助：
+
+**使用 conda 环境（替代 venv）：**
+
+```bash
+# 创建并激活 conda 环境
+conda create -n ai-todo python=3.12
+conda activate ai-todo
+
+# 安装依赖（在 backend/ 目录下）
+pip install -r requirements.txt
+
+# 后续直接使用，无需 .venv\Scripts\ 前缀
+alembic upgrade head
+uvicorn app.main:app --reload --host 127.0.0.1 --port 8000 --reload-exclude "*.db"
+```
+
+**如果使用 venv，Windows 上的路径差异：**
+
+```bash
+# Windows venv 的可执行文件在 Scripts 目录下
+.venv\Scripts\python -m pip install -r requirements.txt
+.venv\Scripts\alembic upgrade head
+.venv\Scripts\uvicorn app.main:app --reload --host 127.0.0.1 --port 8000 --reload-exclude "*.db"
+
+# 复制环境变量文件
+copy .env.example .env
+```
+
+> 💡 `--reload-exclude "*.db"` 可避免 SQLite 数据库文件变化触发不必要的服务重载。
+>
+> `.env.example` 默认开启 `AI_MOCK_MODE=true`，无需配置 OpenAI API Key 即可体验 AI 功能。
+
 ### 2. 启动前端
+
+前端代码位于 `frontend/` 目录。
+
+安装依赖并启动：
 
 ```bash
 cd frontend
@@ -120,48 +121,48 @@ npm run dev
 http://127.0.0.1:5173
 ```
 
-> 前端接口地址在 `frontend/.env.development` 中配置，默认指向 `http://127.0.0.1:8000/api`。
+当前前端开发环境接口地址位于 `frontend/.env.development`：
+
+```text
+VITE_API_BASE_URL=http://127.0.0.1:8000/api
+```
 
 ### 3. 运行测试
 
+后端测试：
+
 ```bash
-# 后端测试（venv — Windows）
-cd backend && .venv\Scripts\python -m pytest -q
+cd backend
+.venv/bin/python -m pytest -q
+```
 
-# 后端测试（venv — macOS / Linux）
-cd backend && .venv/bin/python -m pytest -q
+前端端到端测试：
 
-# 后端测试（conda）
-cd backend && python -m pytest -q
-
-# 前端 E2E 测试
-cd frontend && npm run test:e2e
+```bash
+cd frontend
+npm run test:e2e
 ```
 
 ## 💡 使用指南
 
-### 快速体验（推荐）
+### 登录与进入系统
 
-1. 打开 `http://127.0.0.1:5173`
-2. 点击 **"使用演示账号（本地）"** 或通过后端 Demo 登录
-3. 系统自动加载 **8 个示例任务**，涵盖不同优先级、分类和状态
-4. 可以直接浏览 Dashboard、编辑任务、查看统计、体验 AI 功能
-
-### 登录方式
-
-| 方式 | 说明 |
-|------|------|
-| 演示账号 | 点击即用，自动含示例数据，适合快速体验 |
-| 注册登录 | 创建个人账号，数据持久化，适合长期使用 |
+- 可以使用注册账号登录后端
+- 也可以使用演示账号快速体验系统（首次登录自动填充 8 个示例任务）
+- 登录后进入 `TaskPilot` 工作台
 
 ### AI 辅助功能
 
-- **自然语言解析**：输入"明天下午三点完成报告" → AI 自动拆分为结构化任务
-- **智能推荐**：编辑任务时 AI 建议优先级和分类
-- **AI 聊天**：通过右下角浮窗进行对话式任务操作
-- **Mock 兜底**：未配置 API Key 时自动使用前端规则，保障功能可用
+当前 AI 能力包括：
 
-> 详细使用方式可参考 [使用文档](使用文档.md)。
+- 自动从自然语言中提取任务标题、分类、优先级和截止时间
+- AI 解析后直接创建任务
+- 为任务推荐分类和优先级
+- 通过 AI 聊天浮窗执行任务相关操作
+
+详细使用方式可参考：
+
+- [使用文档](使用文档.md)
 
 ## 🛠️ 技术栈
 
