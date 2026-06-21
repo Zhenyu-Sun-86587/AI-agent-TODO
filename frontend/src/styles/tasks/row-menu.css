@@ -1,5 +1,11 @@
 /* 任务行菜单：维护更多操作菜单的定位、层级和危险项。 */
 
+.task-actions-cell {
+  overflow: visible !important;
+  position: relative;
+  z-index: 1;
+}
+
 .row-actions {
   position: relative;
   display: flex;
@@ -22,18 +28,18 @@
   color: var(--muted);
 }
 
-.row-menu-trigger.is-open,
-.row-menu-trigger:hover {
-  border-color: color-mix(in srgb, var(--primary) 28%, var(--line));
+.row-menu-trigger.is-open {
+  position: relative;
+  z-index: 100;
+  border-color: var(--primary);
   color: var(--primary);
-  transform: translateY(-1px);
 }
 
 .row-menu {
   position: absolute;
   top: 34px;
   right: 0;
-  z-index: 8;
+  z-index: 99;
   min-width: 124px;
   display: grid;
   gap: 4px;

@@ -61,6 +61,12 @@
   white-space: nowrap;
 }
 
+/* 操作列（第6列）允许下拉菜单正常溢出 */
+.task-table th:nth-child(6),
+.task-table td:nth-child(6) {
+  overflow: visible;
+}
+
 .task-table th {
   color: var(--muted);
   font-size: 13px;
@@ -85,6 +91,16 @@
 
 .task-table-row:hover {
   transform: translateY(-1px);
+}
+
+/* 打开行菜单的行需要盖过下方行，防止菜单被遮挡 */
+.row-has-open-menu {
+  position: relative;
+  z-index: 10;
+}
+
+.row-has-open-menu td {
+  background: var(--surface); /* 确保有背景色遮挡下方行内容 */
 }
 
 .task-table tbody tr:last-child td {
