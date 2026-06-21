@@ -17,6 +17,82 @@
   resize: vertical;
 }
 
+/* AI 自然语言解析区域 */
+.ai-parse-area {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  margin-bottom: 12px;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--primary) 4%, var(--surface));
+}
+
+.ai-parse-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--primary);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.ai-parse-success {
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--success, #16a34a) 10%, var(--surface));
+  color: var(--success, #16a34a);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.ai-parse-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.ai-parse-result {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+
+.ai-parse-result-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--primary);
+  font-size: 15px;
+}
+
+.ai-parse-result-header strong {
+  color: var(--text);
+}
+
+.ai-confidence {
+  margin-left: auto;
+  padding: 2px 8px;
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.ai-parse-fields {
+  display: grid;
+  gap: 8px;
+}
+
+.form-error {
+  color: var(--danger, #dc2626);
+  font-size: 13px;
+  font-weight: 700;
+}
+
 .preview-actions {
   display: flex;
   align-items: center;

@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
-import { Sparkles } from "lucide-react";
+import { Bot, Sparkles } from "lucide-react";
 import { ActionButton, Surface, SurfaceHeader } from "../../../components/ui/primitives";
 import { fetchAiLogs } from "../../../api/ai";
 import { asErrorMessage } from "../../../api/errors";
-import type { ApiAiLog } from "../../../api/types";
-import type { Task, TaskFieldSuggestion } from "../../tasks/types";
+import { localPartsFromIso, priorityFromApi } from "../../../api/mappers";
+import type { ApiAiLog, ApiParsedTask } from "../../../api/types";
+import type { NewTaskInput, Task, TaskFieldSuggestion } from "../../tasks/types";
 import { EmptyState, Field, formatDue, PriorityBadge } from "../../tasks/components/TaskDisplay";
 import { SelectField } from "../../tasks/components/TaskFilters";
+import { createEmptyTask } from "../../tasks/utils/generation";
 
 export function AIAssistantCard({ onOpenTask, tasks }: { onOpenTask: (task: Task) => void; tasks: Task[] }) {
   return (
@@ -40,7 +42,9 @@ export function AIAssistantCard({ onOpenTask, tasks }: { onOpenTask: (task: Task
 export function AIPage({
   isApiMode,
   onApiError,
+  onCreateTask,
   onOpenTask,
+  onParseTask,
   onSuggestTaskFields,
   recommendedTasks,
   taskVersion,
@@ -48,7 +52,9 @@ export function AIPage({
 }: {
   isApiMode: boolean;
   onApiError: (error: unknown) => string;
+  onCreateTask?: (input: NewTaskInput) => void;
   onOpenTask: (task: Task) => void;
+  onParseTask?: (text: string) => Promise<ApiParsedTask>;
   onSuggestTaskFields: (title: string, description: string) => Promise<TaskFieldSuggestion>;
   recommendedTasks: Task[];
   taskVersion: number;
@@ -57,6 +63,7 @@ export function AIPage({
   return (
     <main className="page-content">
       <div className="page-heading"><div><h1>AI 推荐</h1></div></div>
+      {(onParseTask && onCreateTask) && <AIParseTool isApiMode={isApiMode} onCreateTask={onCreateTask} onParseTask={onParseTask} />}
       <AIAssistantCard onOpenTask={onOpenTask} tasks={recommendedTasks} />
       <AISuggestTool onSuggestTaskFields={onSuggestTaskFields} />
       <AILogsPanel isApiMode={isApiMode} onApiError={onApiError} taskVersion={taskVersion} token={token} />
@@ -179,6 +186,111 @@ function AISuggestTool({ onSuggestTaskFields }: { onSuggestTaskFields: (title: s
       </div>
       {suggestion && <p className="suggest-reason">{suggestion.reason}</p>}
       {error && <p className="form-error">{error}</p>}
+    </Surface>
+  );
+}
+
+function AIParseTool({ isApiMode, onCreateTask, onParseTask }: { isApiMode: boolean; onCreateTask: (input: NewTaskInput) => void; onParseTask: (text: string) => Promise<ApiParsedTask> }) {
+  const [aiInput, setAiInput] = useState("");
+  const [isParsing, setParsing] = useState(false);
+  const [parsed, setParsed] = useState<ApiParsedTask | null>(null);
+  const [parseError, setParseError] = useState("");
+  const [createdTaskId, setCreatedTaskId] = useState<string | null>(null);
+
+  const handleParse = async () => {
+    if (!aiInput.trim()) return;
+    setParsing(true);
+    setParseError("");
+    setParsed(null);
+    setCreatedTaskId(null);
+    try {
+      if (!isApiMode) {
+        setParsed({
+          title: aiInput.trim().slice(0, 100),
+          description: null,
+          priority: "medium",
+          category: null,
+          due_time: null,
+          confidence: 0,
+          raw_due_text: null,
+        });
+        return;
+      }
+      const result = await onParseTask(aiInput.trim());
+      setParsed(result);
+    } catch (error) {
+      setParseError(asErrorMessage(error));
+    } finally {
+      setParsing(false);
+    }
+  };
+
+  const handleConfirmCreate = () => {
+    if (!parsed) return;
+    const due = localPartsFromIso(parsed.due_time);
+    onCreateTask({
+      title: parsed.title,
+      description: parsed.description || "",
+      status: "待办",
+      priority: priorityFromApi(parsed.priority),
+      category: parsed.category || "未分类",
+      dueDate: due.date,
+      dueTime: due.time,
+      tags: parsed.category ? `${parsed.category}, AI生成` : "AI生成",
+      aiReason: parsed.raw_due_text ? `AI 识别到时间表达："${parsed.raw_due_text}"。` : "AI 已根据自然语言拆出任务字段。",
+      isAiCreated: true,
+      confidence: parsed.confidence ?? undefined,
+      rawDueText: parsed.raw_due_text ?? undefined,
+      sourceText: aiInput.trim(),
+      aiBackendMode: isApiMode ? "backend" : "frontend-fallback",
+    });
+    setCreatedTaskId(parsed.title);
+  };
+
+  return (
+    <Surface variant="accent">
+      <SurfaceHeader
+        icon={<Bot size={22} />}
+        title="AI 解析创建任务"
+        description="用自然语言描述你要做的事，AI 会自动拆分为结构化任务。"
+      />
+      <div className="ai-parse-area">
+        <textarea
+          value={aiInput}
+          onChange={(event) => { setAiInput(event.target.value); setParseError(""); }}
+          placeholder='例如："明天下午三点完成软件工程报告，很重要"'
+          rows={3}
+          disabled={isParsing}
+        />
+        <div className="ai-parse-actions">
+          <ActionButton variant="primary" onClick={handleParse} disabled={isParsing || !aiInput.trim()}>
+            {isParsing ? "解析中..." : "解析任务"}
+          </ActionButton>
+        </div>
+        {parseError && <p className="form-error">{parseError}</p>}
+        {parsed && !createdTaskId && (
+          <div className="ai-parse-result">
+            <div className="ai-parse-result-header">
+              <Sparkles size={16} />
+              <strong>AI 解析结果</strong>
+              {parsed.confidence ? <span className="ai-confidence">置信度 {Math.round(parsed.confidence * 100)}%</span> : null}
+            </div>
+            <div className="ai-parse-fields">
+              <Field label="标题">{parsed.title}</Field>
+              <div className="form-grid">
+                <Field label="优先级"><PriorityBadge priority={priorityFromApi(parsed.priority)} /></Field>
+                <Field label="分类">{parsed.category || "未分类"}</Field>
+              </div>
+              <Field label="截止时间">{parsed.due_time ? new Date(parsed.due_time).toLocaleString() : "未识别"}</Field>
+              {parsed.raw_due_text && <Field label="识别到的时间表达">{parsed.raw_due_text}</Field>}
+            </div>
+            <ActionButton variant="primary" fullWidth onClick={handleConfirmCreate}>确认创建任务</ActionButton>
+          </div>
+        )}
+        {createdTaskId && (
+          <div className="ai-parse-success">任务「{createdTaskId}」已创建成功！可在全部任务列表中查看。</div>
+        )}
+      </div>
     </Surface>
   );
 }

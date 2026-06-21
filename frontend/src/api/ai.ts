@@ -1,5 +1,13 @@
 import { apiRequest } from "./client";
-import type { ApiAiChatResponse, ApiAiLog, ApiAiSuggestResponse, ApiPageResult } from "./types";
+import type { ApiAiChatResponse, ApiAiLog, ApiAiParseResponse, ApiAiSuggestResponse, ApiPageResult } from "./types";
+
+export function parseAiTask(text: string, timezone: string, token: string) {
+  return apiRequest<ApiAiParseResponse>("/ai/parse-task", {
+    method: "POST",
+    token,
+    body: JSON.stringify({ text, timezone }),
+  });
+}
 
 export function suggestTask(title: string, description: string, token: string) {
   return apiRequest<ApiAiSuggestResponse>("/ai/suggest", {

@@ -94,7 +94,7 @@ export function useTasks({
     tasks,
   });
 
-  const { suggestTaskFields } = useTaskSuggestions({
+  const { parseAiTaskText, suggestTaskFields } = useTaskSuggestions({
     activeToken,
     handleApiError,
     setApiMessage,
@@ -109,6 +109,7 @@ export function useTasks({
     isCreateOpen: selection.isCreateOpen,
     loadRemoteWorkspace,
     openTaskDetails: selection.openTaskDetails,
+    parseAiTaskText,
     remoteCategories,
     remoteStats,
     requestDeleteTask: selection.requestDeleteTask,

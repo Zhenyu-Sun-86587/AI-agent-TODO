@@ -45,7 +45,9 @@ function buildPageProps(props: PageRendererProps) {
   const ai: AIPageProps = {
     isApiMode: props.isApiMode,
     onApiError: props.onApiError,
+    onCreateTask: "onCreateTask" in props ? props.onCreateTask as AIPageProps["onCreateTask"] : undefined,
     onOpenTask: props.onOpenTask,
+    onParseTask: "onParseTask" in props ? props.onParseTask as AIPageProps["onParseTask"] : undefined,
     onSuggestTaskFields: props.onSuggestTaskFields,
     recommendedTasks: props.recommendedTasks,
     taskVersion: props.taskVersion,

@@ -113,6 +113,7 @@ export function App() {
     isCreateOpen,
     loadRemoteWorkspace,
     openTaskDetails,
+    parseAiTaskText,
     remoteCategories,
     remoteStats,
     requestDeleteTask,
@@ -219,10 +220,12 @@ export function App() {
       isApiMode={Boolean(activeToken)}
       onCreateTask={() => setCreateOpen(true)}
       onApiError={handleApiError}
+      onCreateTask={createTask}
       onDelete={requestDeleteTask}
       onEditTask={setEditingTask}
       onOpenTask={openTaskDetails}
       onPageChange={navigateTo}
+      onParseTask={parseAiTaskText}
       onSuggestTaskFields={suggestTaskFields}
       onUpdateTaskStatus={updateTaskStatus}
       onToggleComplete={toggleComplete}
@@ -285,6 +288,7 @@ export function App() {
               isApiMode={Boolean(activeToken)}
               onClose={() => setCreateOpen(false)}
               onCreate={createTask}
+              onParseTask={parseAiTaskText}
             />
           )}
           {editingTask && (

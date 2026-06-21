@@ -1,7 +1,8 @@
 import { useCallback } from "react";
-import { suggestTask } from "../../../api/ai";
+import { parseAiTask, suggestTask } from "../../../api/ai";
 import { asErrorMessage, isAiConfigError } from "../../../api/errors";
 import { priorityFromApi } from "../../../api/mappers";
+import type { ApiParsedTask } from "../../../api/types";
 import type { TaskFieldSuggestion } from "../types";
 
 export function useTaskSuggestions({
@@ -15,6 +16,34 @@ export function useTaskSuggestions({
   setApiMessage: (message: string) => void;
   setApiState: (state: "local" | "loading" | "online" | "offline") => void;
 }) {
+  const parseAiTaskText = useCallback(async (text: string): Promise<ApiParsedTask> => {
+    if (!activeToken) {
+      // 本地演示模式不支持 /ai/parse-task，提示用户先登录后端。
+      const message = "本地演示模式不支持 AI 解析，请登录后端账号后使用。";
+      setApiState("local");
+      setApiMessage(message);
+      throw new Error(message);
+    }
+
+    try {
+      setApiState("loading");
+      setApiMessage("正在调用 /ai/parse-task...");
+      const data = await parseAiTask(text, "Asia/Shanghai", activeToken);
+      setApiState("online");
+      setApiMessage(`AI 解析完成：${data.ai_status}`);
+      return data.parsed_task;
+    } catch (error) {
+      if (isAiConfigError(error)) {
+        const message = asErrorMessage(error);
+        setApiState("online");
+        setApiMessage(message);
+        throw error;
+      }
+      handleApiError(error);
+      throw error;
+    }
+  }, [activeToken, handleApiError, setApiMessage, setApiState]);
+
   const suggestTaskFields = useCallback(async (title: string, description: string): Promise<TaskFieldSuggestion> => {
     if (!activeToken) {
       // /ai/suggest 依赖后端保存的 BYOK 配置，本地演示只允许前端规则生成任务草稿。
@@ -50,6 +79,7 @@ export function useTaskSuggestions({
   }, [activeToken, handleApiError, setApiMessage, setApiState]);
 
   return {
+    parseAiTaskText,
     suggestTaskFields,
   };
 }
