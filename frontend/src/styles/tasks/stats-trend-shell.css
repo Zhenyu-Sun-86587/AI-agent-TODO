@@ -34,41 +34,33 @@
 }
 
 .trend-range-select {
-  position: relative;
   flex: 0 0 auto;
 }
 
-.trend-range-select::after {
-  content: "";
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  width: 7px;
-  height: 7px;
-  border-right: 1.5px solid currentColor;
-  border-bottom: 1.5px solid currentColor;
-  transform: translateY(-70%) rotate(45deg);
-  color: var(--muted);
-  pointer-events: none;
+.trend-range-select.ui-control {
+  min-width: 132px;
+  height: 34px;
 }
 
-.trend-range-select select {
-  min-width: 112px;
-  height: 34px;
-  padding: 0 30px 0 12px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.03);
-  color: var(--text);
-  font: inherit;
-  font-size: 13px;
-  font-weight: 700;
-  appearance: none;
-  -webkit-appearance: none;
-  outline: none;
-  cursor: pointer;
+.trend-range-select.ui-select-field select {
+  padding-right: 38px;
+  background: transparent;
+  border: 0;
+  color: inherit;
+}
+
+.trend-range-select.ui-select-field svg {
+  color: var(--muted-strong);
+}
+
+.minimal-shell-light .trend-range-select.ui-select-field svg {
+  color: var(--text-secondary);
+}
+
+.minimal-shell-dark .trend-range-select.ui-select-field svg {
+  color: var(--text-secondary);
 }
 
 .trend-range-select select:focus {
-  box-shadow: var(--focus-ring);
+  cursor: pointer;
 }

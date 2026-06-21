@@ -25,7 +25,6 @@ export function TaskEditor({
   submitLabel?: string;
 }) {
   const [validationError, setValidationError] = useState("");
-  // API 模式只开放后端支持的状态，避免提交“进行中”后被服务端枚举拒绝。
   const statusChoices = isApiMode ? API_TASK_STATUS_OPTIONS : TASK_STATUS_OPTIONS;
   const safeStatus = statusChoices.includes(form.status) ? form.status : "待办";
   const categoryOptions = Array.from(new Set([form.category, ...categories].filter(Boolean)));
@@ -38,7 +37,6 @@ export function TaskEditor({
       return;
     }
     setValidationError("");
-    // 提交时使用 safeStatus 兜底，处理从本地“进行中”任务切到 API 模式后继续编辑的边界。
     onSubmit({ ...form, status: safeStatus });
   };
 

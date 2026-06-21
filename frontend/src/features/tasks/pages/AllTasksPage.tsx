@@ -59,19 +59,10 @@ export function AllTasksPage({
   useEffect(() => setPage(1), [globalSearch]);
 
   useEffect(() => {
-    // 后端任务状态没有“进行中”，切到 API 模式时主动清理这个本地专属筛选。
-    if (isApiMode && status === "进行中") {
-      setStatus(TASK_FILTER_ALL);
-      setPage(1);
-    }
-  }, [isApiMode, status]);
-
-  useEffect(() => {
     if (!isApiMode || !token) return;
 
     let isCancelled = false;
     const keyword = `${globalSearch} ${query}`.trim();
-    const remoteStatus = isApiMode && status === "进行中" ? TASK_FILTER_ALL : status;
     setRemoteLoading(true);
     setRemoteError("");
     // 远程模式使用后端分页和筛选，taskVersion 变化时重新请求以同步 CRUD 后的新结果。
@@ -83,7 +74,7 @@ export function AllTasksPage({
       priority: priority === TASK_FILTER_ALL ? undefined : priorityToApiCode(priority),
       sortBy: sort === "priority" ? "priority" : sort === "createdAt" ? "created_at" : "due_time",
       sortOrder: sort === "dueDate" ? "asc" : "desc",
-      status: remoteStatus === TASK_FILTER_ALL ? undefined : statusToApiCode(remoteStatus),
+      status: status === TASK_FILTER_ALL ? undefined : statusToApiCode(status),
     }, token)
       .then((data) => {
         if (!isCancelled) {

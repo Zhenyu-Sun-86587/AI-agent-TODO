@@ -45,7 +45,6 @@ export function TaskDetailDrawer({ detailState, isApiMode, onClose, onDelete, on
         </div>
         {detailState.isLoading && <p className="table-state">{`正在读取 /tasks/${task.id} ...`}</p>}
         {detailState.error && <p className="form-error">{detailState.error}</p>}
-        <p className="drawer-description">{task.description || "暂无描述。"}</p>
         <div className="drawer-fields">
           <Field label="状态"><StatusBadge status={task.status} /></Field>
           <Field label="优先级"><PriorityBadge priority={task.priority} /></Field>
@@ -53,18 +52,9 @@ export function TaskDetailDrawer({ detailState, isApiMode, onClose, onDelete, on
           {!isApiMode && <Field label="标签">{task.tags.join(" / ") || "未设置"}</Field>}
           <Field label="创建来源">{task.isAiCreated ? "AI 生成" : "自定义创建"}</Field>
         </div>
-        <section className="subtasks">
-          <h3>子任务</h3>
-          {/* 远程任务模型暂未返回子任务，API 模式只展示真实字段，避免详情抽屉混入本地演示数据。 */}
-          {isApiMode ? (
-            <p>后端任务模型暂未提供子任务字段，前端不再展示假数据。</p>
-          ) : (
-            <>
-              <label><input type="checkbox" /> 确认字段结构</label>
-              <label><input type="checkbox" /> 联调后端接口</label>
-              <label><input type="checkbox" /> 补充验收截图</label>
-            </>
-          )}
+        <section className="task-description-card">
+          <h3>任务描述</h3>
+          <p className="drawer-description">{task.description || "暂无描述。"}</p>
         </section>
         <section className="ai-analysis">
           <div className="ai-analysis-heading">

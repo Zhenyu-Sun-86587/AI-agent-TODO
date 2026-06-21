@@ -51,7 +51,7 @@ export function TaskTable({
           <thead><tr><th>任务</th><th>状态</th><th>优先级</th><th>分类</th><th>截止时间</th><th className="task-actions-header">操作</th></tr></thead>
           <tbody>
             {tasks.map((task, index) => (
-              <tr className={`task-table-row ${task.status === "已完成" ? "is-complete" : ""} ${task.priority === "高" ? "is-high-priority" : ""}`} key={task.id} style={{ "--stagger-index": index } as CSSProperties} onClick={() => { setOpenMenuTaskId(null); onOpenTask(task); }}>
+              <tr className={`task-table-row ${task.status === "已完成" ? "is-complete" : ""} ${task.priority === "高" ? "is-high-priority" : ""} ${openMenuTaskId === task.id ? "is-menu-open" : ""}`} key={task.id} style={{ "--stagger-index": index } as CSSProperties} onClick={() => { setOpenMenuTaskId(null); onOpenTask(task); }}>
                 <td><div className="table-title"><strong className={task.status === "已完成" ? "task-title-done" : ""}>{task.title}</strong>{task.description ? <span>{task.description}</span> : null}</div></td>
                 <td><StatusBadge status={task.status} /></td>
                 <td><PriorityBadge priority={task.priority} /></td>

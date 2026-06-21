@@ -1,6 +1,6 @@
-/* 任务详情：维护子任务、AI 分析和详情字段展示。 */
+/* 任务详情：维护说明卡片、AI 分析和详情字段展示。 */
 
-.subtasks,
+.task-description-card,
 .ai-analysis {
   display: grid;
   gap: 10px;
@@ -9,10 +9,8 @@
   border-radius: 14px;
 }
 
-.subtasks label {
-  display: flex;
-  gap: 8px;
-  color: var(--muted);
+.task-description-card p {
+  margin: 0;
 }
 
 .ai-analysis {

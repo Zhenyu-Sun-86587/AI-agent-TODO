@@ -47,7 +47,7 @@
   background: var(--surface-soft);
 }
 
-.drawer-field span {
+.drawer-field > span {
   color: var(--muted);
   font-size: 13px;
   font-weight: 800;
@@ -55,6 +55,30 @@
 
 .drawer-field strong {
   font-weight: 900;
+}
+
+.drawer .status-badge.status-todo {
+  color: var(--muted) !important;
+}
+
+.drawer .status-badge.status-in-progress {
+  color: var(--blue) !important;
+}
+
+.drawer .status-badge.status-done {
+  color: var(--green) !important;
+}
+
+.drawer .priority-badge.priority-high {
+  color: var(--red) !important;
+}
+
+.drawer .priority-badge.priority-medium {
+  color: var(--orange) !important;
+}
+
+.drawer .priority-badge.priority-low {
+  color: var(--green) !important;
 }
 
 .drawer-actions {

@@ -1,8 +1,7 @@
 import type { TaskPriority, TaskStatus } from "./types";
 
-// API_TASK_STATUS_OPTIONS 受当前后端能力限制，只暴露后端真正接受的状态集合。
 export const TASK_STATUS_OPTIONS: readonly TaskStatus[] = ["待办", "进行中", "已完成"];
-export const API_TASK_STATUS_OPTIONS: readonly TaskStatus[] = ["待办", "已完成"];
+export const API_TASK_STATUS_OPTIONS: readonly TaskStatus[] = TASK_STATUS_OPTIONS;
 export const TASK_PRIORITY_OPTIONS: readonly TaskPriority[] = ["高", "中", "低"];
 
 export const TASK_PRIORITY_SCORE: Record<TaskPriority, number> = {

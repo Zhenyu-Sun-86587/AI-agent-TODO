@@ -192,7 +192,6 @@ body,
 
 .minimal-shell .ai-recommend-list strong,
 .minimal-shell .kanban-card strong,
-.minimal-shell .drawer-field strong,
 .minimal-shell .empty-state strong {
   color: #f8fafc;
 }
@@ -259,7 +258,6 @@ body,
 .minimal-shell-light .section-title h2,
 .minimal-shell-light .drawer-header h2,
 .minimal-shell-light .kanban-card strong,
-.minimal-shell-light .drawer-field strong,
 .minimal-shell-light .empty-state strong,
 .minimal-shell-light .user-name-text,
 .minimal-shell-light .ai-reason-header strong {
