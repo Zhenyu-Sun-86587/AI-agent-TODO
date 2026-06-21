@@ -5,10 +5,11 @@
 
 要求：
 1. title 必须是简洁任务标题。
-2. priority 只能是 low、medium、high。
-3. category 使用简短中文分类，例如 学习、工作、生活、项目。
-4. due_time 必须是 ISO 8601 时间字符串；无法解析则返回 null。
-5. 不要返回 Markdown，不要返回解释。
+2. description 必须用 1-2 句中文概括任务要做什么；只有在用户输入确实没有任何可概括内容时才返回 null。
+3. priority 只能是 low、medium、high。
+4. category 使用简短中文分类，例如 学习、工作、生活、项目。
+5. due_time 必须是 ISO 8601 时间字符串；无法解析则返回 null。
+6. 不要返回 Markdown，不要返回解释。
 
 返回 JSON Schema：
 {
