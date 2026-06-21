@@ -7,7 +7,6 @@ export type SendChatRequest = {
   model: ChatModel;
   messages: ChatMessage[];
   input: string;
-  attachments: ChatAttachment[];
   followUpMode: boolean;
   token?: string;
 };
@@ -17,24 +16,32 @@ export type SendChatResponse = {
   taskChanged: boolean;
 };
 
+function serializeAttachment(attachment: ChatAttachment) {
+  const content = attachment.content.trim();
+  if (!content) {
+    return "";
+  }
+  return `\n\n[附件: ${attachment.name}]\n${content}`;
+}
+
+function serializeMessage(message: ChatMessage) {
+  const content = message.content.trim();
+  const attachmentText = message.attachments?.map(serializeAttachment).join("") || "";
+  return `${content}${attachmentText}`.trim();
+}
+
 export async function sendChatMessage(request: SendChatRequest): Promise<SendChatResponse> {
   if (!request.token) {
     throw new Error("请先登录后端账号，再使用真实 AI 聊天。");
   }
-  if (request.attachments.length) {
-    throw new Error("当前真实 AI 聊天暂不支持附件，请先移除附件后发送。");
-  }
 
-  // 发送给后端的历史只保留非空文本，附件 metadata 仍留存在本地消息记录中。
   const data = await sendAiChat(
     request.token,
     request.model.id,
-    request.messages
-      .filter((message) => message.content.trim())
-      .map((message) => ({
-        role: message.role,
-        content: message.content.trim(),
-      })),
+    request.messages.map((message) => ({
+      role: message.role,
+      content: serializeMessage(message),
+    })),
     { followUpMode: request.followUpMode },
   );
 

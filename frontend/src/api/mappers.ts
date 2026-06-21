@@ -76,10 +76,11 @@ export function dateFromIso(value: string | null) {
 export function mapApiTask(task: ApiTask, parsedTask?: ApiParsedTask): Task {
   // 页面 Task 模型包含展示文案、标签和 AI 辅助信息，这里把后端字段补齐为可直接渲染的数据。
   const due = localPartsFromIso(task.due_time);
+  const description = task.description || parsedTask?.description || "";
   return {
     id: task.id,
     title: task.title,
-    description: task.description || "",
+    description,
     status: statusFromApi(task.status),
     priority: priorityFromApi(task.priority),
     category: task.category || "未分类",

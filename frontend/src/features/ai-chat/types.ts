@@ -3,6 +3,7 @@ export type ChatAttachment = {
   name: string;
   size: number;
   type: string;
+  content: string;
 };
 
 // ChatMessage 的 status 只用于前端发送态展示，不直接映射后端消息状态机。

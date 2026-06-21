@@ -251,6 +251,11 @@
   transition: all 0.2s ease;
 }
 
+.ai-chat-composer-toolbar button:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
 .ai-chat-header-actions button {
   width: 34px;
   height: 34px;
@@ -487,6 +492,13 @@
   padding: 8px 12px;
   background: var(--ai-chat-error-bg);
   border-radius: 8px;
+}
+
+.ai-chat-composer-error {
+  margin: 10px 2px 0;
+  color: var(--ai-chat-error);
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 /* 输入区：承载附件、文本域、跟进开关、模型选择和发送按钮。 */

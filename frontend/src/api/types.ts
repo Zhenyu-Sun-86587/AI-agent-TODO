@@ -18,7 +18,7 @@ export interface ApiPageResult<T> {
 }
 
 export type ApiPriority = "low" | "medium" | "high";
-export type ApiTaskStatus = "todo" | "done";
+export type ApiTaskStatus = "todo" | "in_progress" | "done";
 
 export interface ApiUser {
   id: number;
