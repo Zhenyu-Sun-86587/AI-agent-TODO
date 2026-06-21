@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Any, Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.schemas.task import Priority, TaskRead
 
@@ -47,10 +47,31 @@ class AiSuggestResponse(BaseModel):
     reason: Optional[str] = None
 
 
+class AiChatAttachment(BaseModel):
+    name: str = Field(min_length=1, max_length=255)
+    size: int = Field(default=0, ge=0)
+    type: str = Field(default="", max_length=100)
+    content: str = Field(min_length=1)
+
+    @field_validator("name")
+    @classmethod
+    def _validate_markdown_name(cls, value: str) -> str:
+        if not value.lower().endswith(".md"):
+            raise ValueError("只支持 .md 附件")
+        return value
+
+
 class AiChatMessage(BaseModel):
     # role 限定为常见聊天角色，避免任意字符串透传给模型提供商。
     role: str = Field(pattern="^(user|assistant|system)$")
-    content: str = Field(min_length=1, max_length=4000)
+    content: str = Field(default="", max_length=4000)
+    attachments: list[AiChatAttachment] = Field(default_factory=list, max_length=10)
+
+    @model_validator(mode="after")
+    def _validate_payload(self):
+        if not self.content.strip() and not self.attachments:
+            raise ValueError("消息内容和附件不能同时为空")
+        return self
 
 
 class AiChatRequest(BaseModel):

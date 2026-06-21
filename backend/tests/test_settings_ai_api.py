@@ -78,6 +78,7 @@ def test_ai_parse_suggest_create_and_logs_in_mock_mode(client, monkeypatch):
     task = response.json()["data"]["task"]
     assert task["is_ai_created"] is True
     assert task["category"] == "课程"
+    assert task["description"]
 
     response = client.get("/api/ai/logs", headers=headers, params={"status": "mocked"})
     assert response.status_code == 200

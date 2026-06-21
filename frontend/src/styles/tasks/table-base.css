@@ -80,6 +80,8 @@
 }
 
 .task-table-row {
+  position: relative;
+  z-index: 0;
   animation: pageFadeUp var(--motion-base) var(--ease-out) both;
   animation-delay: calc(var(--stagger-index) * 32ms);
   transition:
@@ -89,7 +91,12 @@
     transform var(--motion-fast) var(--ease-out);
 }
 
+.task-table-row.is-menu-open {
+  z-index: 20;
+}
+
 .task-table-row:hover {
+  z-index: 10;
   transform: translateY(-1px);
 }
 

@@ -18,7 +18,7 @@
 .minimal-shell .ai-recommend-list p,
 .minimal-shell .ai-recommend-meta,
 .minimal-shell .task-table-row p,
-.minimal-shell .drawer-field span {
+.minimal-shell .drawer-field > span {
   color: #64748b;
 }
 

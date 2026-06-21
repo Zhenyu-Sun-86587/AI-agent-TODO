@@ -41,6 +41,7 @@ function normalizeAttachment(value: unknown, index: number): ChatAttachment | nu
     name: value.name,
     size: typeof value.size === "number" && Number.isFinite(value.size) ? value.size : 0,
     type: typeof value.type === "string" ? value.type : "",
+    content: typeof value.content === "string" ? value.content : "",
   };
 }
 

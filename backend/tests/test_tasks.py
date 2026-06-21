@@ -51,6 +51,14 @@ def test_task_crud_status_and_nullable_updates(client):
     response = client.patch(
         f"/api/tasks/{task_id}/status",
         headers=headers,
+        json={"status": "in_progress"},
+    )
+    assert response.status_code == 200
+    assert response.json()["data"]["status"] == "in_progress"
+
+    response = client.patch(
+        f"/api/tasks/{task_id}/status",
+        headers=headers,
         json={"status": "done"},
     )
     assert response.status_code == 200
@@ -86,11 +94,15 @@ def test_task_list_filters_sorting_and_categories(client):
         headers=headers,
         json={"title": "买牛奶", "description": "下班后", "priority": "low", "category": "生活"},
     )
-    client.patch(f"/api/tasks/{second['id']}/status", headers=headers, json={"status": "done"})
+    client.patch(f"/api/tasks/{second['id']}/status", headers=headers, json={"status": "in_progress"})
 
     response = client.get("/api/tasks", headers=headers, params={"status": "todo"})
     assert response.status_code == 200
     assert response.json()["data"]["pagination"]["total"] == 2
+
+    response = client.get("/api/tasks", headers=headers, params={"status": "in_progress"})
+    assert response.status_code == 200
+    assert response.json()["data"]["pagination"]["total"] == 1
 
     response = client.get("/api/tasks", headers=headers, params={"priority": "high"})
     assert response.json()["data"]["items"][0]["title"] == "准备项目答辩 PPT"

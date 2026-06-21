@@ -9,6 +9,11 @@ export function parseAiTask(text: string, timezone: string, token: string) {
   });
 }
 
+type ApiAiChatMessage = {
+  role: "user" | "assistant" | "system";
+  content: string;
+};
+
 export function suggestTask(title: string, description: string, token: string) {
   return apiRequest<ApiAiSuggestResponse>("/ai/suggest", {
     method: "POST",
@@ -24,7 +29,7 @@ export function fetchAiLogs(path: string, token: string) {
 export function sendAiChat(
   token: string,
   modelName: string,
-  messages: Array<{ role: "user" | "assistant" | "system"; content: string }>,
+  messages: ApiAiChatMessage[],
   options: { followUpMode: boolean } = { followUpMode: false },
 ) {
   return apiRequest<ApiAiChatResponse>("/ai/chat", {

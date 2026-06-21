@@ -1,5 +1,5 @@
 import { ArrowUp, FilePlus2, X } from "lucide-react";
-import { useRef, type KeyboardEvent } from "react";
+import { useRef, useState, type Dispatch, type KeyboardEvent, type SetStateAction } from "react";
 import type { ChatAttachment, ChatModelGroup, ChatSendOptions } from "../../features/ai-chat/types";
 import ModelSelector from "./ModelSelector";
 
@@ -14,7 +14,12 @@ function toAttachment(file: File): ChatAttachment {
     name: file.name,
     size: file.size,
     type: file.type,
+    content: "",
   };
+}
+
+function isMarkdownFile(file: File) {
+  return file.name.toLowerCase().endsWith(".md");
 }
 
 export default function ChatComposer({
@@ -35,7 +40,7 @@ export default function ChatComposer({
   input: string;
   isFollowUpMode: boolean;
   modelGroups: ChatModelGroup[];
-  onAttachmentsChange: (attachments: ChatAttachment[]) => void;
+  onAttachmentsChange: Dispatch<SetStateAction<ChatAttachment[]>>;
   onFollowUpModeChange: (enabled: boolean) => void;
   onInputChange: (value: string) => void;
   onModelChange: (modelId: string) => void;
@@ -44,12 +49,14 @@ export default function ChatComposer({
 }) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const [attachmentError, setAttachmentError] = useState("");
+  const [isReadingFiles, setIsReadingFiles] = useState(false);
   const canSend = Boolean(input.trim()) || attachments.length > 0;
 
   const submit = () => {
     const nextInput = textareaRef.current?.value ?? input;
     const nextAttachments = attachments;
-    if (disabled || (!nextInput.trim() && nextAttachments.length === 0)) {
+    if (disabled || isReadingFiles || (!nextInput.trim() && nextAttachments.length === 0)) {
       return;
     }
     if (textareaRef.current) {
@@ -58,6 +65,7 @@ export default function ChatComposer({
     // 先清空本地输入，再异步发送，避免网络慢时用户误以为提交没有生效。
     onInputChange("");
     onAttachmentsChange([]);
+    setAttachmentError("");
     window.requestAnimationFrame(() => {
       if (textareaRef.current) {
         textareaRef.current.value = "";
@@ -89,7 +97,7 @@ export default function ChatComposer({
               {attachment.name}
               <button
                 type="button"
-                onClick={() => onAttachmentsChange(attachments.filter((item) => item.id !== attachment.id))}
+                onClick={() => onAttachmentsChange((current) => current.filter((item) => item.id !== attachment.id))}
                 aria-label={`移除 ${attachment.name}`}
               >
                 <X size={13} />
@@ -113,13 +121,48 @@ export default function ChatComposer({
           className="ai-chat-file-input"
           multiple
           type="file"
+          accept=".md"
           onChange={(event) => {
             const files = Array.from(event.target.files || []);
-            onAttachmentsChange([...attachments, ...files.map(toAttachment)]);
             event.target.value = "";
+            if (!files.length) {
+              return;
+            }
+            const markdownFiles = files.filter(isMarkdownFile);
+            const rejectedFiles = files.filter((file) => !isMarkdownFile(file));
+            if (rejectedFiles.length) {
+              setAttachmentError(`只支持 .md 文件：${rejectedFiles.map((file) => file.name).join("、")}`);
+            } else {
+              setAttachmentError("");
+            }
+            if (!markdownFiles.length) {
+              return;
+            }
+            setIsReadingFiles(true);
+            void Promise.all(
+              markdownFiles.map(async (file) => ({
+                ...(toAttachment(file)),
+                content: await file.text(),
+              })),
+            )
+              .then((loadedAttachments) => {
+                onAttachmentsChange((current) => [...current, ...loadedAttachments]);
+              })
+              .catch(() => {
+                setAttachmentError("读取 .md 附件失败，请重试。");
+              })
+              .finally(() => {
+                setIsReadingFiles(false);
+              });
           }}
         />
-        <button type="button" onClick={() => fileInputRef.current?.click()} aria-label="选择文件">
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          aria-label="选择文件"
+          title={isReadingFiles ? "正在读取附件" : "选择 .md 附件"}
+          disabled={isReadingFiles}
+        >
           <FilePlus2 size={19} />
         </button>
         <button
@@ -135,10 +178,11 @@ export default function ChatComposer({
 
         <ModelSelector groups={modelGroups} selectedModelId={selectedModelId} onModelChange={onModelChange} />
 
-        <button className="ai-chat-send" type="button" onClick={submit} disabled={disabled || !canSend} aria-label="发送消息">
+        <button className="ai-chat-send" type="button" onClick={submit} disabled={disabled || isReadingFiles || !canSend} aria-label="发送消息">
           <ArrowUp size={18} />
         </button>
       </div>
+      {attachmentError ? <p className="ai-chat-composer-error">{attachmentError}</p> : null}
     </form>
   );
 }

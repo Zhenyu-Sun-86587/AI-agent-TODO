@@ -63,6 +63,52 @@ def test_demo_login_returns_backend_session(client):
     assert me_response.json()["data"]["email"] == "demo@aitodo.dev"
 
 
+def test_demo_login_seeds_weekly_tasks(client):
+    """Demo 账号应自带一周演示任务，便于任务中心和日历直接展示。"""
+    response = client.post("/api/auth/demo")
+
+    assert response.status_code == 200
+    token = response.json()["data"]["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    task_response = client.get("/api/tasks", headers=headers, params={"page_size": 20})
+    assert task_response.status_code == 200
+    data = task_response.json()["data"]
+    assert data["pagination"]["total"] == 9
+
+    titles = {item["title"] for item in data["items"]}
+    assert {
+        "完成演示说明稿定稿",
+        "梳理 TaskPilot 演示流程",
+        "校对任务筛选和排序",
+        "补全 API 对接说明",
+        "核对周视图时间轴",
+        "准备答辩材料",
+        "验证 AI 创建任务链路",
+        "检查统计接口返回",
+        "整理一周复盘笔记",
+    } == titles
+
+    categories = {item["name"] for item in client.get("/api/tasks/categories", headers=headers).json()["data"]}
+    assert {"文档", "项目演示", "任务中心", "日历", "生活", "测试", "后端联调", "复盘"} <= categories
+
+
+def test_demo_login_does_not_reset_existing_tasks(client):
+    """再次登录 demo 账号时，不应该把已经存在的任务清空。"""
+    response = client.post("/api/auth/demo")
+    token = response.json()["data"]["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    client.post("/api/tasks", headers=headers, json={"title": "演示中的临时补充任务"})
+
+    response = client.post("/api/auth/demo")
+    assert response.status_code == 200
+
+    refreshed = client.get("/api/tasks", headers={"Authorization": f"Bearer {response.json()['data']['access_token']}"})
+    assert refreshed.status_code == 200
+    assert refreshed.json()["data"]["pagination"]["total"] == 10
+
+
 def test_login_wrong_password_fails(client):
     """错误密码不暴露用户是否存在，只返回统一登录失败错误。"""
     auth_headers(client)

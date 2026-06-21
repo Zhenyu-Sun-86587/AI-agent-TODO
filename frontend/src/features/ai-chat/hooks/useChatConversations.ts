@@ -171,7 +171,6 @@ export function useChatConversations(initialModelId: string | undefined, token?:
         conversationId,
         input,
         messages: nextMessages,
-        attachments,
         followUpMode: options.followUpMode,
         token,
       });

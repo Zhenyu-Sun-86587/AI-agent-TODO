@@ -27,7 +27,7 @@ export default function ChatThread({ isSending, messages }: { isSending: boolean
       <div className="ai-chat-thread">
         <section className="ai-chat-empty">
           <h2>今天想聊点什么？</h2>
-          <p>可以直接输入问题，也可以先选择文件 metadata 后一起提交。</p>
+          <p>可以直接输入问题，也可以一起附上 Markdown 文件。</p>
         </section>
         <div ref={bottomRef} />
       </div>
@@ -38,7 +38,7 @@ export default function ChatThread({ isSending, messages }: { isSending: boolean
     <div className="ai-chat-thread" aria-live="polite">
       {messages.map((message) => (
         <article className={`ai-chat-message ${message.role}`} key={message.id}>
-          <p>{message.content}</p>
+          {message.content.trim() ? <p>{message.content}</p> : null}
           {message.attachments?.length ? (
             <div className="ai-chat-message-attachments">
               {message.attachments.map((attachment) => (

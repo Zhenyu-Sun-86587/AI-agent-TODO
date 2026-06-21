@@ -27,6 +27,7 @@ from app.utils.datetime import utc_now
 PROMPT_PATH = Path(__file__).resolve().parents[1] / "prompts" / "parse_task.md"
 DEEPSEEK_MODEL_PREFIX = "deepseek-"
 DEEPSEEK_DNS_CACHE_TTL_SECONDS = 300
+MAX_ATTACHMENT_CONTENT_CHARS = 12000
 AGENT_ACTIONS = {
     "chat",
     "follow_up",
@@ -249,7 +250,7 @@ class AiService:
             # Agent 先让模型产出结构化决策，再由后端白名单执行，避免模型直接操作数据库。
             content = self._call_agent_model(api_key, model_name, messages, user, follow_up_mode, timezone_name)
             decision = self._validate_agent_decision(content)
-            response = self._execute_agent_decision(user, decision, model_name, follow_up_mode)
+            response = self._execute_agent_decision(user, decision, model_name, follow_up_mode, messages, timezone_name)
         except (AuthenticationError, PermissionDeniedError) as exc:
             raise BusinessError(
                 ErrorCode.OPENAI_KEY_INVALID,
@@ -293,7 +294,7 @@ class AiService:
             model_name,
             lambda: client.chat.completions.create(
                 model=model_name,
-                messages=[message.model_dump() for message in messages],
+                messages=self._messages_for_model(messages),
                 temperature=0.7,
             ),
         )
@@ -332,10 +333,21 @@ class AiService:
             "\"updates\":{\"title\":null,\"description\":null,\"priority\":null,\"category\":null,\"due_time\":null,\"status\":null}}。\n"
             "规则：普通问答用 chat。创建任务用 create_task，并给出完整 task。查询列表用 list_tasks。"
             "查看、修改、删除、完成、恢复任务必须定位到唯一任务；能定位时填 target_task_id。"
-            "完成任务填 action=set_task_status 且 updates.status=done；恢复任务填 status=todo。"
-            "如果追问模式开启，且用户目标、创建内容、修改内容、任务匹配、截止时间、优先级、分类、状态等任何任务 JSON 字段不清楚，"
-            "必须返回 follow_up，并把不确定字段写入 uncertain_fields，在 message 里一次性追问；不要用默认值硬填。"
-            "如果追问模式关闭，可在安全范围内为创建任务使用合理默认值，但仍要避免编造截止时间。"
+            "完成任务填 action=set_task_status 且 updates.status=done；恢复任务填 status=todo；开始处理任务填 status=in_progress。"
+            "创建任务时，先产出一个 task 草稿：能从用户原话和上下文明确推断出的字段直接填写，当前无法确定的字段填 null。"
+            "title 默认由你自动概括，不要把 title 作为常规追问项；只有连任务主体都无法判断时才追问。"
+            "创建任务重点审阅字段是 description、priority、category、due_time。"
+            "如果用户明确说某个字段'你来写'、'你决定'、'你看着办'、'自动生成'、'默认'、'都行'，该字段不算不确定，应由你根据上下文直接补全。"
+            "如果追问模式开启，只要这四个字段里仍有 null，就必须返回 follow_up，并把不确定字段写入 uncertain_fields。"
+            "follow_up 的 message 必须直接输出最终追问文案，不要加前缀说明；每个缺失字段占一行，顺序固定为 due_time、priority、category、description。"
+            "追问行文案必须严格使用以下句式中的对应子集："
+            "“— 截止时间具体是什么时候？（例如 23:00）”、"
+            "“— 优先级是什么？（低 / 中 / 高）”、"
+            "“— 分类是什么？（学习 / 工作 / 生活 / 项目）”、"
+            "“— 任务具体要做什么？”。"
+            "如果追问模式关闭，创建任务时不能把这些字段留成 null：你必须自行补全 description、priority、category、due_time。"
+            "其中 due_time 若用户未明确给出，可按用户时区提供合理默认截止时间，优先使用近期时间，默认基准是次日 23:00；若语义明显更紧急可提前。"
+            "如果追问模式关闭但确实无法安全补全 title，才返回 follow_up。"
             "删除、修改、完成、恢复这类会改变数据的操作，如果不能唯一确定任务，即使追问模式关闭也返回 follow_up，不能猜。"
             "用户回复序号、'第一个'、更完整标题时，要结合前文 assistant 的候选列表和当前任务列表判断。"
             "不要编造任务 ID；due_time 使用 ISO 8601 字符串或 null。"
@@ -346,7 +358,7 @@ class AiService:
                 model=model_name,
                 messages=[
                     {"role": "system", "content": system_prompt},
-                    *[message.model_dump() for message in messages],
+                    *self._messages_for_model(messages),
                 ],
                 temperature=0.1,
                 response_format={"type": "json_object"},
@@ -377,42 +389,49 @@ class AiService:
                 data[key] = {}
         return data
 
-    def _execute_agent_decision(self, user: User, decision: dict[str, Any], model_name: str, follow_up_mode: bool = False) -> AiChatResponse:
+    def _execute_agent_decision(
+        self,
+        user: User,
+        decision: dict[str, Any],
+        model_name: str,
+        follow_up_mode: bool = False,
+        messages: Optional[list[AiChatMessage]] = None,
+        timezone_name: str = "Asia/Shanghai",
+    ) -> AiChatResponse:
         action = decision["action"]
         message = str(decision.get("message") or "").strip()
         task_service = TaskService(self.db)
+        source_text = self._latest_user_text(messages or [])
+        uncertain_fields = self._agent_uncertain_fields(decision)
 
         if action == "chat":
             return AiChatResponse(content=message or "我在。", model_name=model_name, agent_action=action)
 
-        if action == "follow_up":
-            return AiChatResponse(content=message or "请再补充一点信息。", model_name=model_name, agent_action=action)
+        if action in {"create_task", "follow_up"}:
+            if not follow_up_mode and action == "follow_up":
+                return AiChatResponse(content=message or "请再补充一点信息。", model_name=model_name, agent_action=action)
 
-        uncertain_fields = self._agent_uncertain_fields(decision)
+            task_data = decision.get("task") or {}
+            if follow_up_mode:
+                follow_up_fields = self._create_task_follow_up_fields(decision)
+                if follow_up_fields:
+                    return AiChatResponse(
+                        content=message or self._format_uncertain_fields_follow_up(follow_up_fields),
+                        model_name=model_name,
+                        agent_action="follow_up",
+                    )
+                return self._create_ai_task_response(user, task_data, model_name, message, source_text)
+
+            if action == "create_task":
+                return self._create_ai_task_response(user, task_data, model_name, message, source_text)
+            return AiChatResponse(content=message or "请再补充一点信息。", model_name=model_name, agent_action="follow_up")
+
         if follow_up_mode and uncertain_fields:
             # 追问模式下任何关键字段不确定都不写库，让用户先补齐信息。
             return AiChatResponse(
-                content=message or self._format_uncertain_fields_follow_up(uncertain_fields),
+                content=self._format_uncertain_fields_follow_up(uncertain_fields),
                 model_name=model_name,
                 agent_action="follow_up",
-            )
-
-        if action == "create_task":
-            task_data = self._agent_task_create(decision.get("task") or {})
-            if not task_data:
-                # 创建任务至少需要可用标题；过泛的标题会被当成信息不足处理。
-                return AiChatResponse(
-                    content=message or "请补充要创建的任务内容。",
-                    model_name=model_name,
-                    agent_action="follow_up",
-                )
-            task = task_service.create_task(user, task_data, is_ai_created=True)
-            return AiChatResponse(
-                content=message or f"已创建任务：{task.title}",
-                model_name=model_name,
-                agent_action=action,
-                task_changed=True,
-                task=TaskRead.model_validate(task),
             )
 
         if action == "list_tasks":
@@ -507,11 +526,111 @@ class AiService:
 
         return AiChatResponse(content=message or "我还不能执行这个操作。", model_name=model_name, agent_action="chat")
 
+    def _create_ai_task_response(
+        self,
+        user: User,
+        task_data: dict[str, Any],
+        model_name: str,
+        message: str,
+        source_text: str,
+    ) -> AiChatResponse:
+        task_data_obj = self._agent_task_create(task_data, follow_up_mode=False, source_text=source_text)
+        if not task_data_obj:
+            return AiChatResponse(
+                content=message or "请补充更具体的任务内容和描述，我再帮你创建。",
+                model_name=model_name,
+                agent_action="follow_up",
+            )
+        task = TaskService(self.db).create_task(user, task_data_obj, is_ai_created=True)
+        return AiChatResponse(
+            content=message or f"已创建任务：{task.title}",
+            model_name=model_name,
+            agent_action="create_task",
+            task_changed=True,
+            task=TaskRead.model_validate(task),
+        )
+
     def _latest_user_text(self, messages: list[AiChatMessage]) -> str:
         for message in reversed(messages):
             if message.role == "user":
-                return message.content
-        return messages[-1].content if messages else ""
+                return self._render_message_for_model(message)
+        return self._render_message_for_model(messages[-1]) if messages else ""
+
+    def _messages_for_model(self, messages: list[AiChatMessage]) -> list[dict[str, Any]]:
+        rendered: list[dict[str, Any]] = []
+        for message in messages:
+            content = self._render_message_for_model(message)
+            if not content:
+                continue
+            rendered.append({"role": message.role, "content": content})
+        return rendered
+
+    def _render_message_for_model(self, message: AiChatMessage) -> str:
+        content = message.content.strip()
+        attachment_content = self._render_attachments_for_model(message.attachments)
+        if content and attachment_content:
+            return f"{content}\n\n{attachment_content}"
+        if attachment_content:
+            return attachment_content
+        return content
+
+    def _render_attachments_for_model(self, attachments: list[Any]) -> str:
+        if not attachments:
+            return ""
+        blocks = []
+        for index, attachment in enumerate(attachments, start=1):
+            name = self._optional_short_text(getattr(attachment, "name", None), 255) or f"attachment-{index}.md"
+            size = getattr(attachment, "size", 0) or 0
+            attachment_type = self._optional_short_text(getattr(attachment, "type", None), 100) or "text/markdown"
+            raw_content = str(getattr(attachment, "content", "") or "")
+            content = raw_content[:MAX_ATTACHMENT_CONTENT_CHARS]
+            suffix = "\n[内容已截断]" if len(raw_content) > len(content) else ""
+            blocks.append(
+                "\n".join(
+                    [
+                        f"[附件开始 #{index}]",
+                        f"文件名: {name}",
+                        f"大小: {size} bytes",
+                        f"类型: {attachment_type}",
+                        content + suffix,
+                        "[附件结束]",
+                    ],
+                )
+            )
+        return "\n\n".join(blocks)
+
+    def _parse_zh_priority(self, text: str) -> Optional[Priority]:
+        normalized = re.sub(r"\s+", "", text).lower()
+        labeled = re.search(r"优先级(?:是|为|:|：)?(高|中|低|high|medium|low)", normalized, flags=re.IGNORECASE)
+        if labeled:
+            normalized = labeled.group(1).lower()
+        if normalized in {"高", "high", "紧急", "重要", "高优先级"}:
+            return Priority.high
+        if normalized in {"中", "medium", "普通", "一般", "中优先级"}:
+            return Priority.medium
+        if normalized in {"低", "low", "不急", "低优先级"}:
+            return Priority.low
+        return None
+
+    def _parse_zh_category(self, text: str) -> Optional[str]:
+        raw = self._optional_short_text(text, 200)
+        if not raw:
+            return None
+
+        labeled = re.search(r"(?:分类|类别)(?:是|为|:|：)?\s*([^,，。；;\n]+)", raw)
+        if labeled:
+            category = labeled.group(1)
+        else:
+            category = raw
+            if any(marker in category for marker in ("截止时间", "优先级", "任务具体", "描述", "你来")):
+                return None
+
+        category = re.split(r"(?:任务具体|任务描述|描述|优先级|截止时间|你来|你决定)", category, maxsplit=1)[0]
+        category = category.strip(" ：:，,。；;、 \n\t")
+        if "/" in category:
+            category = category.split("/", 1)[0].strip()
+        category = re.sub(r"^(分类|类别)[:：是为]*", "", category).strip()
+        return category[:50] or None
 
     def _task_to_agent_dict(self, task: Any) -> dict[str, Any]:
         return {
@@ -526,18 +645,37 @@ class AiService:
             "updated_at": task.updated_at.isoformat() if task.updated_at else None,
         }
 
-    def _agent_task_create(self, data: dict[str, Any]) -> Optional[TaskCreate]:
+    def _agent_task_create(self, data: dict[str, Any], follow_up_mode: bool = False, source_text: str = "") -> Optional[TaskCreate]:
         title = self._optional_short_text(data.get("title"), 100)
-        if not title or title in {"弄一下", "处理一下", "搞一下", "任务", "待办", "事情", "这个", "那个"}:
+        if not title or title in {"弄一下", "处理一下", "搞一下", "任务", "待办", "事情", "这个", "那个", "小作业"}:
+            inferred_source = self._optional_short_text(data.get("description"), 2000) or source_text
+            title = self._safe_title(self._strip_time_words(inferred_source), inferred_source) if inferred_source else ""
+        if not title:
             # 泛化占位标题无法代表明确任务，交回前端追问。
             return None
+        description = self._optional_short_text(data.get("description"), 2000)
+        if not description:
+            if follow_up_mode:
+                return None
+            description = self._fallback_description(title)
         return TaskCreate(
             title=title,
-            description=self._optional_short_text(data.get("description"), 2000),
+            description=description,
             priority=self._agent_priority(data.get("priority"), default=Priority.medium) or Priority.medium,
-            category=self._optional_short_text(data.get("category"), 50) or "未分类",
+            category=self._agent_category(data.get("category")) or self._heuristic_category(f"{title}\n{description}"),
             due_time=self._parse_agent_datetime(data.get("due_time")),
         )
+
+    def _agent_category(self, value: Any) -> Optional[str]:
+        text = self._optional_short_text(value, 200)
+        if not text:
+            return None
+        parsed = self._parse_zh_category(text)
+        if parsed:
+            return parsed
+        if any(marker in text for marker in ("截止时间", "优先级", "任务具体", "描述", "你来")):
+            return None
+        return text[:50]
 
     def _agent_task_update(self, data: dict[str, Any]) -> dict[str, Any]:
         update_data: dict[str, Any] = {}
@@ -591,27 +729,43 @@ class AiService:
                 normalized.append(canonical)
         return normalized
 
+    def _create_task_follow_up_fields(self, decision: dict[str, Any]) -> list[str]:
+        task_data = decision.get("task") or {}
+        fields = [field for field in self._agent_uncertain_fields(decision) if field != "title"]
+        if self._optional_short_text(task_data.get("description"), 2000) is None and "description" not in fields:
+            fields.append("description")
+        if self._optional_short_text(task_data.get("category"), 50) in (None, "", "未分类") and "category" not in fields:
+            fields.append("category")
+        if self._parse_agent_datetime(task_data.get("due_time")) is None and "due_time" not in fields:
+            fields.append("due_time")
+        if self._agent_priority(task_data.get("priority"), default=None) is None and "priority" not in fields:
+            fields.append("priority")
+        return fields
+
     def _format_uncertain_fields_follow_up(self, fields: list[str]) -> str:
-        labels = {
-            "title": "任务标题",
-            "description": "任务描述",
-            "priority": "优先级",
-            "category": "分类",
-            "due_time": "截止时间",
-            "target_task": "目标任务",
-            "target_task_id": "目标任务",
-            "target_query": "目标任务",
-            "updates": "修改内容",
-            "status": "任务状态",
+        question_map = {
+            "description": "任务具体要做什么？",
+            "priority": "优先级是什么？（低 / 中 / 高）",
+            "category": "分类是什么？（学习 / 工作 / 生活 / 项目）",
+            "due_time": "截止时间具体是什么时候？（例如 23:00）",
+            "target_task": "你要操作的是哪个任务？",
+            "target_task_id": "你要操作的是哪个任务？",
+            "target_query": "你要操作的是哪个任务？",
+            "updates": "需要修改哪些内容？",
+            "status": "任务状态是什么？（待办 / 进行中 / 已完成）",
         }
-        readable = []
+        order = ["due_time", "priority", "category", "description", "updates", "status", "target_task", "target_task_id", "target_query"]
+        normalized = []
+        for field in order:
+            if field in fields and field in question_map and field not in normalized:
+                normalized.append(field)
         for field in fields:
-            label = labels.get(field, field)
-            if label not in readable:
-                readable.append(label)
+            if field in question_map and field not in normalized:
+                normalized.append(field)
+        readable = [question_map[field] for field in normalized]
         if not readable:
             return "我还不能确定任务信息，请再补充一下。"
-        return f"我还不能确定{self._join_zh_list(readable)}，请补充后我再执行。"
+        return "\n".join([f"— {item}" for item in readable])
 
     def _join_zh_list(self, items: list[str]) -> str:
         if len(items) <= 1:
@@ -641,6 +795,9 @@ class AiService:
     def _agent_priority(self, value: Any, default: Optional[Priority] = Priority.medium) -> Optional[Priority]:
         if value in (None, ""):
             return default
+        parsed = self._parse_zh_priority(str(value))
+        if parsed:
+            return parsed
         try:
             return Priority(str(value).strip().lower())
         except ValueError:
@@ -653,6 +810,8 @@ class AiService:
         normalized = str(value).strip().lower()
         if normalized in {"done", "完成", "已完成", "complete", "completed"}:
             return TaskStatus.done
+        if normalized in {"in_progress", "in-progress", "progress", "进行中", "处理中", "开始", "开始处理", "working"}:
+            return TaskStatus.in_progress
         if normalized in {"todo", "待办", "未完成", "open", "reopen"}:
             return TaskStatus.todo
         try:
@@ -722,6 +881,7 @@ class AiService:
     def _status_label(self, status: Any) -> str:
         return {
             TaskStatus.todo.value: "待办",
+            TaskStatus.in_progress.value: "进行中",
             TaskStatus.done.value: "已完成",
         }.get(str(status), str(status))
 
@@ -784,6 +944,7 @@ class AiService:
     def _validate_parsed_task(self, content: str, raw_text: str) -> AiParsedTask:
         data = self._json_loads(content)
         data["title"] = self._safe_title(data.get("title"), raw_text)
+        data["description"] = self._safe_description(data.get("description"), raw_text)
         data["priority"] = self._safe_priority(data.get("priority"))
         data["category"] = self._safe_category(data.get("category"))
         if not data.get("raw_due_text"):
@@ -812,7 +973,7 @@ class AiService:
         # Mock 解析用固定置信度和关键词规则，覆盖离线演示的核心任务字段。
         return AiParsedTask(
             title=self._safe_title(self._strip_time_words(text), text),
-            description=None,
+            description=self._safe_description(None, text),
             priority=self._heuristic_priority(text),
             category=self._heuristic_category(text),
             due_time=due_time,
@@ -826,6 +987,32 @@ class AiService:
             category=self._heuristic_category(text),
             reason="AI Mock 模式或服务兜底：根据关键词推荐分类与优先级",
         )
+
+    def _safe_description(self, value: Any, raw_text: str) -> str:
+        description = self._optional_short_text(value, 2000)
+        if description:
+            return description
+        return self._fallback_description(raw_text)
+
+    def _fallback_description(self, raw_text: str) -> str:
+        normalized = re.sub(r"\s+", " ", raw_text).strip(" ，。；;,.、\n\t")
+        if not normalized:
+            return "根据用户输入生成的任务，请补充更具体的执行内容。"
+
+        compact = self._strip_time_words(normalized).strip(" ，。；;,.、")
+        if not compact:
+            compact = normalized
+
+        first_sentence = re.split(r"[。；;\n]+", compact, maxsplit=1)[0].strip(" ，。；;,.、")
+        if not first_sentence:
+            first_sentence = compact
+
+        if len(first_sentence) > 80:
+            first_sentence = first_sentence[:80].rstrip(" ，。；;,.、")
+
+        if first_sentence.endswith(("。", "！", "？")):
+            return first_sentence
+        return f"{first_sentence}。"
 
     def _mock_due_time(self, text: str, timezone_name: str) -> tuple[Optional[datetime], Optional[str]]:
         now = self._now_for_timezone(timezone_name)
