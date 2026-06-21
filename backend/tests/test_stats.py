@@ -55,6 +55,8 @@ def test_stats_overview_category_priority_and_trend(client, monkeypatch):
         headers=headers,
         json={"text": "明天下午三点完成软件工程报告，很重要", "timezone": "Asia/Shanghai"},
     ).json()["data"]["task"]
+    reading_task = client.get("/api/tasks", headers=headers, params={"category": "学习"}).json()["data"]["items"][0]
+    client.patch(f"/api/tasks/{reading_task['id']}/status", headers=headers, json={"status": "in_progress"})
     client.patch(f"/api/tasks/{task_a['id']}/status", headers=headers, json={"status": "done"})
     client.patch(f"/api/tasks/{ai_task['id']}/status", headers=headers, json={"status": "done"})
 
@@ -78,6 +80,7 @@ def test_stats_overview_category_priority_and_trend(client, monkeypatch):
     assert list(priorities) == ["high", "medium", "low"]
     assert priorities["high"]["total"] == 2
     assert priorities["medium"]["total"] == 1
+    assert priorities["medium"]["todo"] == 1
     assert priorities["low"]["total"] == 1
 
     response = client.get("/api/stats/trend", headers=headers, params={"days": 7})

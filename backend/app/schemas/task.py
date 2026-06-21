@@ -12,8 +12,9 @@ class Priority(str, Enum):
 
 
 class TaskStatus(str, Enum):
-    # 当前业务只区分待办和完成；新增状态需同步服务层过滤、统计和迁移约束。
+    # 任务状态统一支持待办、进行中、已完成三态。
     todo = "todo"
+    in_progress = "in_progress"
     done = "done"
 
 

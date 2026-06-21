@@ -27,10 +27,10 @@ class StatsService:
         # overview 的基础口径是创建时间范围内的任务，逾期/今日截止在这个集合上继续统计。
         total_tasks = query.count()
         done_tasks = query.filter(Task.status == TaskStatus.done.value).count()
-        todo_tasks = query.filter(Task.status == TaskStatus.todo.value).count()
+        todo_tasks = query.filter(Task.status != TaskStatus.done.value).count()
         now = utc_now()
         overdue_tasks = query.filter(
-            Task.status == TaskStatus.todo.value,
+            Task.status != TaskStatus.done.value,
             Task.due_time.isnot(None),
             Task.due_time < now,
         ).count()

@@ -8,13 +8,10 @@ from app.models.user import User
 from app.models.user_setting import UserSetting
 from app.schemas.auth import LoginRequest
 from app.schemas.user import UserCreate
+from app.services.demo_data import ensure_demo_account
 
 
 class AuthService:
-    DEMO_USERNAME = "demo_user"
-    DEMO_EMAIL = "demo@aitodo.dev"
-    DEMO_PASSWORD = "aitodo-demo-account"
-
     def __init__(self, db: Session) -> None:
         self.db = db
 
@@ -60,24 +57,7 @@ class AuthService:
         return self._auth_payload(user)
 
     def demo_login(self) -> dict:
-        user = self.db.query(User).filter(User.email == self.DEMO_EMAIL).first()
-        if not user:
-            user = User(
-                username=self.DEMO_USERNAME,
-                email=self.DEMO_EMAIL,
-                password_hash=hash_password(self.DEMO_PASSWORD),
-            )
-            self.db.add(user)
-            self.db.flush()
-
-        # Demo 账号每次登录都回到当前默认模型，并清掉个人 Key，避免上一次体验污染本次会话。
-        if user.setting:
-            user.setting.model_name = settings.openai_default_model
-            user.setting.openai_api_key_encrypted = None
-            self.db.add(user.setting)
-        else:
-            self.db.add(UserSetting(user_id=user.id, model_name=settings.openai_default_model))
-
+        user = ensure_demo_account(self.db)
         self.db.commit()
         self.db.refresh(user)
         return self._auth_payload(user)
