@@ -347,8 +347,8 @@ def test_agent_chat_follow_up_mode_blocks_uncertain_task_json(monkeypatch):
     assert total == 0
 
 
-def test_agent_chat_follow_up_mode_also_asks_for_description(monkeypatch):
-    """追问模式下创建任务如果没有任务描述，也应追问任务描述。"""
+def test_agent_chat_follow_up_mode_uses_model_message_for_missing_fields(monkeypatch):
+    """追问模式下优先直接返回模型给出的逐行追问文案。"""
     monkeypatch.setattr(settings, "openai_api_key", "sk-env-secret-5678")
     db = make_db()
     user = make_user(db)
@@ -358,7 +358,7 @@ def test_agent_chat_follow_up_mode_also_asks_for_description(monkeypatch):
         return """
         {
           "action": "follow_up",
-          "message": "好的，我会帮你创建“后天完成大作业”的任务。请补充以下信息：\\n- 截止时间具体是后天几点？\\n- 优先级是低、中、高？\\n- 分类是什么？",
+          "message": "— 截止时间具体是什么时候？（例如 23:00）\\n— 优先级是什么？（低 / 中 / 高）\\n— 分类是什么？（学习 / 工作 / 生活 / 项目）\\n— 任务具体要做什么？",
           "task": {
             "title": "后天完成大作业",
             "description": null,
@@ -380,12 +380,7 @@ def test_agent_chat_follow_up_mode_also_asks_for_description(monkeypatch):
     )
 
     assert response.agent_action == "follow_up"
-    assert "— 截止时间具体是什么时候？（例如 23:00）" in response.content
-    assert "— 优先级是什么？（低 / 中 / 高）" in response.content
-    assert "— 分类是什么？（学习 / 工作 / 生活 / 项目）" in response.content
-    assert "— 任务具体要做什么？" in response.content
-    assert "优先级和分类" not in response.content
-    assert "请补充以下信息" not in response.content
+    assert response.content == "— 截止时间具体是什么时候？（例如 23:00）\n— 优先级是什么？（低 / 中 / 高）\n— 分类是什么？（学习 / 工作 / 生活 / 项目）\n— 任务具体要做什么？"
 
 
 def test_agent_chat_follow_up_mode_blocks_missing_description(monkeypatch):
@@ -423,9 +418,255 @@ def test_agent_chat_follow_up_mode_blocks_missing_description(monkeypatch):
 
     assert response.agent_action == "follow_up"
     assert response.task_changed is False
-    assert response.content == "— 截止时间具体是什么时候？（例如 23:00）\n— 优先级是什么？（低 / 中 / 高）\n— 任务具体要做什么？"
+    assert response.content == "— 截止时间具体是什么时候？（例如 23:00）\n— 任务具体要做什么？"
     assert tasks == []
     assert total == 0
+
+
+def test_agent_chat_follow_up_mode_blocks_model_create_when_task_still_has_nulls(monkeypatch):
+    """追问模式下即使模型误返回 create_task，关键字段仍缺失时也必须拦截。"""
+    monkeypatch.setattr(settings, "openai_api_key", "sk-env-secret-5678")
+    db = make_db()
+    user = make_user(db)
+    service = AiService(db)
+
+    def fake_call_agent_model(api_key, model_name, messages, current_user, follow_up_mode, timezone_name):
+        return """
+        {
+          "action": "create_task",
+          "message": "",
+          "task": {
+            "title": "写实验报告",
+            "description": "完成实验报告的撰写与提交。",
+            "priority": "high",
+            "category": null,
+            "due_time": null
+          }
+        }
+        """
+
+    monkeypatch.setattr(service, "_call_agent_model", fake_call_agent_model)
+
+    response = service.chat(
+        user,
+        [AiChatMessage(role="user", content="帮我创建一个写实验报告的任务")],
+        "deepseek-v4-pro",
+        agent_mode=True,
+        follow_up_mode=True,
+    )
+    tasks, total = TaskService(db).list_tasks(user, page=1, page_size=10)
+
+    assert response.agent_action == "follow_up"
+    assert response.content == "— 截止时间具体是什么时候？（例如 23:00）\n— 分类是什么？（学习 / 工作 / 生活 / 项目）"
+    assert tasks == []
+    assert total == 0
+
+
+def test_agent_chat_follow_up_mode_creates_task_after_model_rechecks_full_conversation(monkeypatch):
+    """追问后的随意补充由模型整段重理解，后端不再逐行手工合并。"""
+    monkeypatch.setattr(settings, "openai_api_key", "sk-env-secret-5678")
+    db = make_db()
+    user = make_user(db)
+    service = AiService(db)
+
+    def fake_call_agent_model(api_key, model_name, messages, current_user, follow_up_mode, timezone_name):
+        if len(messages) == 1:
+            return """
+            {
+              "action": "follow_up",
+              "message": "— 截止时间具体是什么时候？（例如 23:00）\\n— 优先级是什么？（低 / 中 / 高）\\n— 分类是什么？（学习 / 工作 / 生活 / 项目）\\n— 任务具体要做什么？",
+              "uncertain_fields": ["due_time", "priority", "category", "description"],
+              "task": {
+                "title": "完成大作业",
+                "description": null,
+                "priority": null,
+                "category": null,
+                "due_time": null
+              }
+            }
+            """
+        assert messages[-1].content == "后天晚上十一点五十九，高，学习，具体内容你来写"
+        return """
+        {
+          "action": "create_task",
+          "message": "已创建任务：完成大作业",
+          "uncertain_fields": [],
+          "task": {
+            "title": "完成大作业",
+            "description": "完成大作业的资料整理、内容编写与检查提交，确保符合要求并按时完成。",
+            "priority": "high",
+            "category": "学习",
+            "due_time": "2026-06-23T23:59:00+08:00"
+          }
+        }
+        """
+
+    monkeypatch.setattr(service, "_call_agent_model", fake_call_agent_model)
+
+    first_response = service.chat(
+        user,
+        [AiChatMessage(role="user", content="创建一个任务，后天完成大作业")],
+        "deepseek-v4-pro",
+        agent_mode=True,
+        follow_up_mode=True,
+    )
+    assert first_response.agent_action == "follow_up"
+
+    response = service.chat(
+        user,
+        [
+            AiChatMessage(role="user", content="创建一个任务，后天完成大作业"),
+            AiChatMessage(role="assistant", content=first_response.content),
+            AiChatMessage(role="user", content="后天晚上十一点五十九，高，学习，具体内容你来写"),
+        ],
+        "deepseek-v4-pro",
+        agent_mode=True,
+        follow_up_mode=True,
+    )
+    tasks, total = TaskService(db).list_tasks(user, page=1, page_size=10)
+
+    assert response.agent_action == "create_task"
+    assert response.task_changed is True
+    assert response.task is not None
+    assert response.task.description == "完成大作业的资料整理、内容编写与检查提交，确保符合要求并按时完成。"
+    assert response.task.priority == Priority.high
+    assert response.task.category == "学习"
+    assert response.task.due_time is not None
+    assert len(tasks) == 1
+    assert total == 1
+
+
+def test_agent_chat_follow_up_mode_allows_model_to_honor_delegated_fields(monkeypatch):
+    """用户说“你来写/你来定”后，只要模型补全完整草稿，后端直接创建。"""
+    monkeypatch.setattr(settings, "openai_api_key", "sk-env-secret-5678")
+    db = make_db()
+    user = make_user(db)
+    service = AiService(db)
+
+    def fake_call_agent_model(api_key, model_name, messages, current_user, follow_up_mode, timezone_name):
+        return """
+        {
+          "action": "create_task",
+          "message": "已创建任务：完成大作业",
+          "uncertain_fields": [],
+          "task": {
+            "title": "完成大作业",
+            "description": "完成大作业的资料整理、内容编写与检查提交，确保符合要求并按时完成。",
+            "priority": "high",
+            "category": "学习",
+            "due_time": "2026-06-23T23:59:00+08:00"
+          }
+        }
+        """
+
+    monkeypatch.setattr(service, "_call_agent_model", fake_call_agent_model)
+
+    response = service.chat(
+        user,
+        [
+            AiChatMessage(role="user", content="创建一个任务，后天完成大作业"),
+            AiChatMessage(
+                role="assistant",
+                content="— 截止时间具体是什么时候？（例如 23:00）\n— 优先级是什么？（低 / 中 / 高）\n— 分类是什么？（学习 / 工作 / 生活 / 项目）\n— 任务具体要做什么？",
+            ),
+            AiChatMessage(role="user", content="23:59，高，学习，剩下的你来决定"),
+        ],
+        "deepseek-v4-pro",
+        agent_mode=True,
+        follow_up_mode=True,
+    )
+
+    assert response.agent_action == "create_task"
+    assert response.task_changed is True
+    assert response.task is not None
+    assert response.task.priority == Priority.high
+    assert response.task.category == "学习"
+    assert response.task.description == "完成大作业的资料整理、内容编写与检查提交，确保符合要求并按时完成。"
+    assert response.task.due_time is not None
+    assert response.task.due_time.hour == 23
+    assert response.task.due_time.minute == 59
+
+
+def test_agent_chat_creates_task_without_follow_up_mode_and_model_supplies_defaults(monkeypatch):
+    """非追问模式下由模型自行补全 description/priority/category/due_time。"""
+    monkeypatch.setattr(settings, "openai_api_key", "sk-env-secret-5678")
+    db = make_db()
+    user = make_user(db)
+    service = AiService(db)
+
+    def fake_call_agent_model(api_key, model_name, messages, current_user, follow_up_mode, timezone_name):
+        return """
+        {
+          "action": "create_task",
+          "message": "已创建任务：写实验报告",
+          "uncertain_fields": [],
+          "task": {
+            "title": "写实验报告",
+            "description": "完成实验报告的资料整理、内容撰写与提交，确保结构完整并按时完成。",
+            "priority": "medium",
+            "category": "学习",
+            "due_time": "2026-06-22T23:00:00+08:00"
+          }
+        }
+        """
+
+    monkeypatch.setattr(service, "_call_agent_model", fake_call_agent_model)
+
+    response = service.chat(
+        user,
+        [AiChatMessage(role="user", content="帮我创建一个写实验报告的任务")],
+        "deepseek-v4-pro",
+        agent_mode=True,
+        follow_up_mode=False,
+    )
+
+    assert response.agent_action == "create_task"
+    assert response.task_changed is True
+    assert response.task is not None
+    assert response.task.title == "写实验报告"
+    assert response.task.description == "完成实验报告的资料整理、内容撰写与提交，确保结构完整并按时完成。"
+    assert response.task.category == "学习"
+    assert response.task.priority == Priority.medium
+    assert response.task.due_time is not None
+    assert response.task.due_time.hour == 23
+    assert response.task.due_time.minute == 0
+
+
+def test_agent_task_create_sanitizes_bad_inline_category(monkeypatch):
+    """模型把整句追问回复塞进 category 时，落库前要清洗成真实分类。"""
+    monkeypatch.setattr(settings, "openai_api_key", "sk-env-secret-5678")
+    db = make_db()
+    user = make_user(db)
+    service = AiService(db)
+
+    def fake_call_agent_model(api_key, model_name, messages, current_user, follow_up_mode, timezone_name):
+        return """
+        {
+          "action": "create_task",
+          "message": "",
+          "task": {
+            "title": "完成软工实验报告",
+            "description": "完成软件工程实验报告的撰写、整理与提交。",
+            "priority": "high",
+            "category": "截止时间23:59,优先级高,分类为学习,任务具体做什么你来写",
+            "due_time": "2026-06-23T23:59:00+08:00"
+          }
+        }
+        """
+
+    monkeypatch.setattr(service, "_call_agent_model", fake_call_agent_model)
+
+    response = service.chat(
+        user,
+        [AiChatMessage(role="user", content="创建一个任务,内容是完成软工实验报告,后天截止")],
+        "deepseek-v4-pro",
+        agent_mode=True,
+        follow_up_mode=False,
+    )
+
+    assert response.agent_action == "create_task"
+    assert response.task is not None
+    assert response.task.category == "学习"
 
 
 def test_agent_chat_updates_status_only_with_ai_selected_task(monkeypatch):
